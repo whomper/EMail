@@ -28,6 +28,7 @@ long pf_write(int h, const void *buf, long n);
 void pf_close(int h);
 long pf_seek(int h, long off);			/* from the start; new position or < 0 */
 long pf_size(const char *path);			/* -1 if missing */
+unsigned long pf_info(const char *path, long *size);	/* date and time, 0 if missing; *size, -1 */
 int  pf_exists(const char *path);
 int  pf_mkdir(const char *path);		/* 0 ok or already there */
 int  pf_remove(const char *path);

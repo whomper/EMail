@@ -1402,6 +1402,7 @@ int main(void)
 	pf_idle = busy_idle;
 	mail_status = status;
 	tls_note = status;
+	tls_file_info = pf_info;	/* CACERT.PEM's date and size in one look */
 	for (d = 0; d < naccts; d++)
 		folders_load(accts[d]);
 

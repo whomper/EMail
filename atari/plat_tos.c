@@ -43,6 +43,23 @@ long pf_size(const char *path)
 	return r;
 }
 
+/* the date and the size from one look at the folder (guidelines 6.5) */
+unsigned long pf_info(const char *path, long *size)
+{
+	void *old = Fgetdta();
+	unsigned long r = 0;
+	Fsetdta(&dta);
+	*size = -1;
+	if (Fsfirst(path, 0x07) == 0) {
+		*size = (long)dta.d_length;
+		r = ((unsigned long)dta.d_date << 16) | dta.d_time;
+		if (!r)
+			r = 1;
+	}
+	Fsetdta(old);
+	return r;
+}
+
 int pf_exists(const char *path)
 {
 	void *old = Fgetdta();
