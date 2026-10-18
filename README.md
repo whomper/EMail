@@ -41,19 +41,27 @@ one is there on its own, and all of them together in `EMAIL-x.y.zip`.
 1. Copy `EMAIL.PRG` to any folder on any drive, with `EMAIL.HYP` and `EMAIL.REF` beside it. EMail keeps
    its settings and your mail next to itself, so a folder of its own (`C:\EMAIL\`, say) keeps them
    together; nothing has to be in a particular place.
-2. Set up the gateway on a Raspberry Pi, in a clone of this repository (or of
-   [AERA-Gateway](https://github.com/whomper/AERA-Gateway)):
-   `sudo gateway/aera-gateway install mail imap.gmail.com smtp.gmail.com`, with your provider's
-   servers (see [gateway/README.md](gateway/README.md)).
+2. Set up the gateway on a Raspberry Pi from [AERA-Gateway](https://github.com/whomper/AERA-Gateway),
+   which brings it to its latest release, with your provider's servers:
+
+   ```
+   git clone https://github.com/whomper/AERA-Gateway
+   cd AERA-Gateway
+   ./update-pi.sh
+   sudo gateway/aera-gateway install mail imap.gmail.com smtp.gmail.com
+   ```
+
+   (iCloud: `imap.mail.me.com smtp.mail.me.com:587`; AERA-Gateway's README has the others).
+   `./update-pi.sh` there keeps it up to date.
 3. Start EMail and fill in your account: the Pi's IP address (`aera-gateway` prints it), ports 143 (IMAP)
-   and 587 (SMTP), and your login (Gmail, iCloud and Yahoo need an app password).
+   and 587 (SMTP), and your login (Gmail, iCloud, Yahoo and Fastmail need an app password).
 4. Press **Help** in EMail for the [user guide](docs/GUIDE.md); it describes everything else.
 
 On a Falcon or TT with 4 MB you can skip the Pi: copy `CACERT.PEM` and `ROOTS.DAT` next to `EMAIL.PRG`
 and switch on **Options > Falcon mode**. EMail fills in the servers for the big providers.
 
 **Updating:** copy the new release's files over the old ones. `EMAIL.INF`, `EMAIL.KEY` and your mail stay
-as they are.
+as they are. On the Pi, `./update-pi.sh` in `AERA-Gateway` updates the gateway.
 
 **Needs:** TOS 1.04 or newer (TOS 4 on the Falcon), EmuTOS, MagiC or MiNT; 640×200 (ST medium) or
 larger; 1 MB of memory (EMail itself takes about 410 KB; more memory holds bigger folders); network: STinG (or STiK), MiNTnet or
@@ -106,7 +114,8 @@ On (Falcon, TT):  Falcon (EMAIL.PRG, TLS 1.2, RSA on the DSP) ------------------
 Each account keeps separate server settings for the gateway and for Falcon mode, so switching between
 them keeps both.
 
-The gateway's own README: [gateway/README.md](gateway/README.md).
+The gateway's own README, with every provider and option: [AERA-Gateway](https://github.com/whomper/AERA-Gateway)
+(the same text is in this repository's copy, [gateway/README.md](gateway/README.md)).
 
 ### Performance: Pi, 68030 and DSP
 

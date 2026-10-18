@@ -16,8 +16,11 @@ reads and writes Hebrew.
   - **STinG** on plain TOS (or STiK), or
   - **MiNTnet** under FreeMiNT (with or without GlueSTiK), or MagiC-Net
 - For providers that need encryption (nearly all), one of:
-  - a Raspberry Pi or other Linux computer on your network as a gateway,
-    see [gateway/README.md](../gateway/README.md) (any Atari), or
+  - a Raspberry Pi or other Linux computer on your network as a gateway
+    (any Atari), set up from AERA-Gateway
+    (github.com/whomper/AERA-Gateway): its `./update-pi.sh` and
+    `sudo gateway/aera-gateway install mail` with your provider's
+    servers, or
   - **Falcon mode**: EMail does the encryption itself (a Falcon, or a TT,
     with 4 MB of memory or more), see [Falcon mode](#falcon-mode)
 
@@ -62,7 +65,8 @@ and `EMAIL.REF`, and for Falcon mode `CACERT.PEM` and `ROOTS.DAT`.
 `EMAIL.INF`, `EMAIL.KEY` and your mail stay as they are. Keep EMAIL.KEY
 with EMAIL.INF: without it EMail asks for the passwords again. Coming
 from a version before 1.37, type your signature once more, in Options >
-Settings > Signature.
+Settings > Signature. On the Pi, `./update-pi.sh` in the AERA-Gateway
+folder updates the gateway.
 
 ## Setting up an account
 
@@ -75,7 +79,7 @@ Options > Accounts > New, or the dialog EMail shows at first start:
 | E-mail         | your address                                                     |
 | Incoming mail  | IMAP (folders stay on the server) or POP3 (mail comes to the Atari) |
 | Server, Port   | through the gateway: the Pi's IP and 143 (IMAP) or 110 (POP3), as for a server without TLS |
-| User, Password | your login (for Gmail: an app password)                          |
+| User, Password | your login (Gmail, iCloud, Yahoo, Fastmail: an app password)     |
 | POP3: leave mail on the server | keep a copy on the server after downloading    |
 | Outgoing       | the Pi's IP and 587 through the gateway; leave User empty to use the incoming login, or type `-` for a server that needs none |
 | Passwords      | shown as `*`; click the eye beside the field to see what you typed |
@@ -507,8 +511,8 @@ the image and mask for icon editors. For EmuTOS,
   that name)? **"certificate out of date"**: check the date, time and
   time zone. **"not enough memory"**: close other programs, check in
   the About box that EMail runs in TT RAM, or use the gateway.
-- **"login failed"**: check user and password; Gmail, iCloud and Yahoo
-  need an app password.
+- **"login failed"**: check user and password; Gmail, iCloud, Yahoo and
+  Fastmail need an app password.
 - **"EMail can't write its key file"**: EMail keeps your passwords in
   EMAIL.INF encrypted, with a key it keeps in `EMAIL.KEY` next to it.
   When that file can't be written (a locked disk, a full one, a folder
