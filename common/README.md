@@ -288,6 +288,22 @@ In `src/tls.c`:
   chain to a root are still BearSSL's to decide. The log's certificates line says how many were
   known.
 
+## `ROOTS.DAT` told by `CACERT.PEM`'s date; the answer's times (18 Oct 2026, from EWeb)
+
+From EWeb 0.8's log on a DFB1: reading the root certificates took 1.5 s a run, mostly reading all
+186 KB of `CACERT.PEM` for the checksum that says `ROOTS.DAT` was made from it.
+
+- `ROOTS.DAT` has a new layout (`MAILROOTS2`: CACERT.PEM's size, checksum and date). The old one
+  (`MAILROOTS1`) is still read. `tools/mkroots` writes the new one with no date.
+- New hook `tls_file_stamp` (`tls.h`): a function giving a file's date and time, 0 if missing; an app
+  sets it to its `pf_stamp` (or leaves it NULL: the checksum every time, as before). With it, the
+  first run that checks the checksum writes the date into `ROOTS.DAT` (in place with `PF_UPDATE`;
+  a `MAILROOTS1` file is written again, once), and later runs compare size and date only. A
+  different `CACERT.PEM` (another size or date) is checked by its checksum again.
+- After a TLS request, the log gets "the answer's first bytes came N ms after the request" and "its
+  first N bytes decrypted N ms after the request". `conn.c` writes TLS lines outside a handshake as
+  " .. ", which doesn't write the log out at once.
+
 `tests/ec`: `make test` checks `ecdsp.c` against BearSSL with a C model of `ec.a56` (key exchanges and
 signature checks on every curve, RFC 7748's vectors, doublings and the point at infinity inside a
 check, points off the curve, good and bad signatures with short and long hashes: 902 checks);
