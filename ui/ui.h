@@ -224,7 +224,6 @@ extern int reader_missing;	/* the reader shows a note: the message isn't here */
 void set_hebrew_kbd(short on);
 extern short hebrew_kbd;
 unsigned char key_char(short kstate, short key);	/* honours the Hebrew layout */
-int ctrl_key(short kstate, short key);	/* Control held, or a letter as a control code */
 void menu_update(void);
 
 #define K_ALT 0x08

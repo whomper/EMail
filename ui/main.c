@@ -233,24 +233,11 @@ static const u8 hebrew_keys[0x36 - 0x10] = {
 	/* 2c z../ */ 0xC8, 0xD0, 0xC3, 0xC6, 0xCF, 0xCE, 0xD3, 0xD7, 0xDC, '.'
 };
 
-/* Control was held for this key: kstate says so, or a letter came as a
-   control code (^A..^Z). The AES gives the modifiers as they are when
-   EMail reads the key, so a quick Ctrl+R typed while EMail was busy comes
-   with Control already let go; Backspace, Tab and Return are the control
-   codes that come without it. */
-int ctrl_key(short kstate, short key)
-{
-	short scan = KEY_SCAN(key);
-	unsigned char ascii = KEY_ASCII(key);
-	return (kstate & K_CTRL) || (ascii >= 1 && ascii <= 26 && scan != 0x0e && scan != 0x0f &&
-				     scan != 0x1c && scan != 0x72);
-}
-
 unsigned char key_char(short kstate, short key)
 {
 	short scan = KEY_SCAN(key);
 	unsigned char ascii = KEY_ASCII(key);
-	if (hebrew_kbd && !(kstate & (K_LSHIFT | K_RSHIFT | K_ALT)) && !ctrl_key(kstate, key) &&
+	if (hebrew_kbd && !(kstate & (K_LSHIFT | K_RSHIFT | K_ALT)) && !key_ctrl(kstate, key) &&
 	    scan >= 0x10 && scan < 0x36 && hebrew_keys[scan - 0x10])
 		ascii = hebrew_keys[scan - 0x10];
 	return ascii;
@@ -1220,7 +1207,7 @@ static int shortcut(short kstate, short key)
 		help_key_pressed();
 		return 1;
 	}
-	if (ctrl_key(kstate, key)) {
+	if (key_ctrl(kstate, key)) {
 		short cmd = C_NONE, shift = (kstate & (K_LSHIFT | K_RSHIFT)) != 0;
 		switch (scan) {
 		/* the AERA programs' keys (the guidelines, 3.2), with

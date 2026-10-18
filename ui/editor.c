@@ -903,7 +903,7 @@ static int key(WIN *w, short kstate, short k)
 		w->closed(w);
 		return 1;
 	}
-	if (ctrl_key(kstate, k))
+	if (key_ctrl(kstate, k))
 		return 0;
 	c = key_char(kstate, k);
 	if (c >= 32 || c >= 0x80) {
