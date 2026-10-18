@@ -48,6 +48,7 @@ for k, v in (("@RUN@", run_dir), ("@DIR@", srv), ("@IMAP@", str(IMAP)), ("@POP3@
 with open(os.path.join(srv, "dovecot.conf"), "w") as f:
     f.write(conf)
 subprocess.run(["chown", "-R", "nobody:", os.path.join(srv, "home")], check=True)
+rig.servers_ready(work, IMAP, SMTP, 10110)
 subprocess.run(["dovecot", "-c", os.path.join(srv, "dovecot.conf")], check=True)
 
 
@@ -94,6 +95,7 @@ for flags, msg in MAIL:
     m0.append("INBOX", flags, None, msg)
 m0.logout()
 smtp = subprocess.Popen([sys.executable, os.path.join(ROOT, "tests", "smtp_server.py"), str(SMTP), srv, "dana", "secret"])
+rig.stop_at_exit(srv, smtp)
 
 # drive C:
 os.makedirs(os.path.join(hd, "AUTO"))

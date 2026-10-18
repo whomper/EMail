@@ -4,8 +4,10 @@
 command FIFO for keys and screenshots, xdotool for the mouse.
 Adapted from Claude ST's recording rig (whomper/atari_claude).
 """
+import atexit
 import os
 import shutil
+import socket
 import stat
 import subprocess
 import sys
@@ -55,6 +57,36 @@ def release(app, d, *files):
     getrelease = os.path.join(COMMON_TOOLS, "getrelease.py")
     subprocess.run([sys.executable, getrelease, app, d] + list(files), check=True)
     return open(os.path.join(d, app.split("@")[0].upper() + ".VERSION")).read().strip()
+
+
+def servers_ready(work, *ports):
+    """Before Dovecot and the SMTP stand-in start: Dovecot runs as its own
+    user, so every folder above work must let others through, and a server
+    left by an earlier run must not hold the ports (the new run would talk
+    to it, with its old certificate)."""
+    d = os.path.abspath(work)
+    while d != "/":
+        d = os.path.dirname(d)
+        if not os.stat(d).st_mode & stat.S_IXOTH:
+            sys.exit("Dovecot can't reach %s: %s is closed to other users (mode %o); use a work folder "
+                     "like /tmp/mail-test" % (work, d, os.stat(d).st_mode & 0o777))
+    for p in ports:
+        with socket.socket() as s:
+            if s.connect_ex(("127.0.0.1", p)) == 0:
+                sys.exit("port %d is taken, by a server from an earlier run? Stop it first "
+                         "(doveadm stop, or kill tests/smtp_server.py)" % p)
+
+
+def stop_at_exit(srv, *procs):
+    """Stop Dovecot (srv/dovecot.conf) and the servers in procs when the rig
+    ends, however it ends."""
+    def stop():
+        for p in procs:
+            if p.poll() is None:
+                p.terminate()
+        subprocess.run(["doveadm", "-c", os.path.join(srv, "dovecot.conf"), "stop"],
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    atexit.register(stop)
 
 
 def bridge(work, fifo_out, fifo_in):

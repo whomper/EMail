@@ -48,8 +48,10 @@ with open(os.path.join(srv, "dovecot.conf"), "w") as f:
 for m in sorted(os.listdir(os.path.join(ROOT, "tests", "mail"))):
     shutil.copy(os.path.join(ROOT, "tests", "mail", m), os.path.join(srv, "home/dana/Maildir/new", m))
 subprocess.run(["chown", "-R", "nobody:", os.path.join(srv, "home")], check=True)
+rig.servers_ready(work, IMAP, SMTP, 10110)
 subprocess.run(["dovecot", "-c", os.path.join(srv, "dovecot.conf")], check=True)
 smtp = subprocess.Popen([sys.executable, os.path.join(ROOT, "tests", "smtp_server.py"), str(SMTP), srv, "dana", "secret"])
+rig.stop_at_exit(srv, smtp)
 
 # drive C:
 os.makedirs(os.path.join(hd, "AUTO"))
