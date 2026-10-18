@@ -29,6 +29,7 @@ int pf_open(const char *path, int mode)
 long pf_read(int h, void *buf, long n) { return Fread((short)h, n, buf); }
 long pf_write(int h, const void *buf, long n) { return Fwrite((short)h, n, buf); }
 void pf_close(int h) { Fclose((short)h); }
+long pf_seek(int h, long off) { return Fseek(off, (short)h, 0); }
 
 static DTA dta;
 

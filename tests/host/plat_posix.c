@@ -32,6 +32,7 @@ int pf_open(const char *path, int mode)
 long pf_read(int h, void *buf, long n) { return read(h, buf, n); }
 long pf_write(int h, const void *buf, long n) { return write(h, buf, n); }
 void pf_close(int h) { close(h); }
+long pf_seek(int h, long off) { return (long)lseek(h, off, SEEK_SET); }
 
 long pf_size(const char *path)
 {

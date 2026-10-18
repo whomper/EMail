@@ -26,6 +26,7 @@ int  pf_open(const char *path, int mode);	/* handle >= 0, < 0 on error */
 long pf_read(int h, void *buf, long n);
 long pf_write(int h, const void *buf, long n);
 void pf_close(int h);
+long pf_seek(int h, long off);			/* from the start; new position or < 0 */
 long pf_size(const char *path);			/* -1 if missing */
 int  pf_exists(const char *path);
 int  pf_mkdir(const char *path);		/* 0 ok or already there */
