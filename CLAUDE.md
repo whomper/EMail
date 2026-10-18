@@ -50,6 +50,11 @@ These come from AERA-Atari's repo template and are the same in every app's CLAUD
 
 ## EMail
 
+- **Talking with Erez** (his rule for the family): no progress or
+  in-between messages. Write to him when he has to decide something: a
+  short context and the decision. Findings: the information, your
+  assessment and what he should do, nothing more. Messages to the hub
+  stay complete, with the evidence.
 - **A release** carries `EMAIL.PRG`, `EMAIL.HYP` and `.REF` (hcp from `common/tools/build-hcp.sh`),
   `CACERT.PEM`, `ROOTS.DAT` and the icon. The icons are committed in `icons/` (`make icons`).
 - The help file's front page (guidelines 4.3) is `docs/front.json`, laid out by
