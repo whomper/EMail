@@ -242,6 +242,26 @@ int main(int argc, char **argv)
 		mime_free(m);
 		free(raw);
 		fold_close(f);
+	} else if (!strcmp(cmd, "sendnow") && a && argc > 4) {
+		/* as Send now in the editor: from memory, the Outbox if it can't go */
+		long len, al, rl;
+		char *u = pf_load(argv[4], &len), *at, *raw, err[200];
+		int sent = 0;
+		if (!u)
+			return 1;
+		at = cs_to_atari(u, len, CS_UTF8, &al);
+		raw = compose_build(a, at, al, 0, 0, err, sizeof(err), &rl);
+		if (!raw) {
+			fprintf(stderr, "error: %s\n", err);
+			return 1;
+		}
+		r = mail_send(a, raw, rl, &sent);
+		if (r == -1 && mail_queue(a, raw, rl))
+			printf("queued: %s\n", mail_err);
+		printf("sent: %d result: %d\n", sent, r);
+		free(u);
+		free(at);
+		free(raw);
 	} else if (!strcmp(cmd, "send") && a && argc > 4) {
 		long len, al, rl;
 		char *u = pf_load(argv[4], &len), *at, *raw, err[200];

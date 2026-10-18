@@ -1100,27 +1100,44 @@ char *abook_load(long *len)
 	return pf_load(path, len);
 }
 
-int abook_add(const char *addr)
+/* the addresses not in the book yet, in one go: the book is read once
+   and written once, however many there are */
+int abook_add_list(char addr[][160], int n)
 {
 	char path[220], email[96], *buf;
-	int h;
-	addr_split(addr, 0, 0, email, sizeof(email));
-	if (!*email || !strchr(email, '@'))
-		return 0;
+	SBUF add;
+	int h, i, added = 0;
 	buf = abook_load(0);
-	if (buf && str_istr(buf, email)) {
-		free(buf);
-		return 0;
+	sb_init(&add);
+	for (i = 0; i < n; i++) {
+		addr_split(addr[i], 0, 0, email, sizeof(email));
+		if (!*email || !strchr(email, '@') || (buf && str_istr(buf, email)) ||
+		    (add.s && str_istr(add.s, email)))
+			continue;
+		sb_adds(&add, addr[i]);
+		sb_adds(&add, "\r\n");
+		added++;
 	}
 	free(buf);
-	path_join(path, sizeof(path), opt.workdir, "ADDRESS.TXT");
-	h = pf_open(path, PF_APPEND);
-	if (h < 0)
-		return -1;
-	pf_write(h, addr, strlen(addr));
-	pf_write(h, "\r\n", 2);
-	pf_close(h);
-	return 1;
+	if (added) {
+		path_join(path, sizeof(path), opt.workdir, "ADDRESS.TXT");
+		h = pf_open(path, PF_APPEND);
+		if (h < 0) {
+			added = -1;
+		} else {
+			pf_write(h, add.s, add.len);
+			pf_close(h);
+		}
+	}
+	sb_free(&add);
+	return added;
+}
+
+int abook_add(const char *addr)
+{
+	char one[1][160];
+	str_copy(one[0], addr, sizeof(one[0]));
+	return abook_add_list(one, 1);
 }
 
 /* ---------------- dates ---------------- */

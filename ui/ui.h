@@ -47,6 +47,7 @@ extern short ap_id;
    people picked in its window */
 #include "people_ask.h"
 void ui_modal_message(const short *msg);	/* a modal loop's MU_MESAG */
+void ui_redraws(void);		/* queued redraws now, before a long wait */
 void editor_names_came(void);
 void editor_picked(const PERSON *list, int n);
 void reader_names_came(void);

@@ -927,11 +927,24 @@ static char *join_text(long *len)
 	return sb_steal(&b);
 }
 
+/* the To and Cc addresses into the address book, which is read once */
+static void remember_rcpts(void)
+{
+	static char list[40][160];
+	long i, he = header_end();
+	int n = 0;
+	for (i = 0; i < (he >= 0 ? he : nl) && n < 40; i++)
+		if (!strncasecmp(ln[i].s, "To:", 3) || !strncasecmp(ln[i].s, "Cc:", 3))
+			n += addr_list(ln[i].s + 3, list + n, 40 - n);
+	if (n)
+		abook_add_list(list, n);
+}
+
 void editor_send(int now)
 {
 	long len, rl;
 	char *text, *raw, err[200];
-	int sent = 0, r;
+	int sent = 0, r = 1;
 	if (w_editor.h <= 0 || !e_acct)
 		return;
 	text = join_text(&len);
@@ -941,24 +954,40 @@ void editor_send(int now)
 		alert(1, "[1][%s][ OK ]", err);
 		return;
 	}
-	if (!mail_queue(e_acct, raw, rl)) {
+	now = now && !opt.offline;
+	if (!now && !mail_queue(e_acct, raw, rl)) {
 		alert(1, "[1][%s][ OK ]", mail_err);
 		free(raw);
 		return;
 	}
-	free(raw);
-	/* remember who we write to */
-	{
-		long i, he = header_end();
-		for (i = 0; i < (he >= 0 ? he : nl); i++) {
-			if (!strncasecmp(ln[i].s, "To:", 3) || !strncasecmp(ln[i].s, "Cc:", 3)) {
-				char list[20][160];
-				int n = addr_list(ln[i].s + 3, list, 20), j;
-				for (j = 0; j < n; j++)
-					abook_add(list[j]);
+	win_close(&w_editor);
+	if (now) {
+		/* straight from memory: the Outbox on the disk only when it
+		   can't go now */
+		ui_redraws();
+		busy(1);
+		mail_err[0] = 0;
+		r = mail_send(e_acct, raw, rl, &sent);
+		busy(0);
+		if (r == -1) {
+			str_copy(err, mail_err, sizeof(err));
+			if (!mail_queue(e_acct, raw, rl)) {
+				/* nowhere to keep it: the message comes back */
+				alert(1, "[1][%s|%s||The message is back|in its window.][ OK ]", err, mail_err);
+				free(raw);
+				dirty = 1;
+				win_open(&w_editor);
+				eb_layout(&w_editor);
+				win_sliders(&w_editor);
+				win_redraw(&w_editor, 0);
+				menu_update();
+				return;
 			}
+			str_copy(mail_err, err, sizeof(mail_err));
 		}
 	}
+	free(raw);
+	remember_rcpts();
 	/* mark the original answered */
 	if (e_reply_uid && cur_folder && cur_finfo == e_reply_fi) {
 		HDR *h = fold_get(cur_folder, e_reply_uid);
@@ -966,18 +995,11 @@ void editor_send(int now)
 			mail_flag(cur_folder, h, MF_ANSWERED, 1);
 	}
 	dirty = 0;
-	win_close(&w_editor);
 	free_all();
-	if (now && !opt.offline) {
-		busy(1);
-		mail_err[0] = 0;
-		r = mail_send_outbox(e_acct, &sent);
-		busy(0);
-		if (r < 0)
-			alert(1, "[1][%s||The message waits in the Outbox.][ OK ]", mail_err);
-	} else {
+	if (r < 0)
+		alert(1, "[1][%s||It waits in the Outbox.][ OK ]", mail_err);
+	else if (!now)
 		alert(1, "[1][The message is in the Outbox.|It goes out with the next|Check mail.][ OK ]");
-	}
 	folders_build();
 	if (cur_finfo && (cur_finfo->role == FR_OUTBOX || cur_finfo->role == FR_SENT)) {
 		if (cur_folder)

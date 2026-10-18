@@ -436,6 +436,32 @@ out=$(run delete 2 Inbox "$P1")
 out=$(run list 2 Trash)
 expect "POP3 delete goes to the local Trash" "תשובה" "$out"
 
+# Send now: straight from memory. An IMAP account writes nothing to the
+# disk (the copy goes to the server's Sent); SEED.DAT is Falcon mode's
+touch "$D/before-send"
+out=$(run sendnow 1 "$W/msg.txt")
+expect "Send now sends at once" "sent: 1 result: 1" "$out"
+written=$(find "$W/EMAIL" -type f -newer "$D/before-send" ! -name SEED.DAT)
+[ -z "$written" ] && { PASS=$((PASS+1)); echo "ok   Send now writes nothing to the disk"; } \
+  || { FAIL=$((FAIL+1)); echo "FAIL Send now wrote to the disk:"; sed 's/^/     | /' <<<"$written"; }
+# a POP account keeps its copy in the local Sent
+out=$(run sendnow 2 "$W/msg.txt")
+expect "Send now from a POP account" "sent: 1 result: 1" "$out"
+out=$(run list 2 Sent)
+expect "its copy is in the local Sent" "תשובה" "$out"
+# the server away: the message waits in the Outbox, and goes with the next one
+cp "$W/EMAIL.INF" "$W/EMAIL.INF.keep"
+sed -i "0,/^smtpport=.*/s//smtpport=$((SMTP + 900))/; 0,/^dsmtpport=.*/s//dsmtpport=$((SMTP + 900))/" "$W/EMAIL.INF"
+out=$(run sendnow 1 "$W/msg.txt")
+expect "no server: queued in the Outbox" "^queued: " "$out"
+expect "no server: nothing sent" "sent: 0 result: -1" "$out"
+cp "$W/EMAIL.INF.keep" "$W/EMAIL.INF"
+out=$(run sendnow 1 "$W/msg.txt")
+expect "the next Send now takes the Outbox along" "sent: 2 result: 1" "$out"
+out=$(run list 1 Outbox)
+[ -z "$(grep -v '^ *$' <<<"$out")" ] && { PASS=$((PASS+1)); echo "ok   the Outbox is empty again"; } \
+  || { FAIL=$((FAIL+1)); echo "FAIL the Outbox still holds:"; sed 's/^/     | /' <<<"$out"; }
+
 if [ -n "${FALCON:-}" ]; then
   out=$(run send 2 "$W/msg.txt")
   expect "message sent with SMTP STARTTLS" "sent: 1" "$out"

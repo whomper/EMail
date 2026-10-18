@@ -375,6 +375,24 @@ void ui_modal_message(const short *msg)
 	people_poll();
 }
 
+/* the redraws the AES has queued, done now: a window closed before a
+   long wait leaves the screen first. Other messages are kept for later */
+void ui_redraws(void)
+{
+	short m[8];
+	AEVENT e;
+	int i;
+	for (i = 0; i < 16; i++) {
+		evnt_multi_(MU_MESAG | MU_TIMER, 0, 0, 0, 0, m, &e);
+		if (!(e.which & MU_MESAG))
+			break;
+		if (m[0] == WM_REDRAW)
+			win_message(m);
+		else
+			ui_modal_message(m);
+	}
+}
+
 static void av_start(const char *s)
 {
 	char path[200];

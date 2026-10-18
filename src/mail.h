@@ -53,6 +53,10 @@ int  mail_move(FOLDER *f, HDR *h, FINFO *dest);
 
 int  mail_queue(ACCOUNT *a, const char *raw, long len);	/* into the Outbox */
 int  mail_send_outbox(ACCOUNT *a, int *sent);
+/* raw at once, straight from memory, with what waits in the Outbox:
+   1, or -1 when raw did not go (mail_err says why: queue it), -2 when
+   it went but one from the Outbox did not */
+int  mail_send(ACCOUNT *a, const char *raw, long len, int *sent);
 
 int  mail_folder_create(ACCOUNT *a, const char *name);
 /* a new name (Atari text) under the same parent; newserver gets its name

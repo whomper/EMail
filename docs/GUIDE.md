@@ -262,9 +262,11 @@ your text...
   type one. The file selector picks one file at a time: to attach
   several at once, drop them on EMail from the desktop (see below).
 - Lines wrap at 72 characters as you type (Options > Settings).
-- **Shift+Ctrl+D sends now.** Ctrl+S (Message > Put in Outbox) keeps it
-  for later; it goes out with the next Check mail. Closing the window asks
-  whether to keep the message in the Outbox.
+- **Shift+Ctrl+D sends now,** straight from memory, with anything
+  already waiting in the Outbox; the disk is used only when the message
+  can't go, and then it waits in the Outbox. Ctrl+S (Message > Put in
+  Outbox) keeps it for later; it goes out with the next Check mail.
+  Closing the window asks whether to keep the message in the Outbox.
 
 Replies quote the original and keep the thread together (In-Reply-To and
 References). Forwarding a message with attachments attaches the original.

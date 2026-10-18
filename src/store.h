@@ -187,6 +187,7 @@ void cache_clear_all(void (*each)(const char *account, const char *folder), int 
 
 /* address book */
 int  abook_add(const char *addr);	/* "Name <a@b>", skips duplicates */
+int  abook_add_list(char addr[][160], int n);	/* the same, the book read once */
 char *abook_load(long *len);
 
 /* dates for display, in the configured time zone */

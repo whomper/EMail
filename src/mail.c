@@ -1129,23 +1129,82 @@ int mail_queue(ACCOUNT *a, const char *raw, long len)
 	return 1;
 }
 
-int mail_send_outbox(ACCOUNT *a, int *sent)
+/* a message made here into a local folder (a POP account's Sent) */
+static int local_save(ACCOUNT *a, FINFO *dest, const char *raw, long len)
 {
-	FINFO *ob = folder_role(a, FR_OUTBOX), *sentf;
-	FOLDER *f;
+	FOLDER *d = fold_open(a, dest);
+	HDR *nh;
+	if (!d)
+		return 0;
+	nh = fold_add(d, d->uidnext);
+	if (nh && msg_save(d, d->uidnext, raw, len) >= 0) {
+		hdr_from_raw(nh, raw, len);
+		nh->size = len;
+		nh->flags |= MF_SEEN | MF_CACHED;
+		d->uidnext++;
+	} else if (nh) {
+		fold_remove(d, nh->uid);
+		nh = 0;
+	}
+	fold_close(d);
+	return nh != 0;
+}
+
+/* one message out over s, and a copy of it in Sent (Gmail files it by
+   itself); *saved is set when that copy went to the disk. The result
+   is smtp_send's, with mail_err set when it is not 1 */
+static int send_raw(ACCOUNT *a, SMTP *s, const char *raw, long len, const char *subject,
+		    long k, long of, int *saved)
+{
+	FINFO *sentf = folder_role(a, FR_SENT);
+	char rcpt[40][96], *out;
+	const char *rp[40];
+	long sl;
+	int n, i, r;
+	n = compose_rcpts(raw, len, rcpt, 40);
+	for (i = 0; i < n; i++)
+		rp[i] = rcpt[i];
+	out = compose_for_smtp(raw, len, &sl);
+	prog_start(1, sl, 0, "%s: sending %s of %s, \"%.24s\"", a->name, num(k), num(of), subject);
+	r = smtp_send(s, a->email, rp, n, out, sl);
+	prog_end();
+	if (r <= 0) {
+		snprintf(mail_err, sizeof(mail_err), "Sending \"%.40s\" failed: %s", subject, s->err);
+	} else if (sentf && sentf->local) {
+		*saved |= local_save(a, sentf, raw, len);
+	} else if (sentf && !str_istr(acct_host(a, 1), "gmail") && !str_istr(acct_host(a, 0), "gmail") &&
+		   mail_connect(a)) {
+		prog_start(1, sl, 0, "%s: saving a copy in %s", a->name, sentf->disp);
+		imap_append(a->im, sentf->server, MF_SEEN, out, sl);
+		prog_end();
+	}
+	free(out);
+	return r;
+}
+
+/* raw (when given) and then what waits in the Outbox, over one SMTP
+   session. The Outbox is opened only when it holds something, so a
+   message sent at once costs no disk work. *mine says whether raw went */
+static int send_all(ACCOUNT *a, const char *raw, long len, int *sent, int *mine)
+{
+	FINFO *ob = folder_role(a, FR_OUTBOX);
+	FOLDER *f = 0;
 	SMTP *s;
 	const char *user, *pass;
 	char helo[64];
-	long i, nsend;
-	int ok = 1;
+	long i, nsend = raw ? 1 : 0, k = 0;
+	int ok = 1, saved = 0, r;
 
 	*sent = 0;
-	if (!ob)
-		return 0;
+	*mine = 0;
 	if (offline())
 		return -1;
-	f = fold_open(a, ob);
-	if (!f || !f->n) {
+	if (ob && (ob->total > 0 || !raw)) {
+		f = fold_open(a, ob);
+		if (f)
+			nsend += f->n;
+	}
+	if (!nsend) {
 		fold_close(f);
 		return 0;
 	}
@@ -1163,54 +1222,62 @@ int mail_send_outbox(ACCOUNT *a, int *sent)
 		      mail_err, sizeof(mail_err));
 	if (!s) {
 		fold_close(f);
+		status("");
 		return -1;
 	}
-	sentf = folder_role(a, FR_SENT);
-	nsend = f->n;
-	for (i = f->n - 1; i >= 0; i--) {
+	if (raw) {
+		HDR t;
+		memset(&t, 0, sizeof(t));
+		hdr_from_raw(&t, raw, len);
+		r = send_raw(a, s, raw, len, t.subject ? t.subject : "", ++k, nsend, &saved);
+		free(t.from);
+		free(t.subject);
+		free(t.to);
+		if (r > 0) {
+			*mine = 1;
+			(*sent)++;
+		} else {
+			ok = -1;
+			if (r < 0)
+				nsend = 0;	/* the session is gone */
+		}
+	}
+	for (i = f && nsend ? f->n - 1 : -1; i >= 0; i--) {
 		HDR *h = &f->h[i];
-		long len, sl;
-		char *raw = msg_load(f, h->uid, &len), *out, rcpt[40][96];
-		const char *rp[40];
-		int n, k, r;
-		if (!raw)
+		long len;
+		char *m = msg_load(f, h->uid, &len);
+		if (!m)
 			continue;
-		n = compose_rcpts(raw, len, rcpt, 40);
-		for (k = 0; k < n; k++)
-			rp[k] = rcpt[k];
-		out = compose_for_smtp(raw, len, &sl);
-		prog_start(1, sl, 0, "%s: sending %s of %s, \"%.24s\"", a->name,
-			   num(nsend - i), num(nsend), h->subject);
-		r = smtp_send(s, a->email, rp, n, out, sl);
-		prog_end();
+		r = send_raw(a, s, m, len, h->subject, ++k, nsend, &saved);
+		free(m);
 		if (r <= 0) {
-			snprintf(mail_err, sizeof(mail_err), "Sending \"%.40s\" failed: %s", h->subject, s->err);
-			free(raw);
-			free(out);
 			ok = -1;
 			if (r < 0)
 				break;
 			continue;
 		}
 		(*sent)++;
-		/* keep a copy in Sent (Gmail files it by itself) */
-		if (sentf && sentf->local) {
-			local_copy(f, h, sentf);
-		} else if (sentf && !str_istr(acct_host(a, 1), "gmail") && !str_istr(acct_host(a, 0), "gmail") &&
-			   mail_connect(a)) {
-			prog_start(1, sl, 0, "%s: saving a copy in %s", a->name, sentf->disp);
-			imap_append(a->im, sentf->server, MF_SEEN, out, sl);
-			prog_end();
-		}
-		free(raw);
-		free(out);
 		fold_remove(f, h->uid);
 	}
 	smtp_quit(s);
-	fold_close(f);
-	folders_save(a);
+	if (f || saved) {
+		fold_close(f);
+		folders_save(a);
+	}
 	status("");
 	return ok;
+}
+
+int mail_send_outbox(ACCOUNT *a, int *sent)
+{
+	int mine;
+	return send_all(a, 0, 0, sent, &mine);
+}
+
+int mail_send(ACCOUNT *a, const char *raw, long len, int *sent)
+{
+	int mine, r = send_all(a, raw, len, sent, &mine);
+	return !mine ? -1 : r < 0 ? -2 : 1;
 }
 
 /* ---------------- folder management ---------------- */
