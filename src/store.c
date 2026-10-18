@@ -11,6 +11,7 @@
 #include <ctype.h>
 #include "plat.h"
 #include "store.h"
+#include "migrate_eml.h"
 #include "secret.h"
 #include "tz.h"
 #include "charset.h"
@@ -433,6 +434,7 @@ int store_init(const char *workdir)
 	short in_opts = 0, i;
 
 	defaults();
+	pf_size_open = pf_handle_size;	/* one look per file read */
 	str_copy(opt.workdir, workdir, sizeof(opt.workdir));
 	path_join(inf_path, sizeof(inf_path), workdir, "EMAIL.INF");
 	{
@@ -708,6 +710,16 @@ void folder_path(ACCOUNT *a, FINFO *f, char *out, int size)
 	path_join(out, size, a->dir, f->dir);
 }
 
+void folders_touch(ACCOUNT *a)
+{
+	a->fdirty = 1;
+}
+
+int folders_flush(ACCOUNT *a)
+{
+	return a->fdirty ? folders_save(a) : 0;
+}
+
 int folders_save(ACCOUNT *a)
 {
 	SBUF b;
@@ -723,6 +735,7 @@ int folders_save(ACCOUNT *a)
 	}
 	path_join(path, sizeof(path), a->dir, "FOLDERS.LST");
 	r = pf_save(path, b.s ? b.s : "", b.len);
+	a->fdirty = 0;
 	sb_free(&b);
 	return r;
 }
@@ -779,6 +792,12 @@ int folders_load(ACCOUNT *a)
 }
 
 /* ---------------- header index ---------------- */
+
+/* A folder open in more than one place (the screen, and a check or a
+ * move working on it) is one FOLDER: what one changes the other sees,
+ * and the index and the pack are written by one owner (guidelines 6.5) */
+#define NOPEN 16
+static FOLDER *open_folders[NOPEN];
 
 static char *dupclean(const char *s)
 {
@@ -844,7 +863,9 @@ HDR *fold_add(FOLDER *f, unsigned long uid)
 	f->n++;
 	memset(&f->h[i], 0, sizeof(HDR));
 	f->h[i].uid = uid;
+	f->h[i].off = -1;
 	f->dirty = 1;
+	f->gen++;
 	return &f->h[i];
 }
 
@@ -855,21 +876,36 @@ void msg_path(FOLDER *f, unsigned long uid, char *out, int size)
 	path_join(out, size, f->dir, name);
 }
 
+static void pack_path(FOLDER *f, char *out, int size)
+{
+	path_join(out, size, f->dir, "MESSAGES.DAT");
+}
+
+/* a body no longer wanted: its record becomes a gap, gone at the next
+   compaction */
+void body_drop(FOLDER *f, HDR *h)
+{
+	if (h->off >= 0)
+		f->gaps += PACK_HEAD + h->plen;
+	h->off = -1;
+	h->plen = 0;
+	h->flags &= ~MF_CACHED;
+}
+
 void fold_remove(FOLDER *f, unsigned long uid)
 {
 	int found;
 	long i = find(f, uid, &found);
-	char path[220];
 	if (!found)
 		return;
-	msg_path(f, uid, path, sizeof(path));
-	pf_remove(path);
+	body_drop(f, &f->h[i]);
 	free(f->h[i].from);
 	free(f->h[i].subject);
 	free(f->h[i].to);
 	memmove(f->h + i, f->h + i + 1, (f->n - i - 1) * sizeof(HDR));
 	f->n--;
 	f->dirty = 1;
+	f->gen++;
 }
 
 void fold_clear(FOLDER *f)
@@ -920,22 +956,51 @@ static void upgrade_headers(FOLDER *f)
 	f->dirty = 1;
 }
 
+/* where the pack ends, as far as the index knows: the records it points
+   to. A record appended after the index was last saved is found at the
+   next append (pack_flush asks the file) */
+static long pack_end_known(FOLDER *f)
+{
+	long i, end = 0;
+	for (i = 0; i < f->n; i++)
+		if (f->h[i].off >= 0 && f->h[i].off + PACK_HEAD + f->h[i].plen > end)
+			end = f->h[i].off + PACK_HEAD + f->h[i].plen;
+	return end;
+}
+
 FOLDER *fold_open(ACCOUNT *a, FINFO *fi)
 {
-	FOLDER *f = calloc(1, sizeof(FOLDER));
-	char path[220], *buf, *line, *next;
+	FOLDER *f;
+	char path[220], dir[200], *buf, *line, *next;
 	short version;
+	long i;
+	int made;
+	folder_path(a, fi, dir, sizeof(dir));
+	for (i = 0; i < NOPEN; i++)
+		if (open_folders[i] && open_folders[i]->acct == a && !strcmp(open_folders[i]->dir, dir)) {
+			f = open_folders[i];
+			f->fi = fi;	/* the folder list may have been read again */
+			f->refs++;
+			return f;
+		}
+	f = calloc(1, sizeof(FOLDER));
 	if (!f)
 		return 0;
 	f->acct = a;
 	f->fi = fi;
-	folder_path(a, fi, f->dir, sizeof(f->dir));
-	if (!fi->opened)
-		pf_mkdir(f->dir);
+	f->refs = 1;
+	str_copy(f->dir, dir, sizeof(f->dir));
+	for (i = 0; i < NOPEN; i++)
+		if (!open_folders[i]) {
+			open_folders[i] = f;
+			break;
+		}
+	/* a folder just made has no index to look for */
+	made = !fi->opened && pf_mkdir(f->dir) == 1;
 	fi->opened = 1;
 	f->uidnext = 1;
 	path_join(path, sizeof(path), f->dir, "INDEX.DAT");
-	buf = pf_load(path, 0);
+	buf = made ? 0 : pf_load(path, 0);
 	if (!buf)
 		return f;
 	version = 0;
@@ -950,28 +1015,33 @@ FOLDER *fold_open(ACCOUNT *a, FINFO *fi)
 			f->uidnext = strtoul(e, &e, 10);
 			f->window = strtol(e, &e, 10);
 			f->exists = strtol(e, &e, 10);
+			f->gaps = strtol(e, &e, 10);
 			continue;
 		}
 		{
-			char *fl[7];
+			char *fl[9];
 			short n = 1;
 			HDR *h;
 			fl[0] = line;
-			while (n < 7 && (fl[n] = strchr(fl[n - 1], '\t'))) {
+			while (n < 9 && (fl[n] = strchr(fl[n - 1], '\t'))) {
 				*fl[n] = 0;
 				fl[n]++;
 				n++;
 			}
 			if (n < 7)
 				continue;
-			if (fl[6][0] && fl[6][strlen(fl[6]) - 1] == '\r')
-				fl[6][strlen(fl[6]) - 1] = 0;
+			if (fl[n - 1][0] && fl[n - 1][strlen(fl[n - 1]) - 1] == '\r')
+				fl[n - 1][strlen(fl[n - 1]) - 1] = 0;
 			h = fold_add(f, strtoul(fl[0], 0, 10));
 			if (!h)
 				break;
 			h->flags = (unsigned short)strtoul(fl[1], 0, 16);
 			h->size = atol(fl[2]);
 			h->date = strtoul(fl[3], 0, 10);
+			if (n == 9) {
+				h->off = atol(fl[7]);
+				h->plen = atol(fl[8]);
+			}
 			hdr_set(h, fl[4], fl[5], fl[6]);
 		}
 	}
@@ -979,8 +1049,398 @@ FOLDER *fold_open(ACCOUNT *a, FINFO *fi)
 	f->dirty = 0;
 	if (version < 3)
 		upgrade_headers(f);
+	f->pend_base = pack_end_known(f);
+	for (i = 0; i < f->n && !(f->h[i].flags & MF_CACHED && f->h[i].off < 0); i++)
+		;
+	if (i < f->n)
+		migrate_eml(f);	/* .EML files from before the pack */
 	fold_count(f);
 	return f;
+}
+
+/* ---------------- the message pack ----------------
+ * A folder's bodies are records in one file, MESSAGES.DAT: "EM", the UID
+ * and the length (4 bytes each, high byte first), then the message. The
+ * index has each one's place. Bodies from the server gather in memory
+ * (pf_bulk) and are appended in one go when the folder is saved or the
+ * buffer is full; a folder only on the Atari has its message appended
+ * at once. The index is saved only after the append, so it never points
+ * past what is on disk; a record is checked before it is used. */
+
+static void put4(unsigned char *p, unsigned long v)
+{
+	p[0] = (unsigned char)(v >> 24);
+	p[1] = (unsigned char)(v >> 16);
+	p[2] = (unsigned char)(v >> 8);
+	p[3] = (unsigned char)v;
+}
+
+static unsigned long get4(const unsigned char *p)
+{
+	return ((unsigned long)p[0] << 24) | ((unsigned long)p[1] << 16) | ((unsigned long)p[2] << 8) | p[3];
+}
+
+/* what waits in memory goes to the end of the pack: one open. The
+   records' places are moved if the pack is not where the index thought
+   it ended. 0, or < 0 and the waiting bodies are dropped */
+int pack_flush(FOLDER *f)
+{
+	char path[220];
+	long end, i, w;
+	int h, ok;
+	if (!f->pend_len)
+		return 0;
+	pack_path(f, path, sizeof(path));
+	h = pf_open(path, PF_APPEND);
+	end = h >= 0 ? pf_handle_size(h) : -1;
+	if (end >= 0 && pf_seek(h, end) == end)
+		w = pf_write(h, f->pend, f->pend_len);
+	else
+		w = -1;
+	if (h >= 0)
+		pf_close(h);
+	ok = w == f->pend_len;
+	for (i = 0; i < f->n; i++) {
+		HDR *m = &f->h[i];
+		if (m->off < f->pend_base)
+			continue;
+		if (ok) {
+			m->off += end - f->pend_base;
+		} else {
+			m->off = -1;	/* not on disk: fetched again when wanted */
+			m->plen = 0;
+			m->flags &= ~MF_CACHED;
+		}
+	}
+	f->pend_base = ok ? end + w : (end >= 0 ? end : f->pend_base);
+	f->pend_len = 0;
+	f->dirty = 1;
+	return ok ? 0 : -1;
+}
+
+static void pend_free(FOLDER *f)
+{
+	pf_bulk_free(f->pend);
+	f->pend = 0;
+	f->pend_cap = 0;
+}
+
+int msg_save(FOLDER *f, unsigned long uid, const char *data, long len)
+{
+	HDR *h = fold_get(f, uid);
+	unsigned char head[PACK_HEAD];
+	if (!h)
+		return -1;
+	body_drop(f, h);
+	head[0] = 'E';
+	head[1] = 'M';
+	put4(head + 2, uid);
+	put4(head + 6, (unsigned long)len);
+	if (!f->pend && !f->pend_len) {
+		f->pend = pf_bulk(&f->pend_cap);
+		if (!f->pend)
+			f->pend_cap = 0;
+	}
+	if (f->pend_len + PACK_HEAD + len > f->pend_cap && pack_flush(f) < 0)
+		return -1;
+	if (PACK_HEAD + len > f->pend_cap) {
+		/* bigger than the buffer: a buffer of its own, at once */
+		char *one = malloc(PACK_HEAD + len), *keep = f->pend;
+		long keepcap = f->pend_cap;
+		int r;
+		if (!one)
+			return -1;
+		memcpy(one, head, PACK_HEAD);
+		memcpy(one + PACK_HEAD, data, len);
+		f->pend = one;
+		f->pend_cap = f->pend_len = PACK_HEAD + len;
+		h->off = f->pend_base;
+		h->plen = len;
+		r = pack_flush(f);
+		free(one);
+		f->pend = keep;
+		f->pend_cap = keepcap;
+		if (r < 0)
+			return -1;
+	} else {
+		memcpy(f->pend + f->pend_len, head, PACK_HEAD);
+		memcpy(f->pend + f->pend_len + PACK_HEAD, data, len);
+		h->off = f->pend_base + f->pend_len;
+		h->plen = len;
+		f->pend_len += PACK_HEAD + len;
+	}
+	h->flags |= MF_CACHED;
+	f->dirty = 1;
+	/* mail only on the Atari is the user's own: on disk at once (a POP
+	   download, still on the server until it quits, flushes itself) */
+	if (f->fi && f->fi->local && !f->bulk && pack_flush(f) < 0)
+		return -1;
+	return 0;
+}
+
+/* Records follow one another to the end of the pack: a record is whole
+   when its end is the end of the file or the start of another ("EM").
+   That tells one cut short by a reset, with more appended after it */
+static int record_whole(int h, long end, long size, const char *in, long inlen)
+{
+	char two[2];
+	if (end == size)
+		return 1;
+	if (end + 2 > size)
+		return 0;
+	if (in && inlen >= 2)
+		return in[0] == 'E' && in[1] == 'M';
+	return pf_seek(h, end) == end && pf_read(h, two, 2) == 2 && two[0] == 'E' && two[1] == 'M';
+}
+
+/* the pack read through, a buffer at a time, to find each record's place
+   again (after a reset in the middle of a compaction, or damage): a
+   record is one whose header names a UID and length the index has and
+   that is whole; of two copies, the later is the newer. What doesn't
+   match is stepped over, a byte at a time */
+static void pack_scan(FOLDER *f)
+{
+	char path[220], *buf;
+	long pos = 0, got, cap, i, size;
+	int h, more = 1;
+	pack_path(f, path, sizeof(path));
+	h = pf_open(path, PF_READ);
+	size = h >= 0 ? pf_handle_size(h) : -1;
+	buf = size >= 0 ? pf_bulk(&cap) : 0;
+	if (!buf || cap < 4 * PACK_HEAD) {
+		if (h >= 0)
+			pf_close(h);
+		pf_bulk_free(buf);
+		return;
+	}
+	for (i = 0; i < f->n; i++)
+		if (f->h[i].off >= 0 && f->h[i].off < f->pend_base) {
+			f->h[i].off = -2;	/* unplaced */
+			f->h[i].flags |= MF_FLAGSCAN;
+		}
+	while (more && pf_seek(h, pos) == pos && (got = pf_read(h, buf, cap)) >= PACK_HEAD) {
+		long k;
+		more = got == cap;
+		for (k = 0; k + PACK_HEAD <= got; k++) {
+			unsigned char *p = (unsigned char *)buf + k;
+			HDR *m;
+			long len, end;
+			if (p[0] != 'E' || p[1] != 'M' || !(m = fold_get(f, get4(p + 2))) || !(m->flags & MF_FLAGSCAN))
+				continue;
+			len = (long)get4(p + 6);
+			end = pos + k + PACK_HEAD + len;
+			if (len != m->plen)
+				continue;
+			if (record_whole(h, end, size, end - pos + 2 <= got ? buf + (end - pos) : 0, 2))
+				m->off = pos + k;	/* a later copy wins */
+			pf_seek(h, pos + got);	/* record_whole may have moved it */
+		}
+		pos += more ? got - PACK_HEAD + 1 : got;
+	}
+	pf_close(h);
+	pf_bulk_free(buf);
+	for (i = 0; i < f->n; i++) {
+		if (f->h[i].off == -2) {
+			f->h[i].off = -1;
+			f->h[i].plen = 0;
+			f->h[i].flags &= ~MF_CACHED;
+		}
+		f->h[i].flags &= ~MF_FLAGSCAN;
+	}
+	f->dirty = 1;
+}
+
+/* one record, checked: NULL if it isn't what the index says */
+static char *pack_read(FOLDER *f, HDR *m, long *len)
+{
+	char path[220], *buf;
+	long want = PACK_HEAD + m->plen, got;
+	int h;
+	if (m->off >= f->pend_base && m->off + want <= f->pend_base + f->pend_len) {
+		buf = malloc(m->plen + 1);
+		if (!buf)
+			return 0;
+		memcpy(buf, f->pend + (m->off - f->pend_base) + PACK_HEAD, m->plen);
+	} else {
+		pack_path(f, path, sizeof(path));
+		h = pf_open(path, PF_READ);
+		if (h < 0)
+			return 0;
+		/* two bytes more: the next record's "EM", or nothing at the end */
+		buf = malloc(want + 3);
+		got = buf && pf_seek(h, m->off) == m->off ? pf_read(h, buf, want + 2) : -1;
+		pf_close(h);
+		if (got < want || (got == want + 1) || (got == want + 2 && (buf[want] != 'E' || buf[want + 1] != 'M')) ||
+		    buf[0] != 'E' || buf[1] != 'M' || get4((unsigned char *)buf + 2) != m->uid ||
+		    (long)get4((unsigned char *)buf + 6) != m->plen) {
+			free(buf);
+			return 0;
+		}
+		memmove(buf, buf + PACK_HEAD, m->plen);
+	}
+	buf[m->plen] = 0;
+	if (len)
+		*len = m->plen;
+	return buf;
+}
+
+char *msg_load(FOLDER *f, unsigned long uid, long *len)
+{
+	HDR *m = fold_get(f, uid);
+	char *buf;
+	if (len)
+		*len = 0;
+	if (!m || m->off < 0)
+		return 0;
+	buf = pack_read(f, m, len);
+	if (!buf && m->off < f->pend_base) {
+		/* not where the index says: look the pack through once */
+		pack_scan(f);
+		if ((m = fold_get(f, uid)) != 0 && m->off >= 0)
+			buf = pack_read(f, m, len);
+		else
+			m = 0;
+	}
+	if (!buf && m)
+		body_drop(f, m);	/* from the server again, when wanted */
+	return buf;
+}
+
+/* a body written out on its own, for a forward's attachment */
+int msg_export(FOLDER *f, unsigned long uid, const char *path)
+{
+	long len;
+	char *raw = msg_load(f, uid, &len);
+	int r;
+	if (!raw)
+		return -1;
+	r = pf_save(path, raw, len);
+	free(raw);
+	return r;
+}
+
+static int cmp_off(const void *x, const void *y)
+{
+	const HDR *a = *(HDR * const *)x, *b = *(HDR * const *)y;
+	return a->off < b->off ? -1 : a->off > b->off;
+}
+
+/* The pack without its gaps: a safe save (MESSAGES.DA$, then renamed),
+ * read and written a buffer at a time, when more than half of it is
+ * gaps. At the end of a job, nothing waiting in memory. */
+static void pack_compact(FOLDER *f)
+{
+	char path[220], tmp[220];
+	HDR **live;
+	char *buf;
+	long bufcap, nlive = 0, i, inpos = -1, inlen = 0, outlen = 0, outpos = 0, half;
+	int in, out, ok = 1;
+	long end = pack_end_known(f);
+	if (f->pend_len || f->gaps <= 0 || f->gaps * 2 < end)
+		return;
+	pack_path(f, path, sizeof(path));
+	for (i = 0; i < f->n; i++)
+		if (f->h[i].off >= 0)
+			nlive++;
+	if (!nlive) {
+		pf_remove(path);
+		f->gaps = 0;
+		f->pend_base = 0;
+		f->dirty = 1;
+		return;
+	}
+	live = malloc(nlive * sizeof(HDR *));
+	buf = pf_bulk(&bufcap);
+	if (!live || !buf || bufcap < 2 * PACK_HEAD) {
+		free(live);
+		pf_bulk_free(buf);
+		return;
+	}
+	for (i = 0, nlive = 0; i < f->n; i++)
+		if (f->h[i].off >= 0)
+			live[nlive++] = &f->h[i];
+	qsort(live, nlive, sizeof(HDR *), cmp_off);
+	half = bufcap / 2;
+	str_copy(tmp, path, sizeof(tmp));
+	tmp[strlen(tmp) - 1] = '$';
+	in = pf_open(path, PF_READ);
+	out = in >= 0 ? pf_open(tmp, PF_WRITE) : -1;
+	if (out < 0)
+		ok = 0;
+	for (i = 0; ok && i < nlive; i++) {
+		HDR *m = live[i];
+		long want = PACK_HEAD + m->plen;
+		char *rec;
+		if (m->off >= inpos && m->off + want <= inpos + inlen) {
+			rec = buf + (m->off - inpos);
+		} else if (want <= half) {
+			inpos = m->off;
+			inlen = pf_seek(in, inpos) == inpos ? pf_read(in, buf, half) : -1;
+			if (inlen < want) {
+				ok = 0;
+				break;
+			}
+			rec = buf;
+		} else {
+			/* bigger than half the buffer: on its own */
+			rec = malloc(want);
+			if (!rec || pf_seek(in, m->off) != m->off || pf_read(in, rec, want) != want) {
+				free(rec);
+				ok = 0;
+				break;
+			}
+			if (outlen && pf_write(out, buf + half, outlen) != outlen)
+				ok = 0;
+			outpos += outlen;
+			outlen = 0;
+			if (ok && pf_write(out, rec, want) != want)
+				ok = 0;
+			free(rec);
+			m->plen = -1 - m->plen;	/* placed below, at outpos - want */
+			m->off = outpos;
+			outpos += want;
+			continue;
+		}
+		if (outlen + want > half) {
+			if (pf_write(out, buf + half, outlen) != outlen)
+				ok = 0;
+			outpos += outlen;
+			outlen = 0;
+		}
+		memcpy(buf + half + outlen, rec, want);
+		m->plen = -1 - m->plen;
+		m->off = outpos + outlen;
+		outlen += want;
+	}
+	if (ok && outlen && pf_write(out, buf + half, outlen) != outlen)
+		ok = 0;
+	outpos += outlen;
+	if (in >= 0)
+		pf_close(in);
+	if (out >= 0)
+		pf_close(out);
+	pf_bulk_free(buf);
+	free(live);
+	if (ok) {
+		pf_remove(path);
+		ok = pf_rename(tmp, path) == 0;
+	}
+	if (!ok) {
+		pf_remove(tmp);
+		/* the old pack stays, and so do the places: the new ones were
+		   kept apart (plen < 0) until now */
+		for (i = 0; i < f->n; i++)
+			if (f->h[i].plen < 0)
+				f->h[i].plen = -1 - f->h[i].plen;
+		pack_scan(f);
+		return;
+	}
+	for (i = 0; i < f->n; i++)
+		if (f->h[i].plen < 0)
+			f->h[i].plen = -1 - f->h[i].plen;
+	f->gaps = 0;
+	f->pend_base = outpos;
+	f->dirty = 1;
 }
 
 int fold_save(FOLDER *f)
@@ -989,8 +1449,10 @@ int fold_save(FOLDER *f)
 	char path[220];
 	long i;
 	int r;
+	pack_flush(f);			/* the pack first: the index never points past it */
+	pend_free(f);			/* the memory is the job's, not the folder's */
 	sb_init(&b);
-	sb_printf(&b, "MAILIDX 3 %lu %lu %ld %ld\n", f->uidvalidity, f->uidnext, f->window, f->exists);
+	sb_printf(&b, "MAILIDX 4 %lu %lu %ld %ld %ld\n", f->uidvalidity, f->uidnext, f->window, f->exists, f->gaps);
 	for (i = 0; i < f->n; i++) {
 		HDR *h = &f->h[i];
 		sb_printf(&b, "%lu\t%x\t%ld\t%lu\t", h->uid, h->flags, h->size, h->date);
@@ -999,7 +1461,7 @@ int fold_save(FOLDER *f)
 		sb_adds(&b, h->subject ? h->subject : "");
 		sb_addc(&b, '\t');
 		sb_adds(&b, h->to ? h->to : "");
-		sb_addc(&b, '\n');
+		sb_printf(&b, "\t%ld\t%ld\n", h->off, h->plen);
 	}
 	path_join(path, sizeof(path), f->dir, "INDEX.DAT");
 	r = pf_save(path, b.s, b.len);
@@ -1009,13 +1471,31 @@ int fold_save(FOLDER *f)
 	return r;
 }
 
+int fold_done(FOLDER *f)
+{
+	return f && (f->dirty || f->pend_len) ? fold_save(f) : 0;
+}
+
 void fold_close(FOLDER *f)
 {
 	long i;
 	if (!f)
 		return;
-	if (f->dirty)
+	if (--f->refs > 0) {
+		/* still open elsewhere (the screen): a local folder's change is
+		   the user's own and goes to disk now; an IMAP folder's is saved
+		   by the job's owner at its end (fold_done), once */
+		if (f->fi && f->fi->local)
+			fold_done(f);
+		return;
+	}
+	pack_compact(f);
+	if (f->dirty || f->pend_len)
 		fold_save(f);
+	for (i = 0; i < NOPEN; i++)
+		if (open_folders[i] == f)
+			open_folders[i] = 0;
+	pend_free(f);
 	for (i = 0; i < f->n; i++) {
 		free(f->h[i].from);
 		free(f->h[i].subject);
@@ -1047,20 +1527,6 @@ void hdr_from_raw(HDR *h, const char *raw, long len)
 	free(dt);
 }
 
-int msg_save(FOLDER *f, unsigned long uid, const char *data, long len)
-{
-	char path[220];
-	msg_path(f, uid, path, sizeof(path));
-	return pf_save(path, data, len);
-}
-
-char *msg_load(FOLDER *f, unsigned long uid, long *len)
-{
-	char path[220];
-	msg_path(f, uid, path, sizeof(path));
-	return pf_load(path, len);
-}
-
 void cache_clear_all(void (*each)(const char *account, const char *folder), int all)
 {
 	short i, j;
@@ -1069,6 +1535,7 @@ void cache_clear_all(void (*each)(const char *account, const char *folder), int 
 		for (j = 0; j < a->nfolders; j++) {
 			FINFO *fi = &a->folders[j];
 			FOLDER *f;
+			char path[220];
 			long k;
 			if (fi->local || fi->noselect || (!all && !fi->opened))
 				continue;
@@ -1077,15 +1544,20 @@ void cache_clear_all(void (*each)(const char *account, const char *folder), int 
 			f = fold_open(a, fi);
 			if (!f)
 				continue;
-			for (k = 0; k < f->n; k++) {
-				if (f->h[k].flags & MF_CACHED) {
-					char path[220];
-					msg_path(f, f->h[k].uid, path, sizeof(path));
-					pf_remove(path);
+			/* the bodies are all in the pack: it goes in one */
+			f->pend_len = 0;
+			for (k = 0; k < f->n; k++)
+				if (f->h[k].flags & MF_CACHED || f->h[k].off >= 0) {
 					f->h[k].flags &= ~MF_CACHED;
+					f->h[k].off = -1;
+					f->h[k].plen = 0;
 					f->dirty = 1;
 				}
-			}
+			pack_path(f, path, sizeof(path));
+			if (f->dirty || f->gaps)
+				pf_remove(path);
+			f->gaps = 0;
+			f->pend_base = 0;
 			fold_close(f);
 		}
 	}

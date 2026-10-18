@@ -70,6 +70,8 @@ TT with 4 MB or more).
 
 ### In more detail
 
+- A folder's messages in one file on disk, written in one go at the end of a check or a download (few
+  file opens on an Atari hard disk); a message cut short by a reset is fetched again
 - IMAP with a local mirror: headers of the newest messages and every message you've read, kept in step
   with the server; big folders load 100 messages at a time, with "Load more" for older ones. Read and
   flag changes are sent in one go when you pause, and at the latest on quit
@@ -230,6 +232,8 @@ tests/hatari/help_test.py /tmp/mail-help           # EMAIL.HYP in EHypView's lat
 
 In `net_test.py` EMail logs in to Dovecot, mirrors the inbox, opens a
 Hebrew message and sends a Hebrew reply; the test checks the reply and its copy in Sent on the server.
+`disk_test.py` counts each job's file opens and lookups from Hatari's GEMDOS trace and fails above its
+budget (the AERA guidelines, 6.5), and cuts a folder's file short to see the message fetched again.
 `select_test.py`, `rename_test.py`, `drag_test.py` (messages dragged onto a folder), `esc_test.py`
 (Esc and Undo cancel every dialog and alert) and `colour_tour.py` run the same way. The tests that need another
 AERA program take its latest release, as you would have it (`common/tools/getrelease.py`; add `vX.Y`

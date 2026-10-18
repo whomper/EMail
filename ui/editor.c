@@ -1001,12 +1001,8 @@ void editor_send(int now)
 	else if (!now)
 		alert(1, "[1][The message is in the Outbox.|It goes out with the next|Check mail.][ OK ]");
 	folders_build();
-	if (cur_finfo && (cur_finfo->role == FR_OUTBOX || cur_finfo->role == FR_SENT)) {
-		if (cur_folder)
-			fold_close(cur_folder);
-		cur_folder = fold_open(cur_acct, cur_finfo);
-		list_refresh();
-	}
+	if (cur_folder && cur_finfo && (cur_finfo->role == FR_OUTBOX || cur_finfo->role == FR_SENT))
+		list_refresh();		/* the send changed cur_folder itself */
 	menu_update();
 }
 

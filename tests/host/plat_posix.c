@@ -29,6 +29,26 @@ int pf_open(const char *path, int mode)
 	return open(path, fl, 0644);
 }
 
+long pf_handle_size(int h)
+{
+	off_t n = lseek(h, 0, SEEK_END);
+	if (n < 0 || lseek(h, 0, SEEK_SET) < 0)
+		return -1;
+	return (long)n;
+}
+
+/* the size a 1 MB ST would get, so the tests flush a buffer at a time */
+void *pf_bulk(long *got)
+{
+	const char *e = getenv("MAIL_BULK");
+	long want = e ? atol(e) : 64L * 1024;
+	void *p = malloc(want);
+	*got = p ? want : 0;
+	return p;
+}
+
+void pf_bulk_free(void *p) { free(p); }
+
 long pf_read(int h, void *buf, long n) { return read(h, buf, n); }
 long pf_write(int h, const void *buf, long n) { return write(h, buf, n); }
 void pf_close(int h) { close(h); }
@@ -50,7 +70,7 @@ int pf_exists(const char *path)
 
 int pf_mkdir(const char *path)
 {
-	return (mkdir(path, 0755) == 0 || errno == EEXIST) ? 0 : -1;
+	return mkdir(path, 0755) == 0 ? 1 : errno == EEXIST ? 0 : -1;
 }
 
 int pf_remove(const char *path) { return unlink(path); }

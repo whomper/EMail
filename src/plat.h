@@ -30,7 +30,7 @@ long pf_seek(int h, long off);			/* from the start; new position or < 0 */
 long pf_size(const char *path);			/* -1 if missing */
 unsigned long pf_info(const char *path, long *size);	/* date and time, 0 if missing; *size, -1 */
 int  pf_exists(const char *path);
-int  pf_mkdir(const char *path);		/* 0 ok or already there */
+int  pf_mkdir(const char *path);		/* 1 made, 0 already there, < 0 error */
 int  pf_remove(const char *path);
 int  pf_rename(const char *from, const char *to);
 /* call cb for every plain file in dir; stop early if cb returns non-zero */
@@ -39,6 +39,15 @@ int  pf_list(const char *dir, int (*cb)(const char *name, long size, void *ud), 
 /* whole-file helpers: pf_load returns a malloc'ed NUL-terminated copy */
 char *pf_load(const char *path, long *len);
 int   pf_save(const char *path, const void *data, long len);
+/* an open file's size, the position left at the start, or < 0: with it
+   pf_load opens first and looks at the folder only when that fails */
+extern long (*pf_size_open)(int h);
+long pf_handle_size(int h);
+
+/* a bulk job's memory (guidelines 6.5): TT RAM when there is some, else a
+   share of what ST RAM has free; 0 when there is too little. *got: its size */
+void *pf_bulk(long *got);
+void  pf_bulk_free(void *p);
 
 /* ---- time ---- */
 typedef struct {

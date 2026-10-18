@@ -174,9 +174,7 @@ void folders_select(ACCOUNT *a, FINFO *fi)
 		if (!mail_sync_folder(a, fi, &newmsgs) && mail_err[0] && !mail_unreachable)
 			alert(1, "[1][%s][ OK ]", mail_err);
 		busy(0);
-		if (cur_folder)
-			fold_close(cur_folder);
-		cur_folder = fold_open(a, fi);
+		fold_done(cur_folder);	/* it worked on cur_folder itself: saved once */
 		list_load();
 		win_redraw(&w_folders, 0);
 	}
@@ -203,6 +201,10 @@ static void click(WIN *w, short mx, short my, short clicks, short kstate)
 		busy(0);
 		if (cur_acct == ent[i].a)
 			refind_current(server);
+		if (cur_folder) {
+			fold_done(cur_folder);	/* the check may have worked on it */
+			list_refresh();
+		}
 		folders_build();
 		return;
 	}

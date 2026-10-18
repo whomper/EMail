@@ -131,9 +131,40 @@ void list_titles(void)
 	win_info(&w_list, i);
 }
 
+/* the view is of one state of the folder: a job working on it (a check,
+   Download all) changes cur_folder->h, and the view is made again
+   before it is used */
+static FOLDER *view_of;
+static unsigned view_gen;
+
+static void build_view(void);
+
+static void fresh(void)
+{
+	if (cur_folder != view_of || (cur_folder && cur_folder->gen != view_gen)) {
+		build_view();
+		w_list.total = nview + (more ? 1 : 0);
+		if (w_list.top > nview)
+			w_list.top = 0;
+	}
+}
+
 void list_refresh(void)
 {
+	build_view();
+	w_list.total = nview + (more ? 1 : 0);
+	if (w_list.top > nview)
+		w_list.top = 0;
+	list_titles();
+	win_sliders(&w_list);
+	win_redraw(&w_list, 0);
+}
+
+static void build_view(void)
+{
 	long i;
+	view_of = cur_folder;
+	view_gen = cur_folder ? cur_folder->gen : 0;
 	free(view);
 	view = 0;
 	nview = 0;
@@ -171,12 +202,6 @@ void list_refresh(void)
 	}
 	if (more < 0)
 		more = 0;
-	w_list.total = nview + (more ? 1 : 0);
-	if (w_list.top > nview)
-		w_list.top = 0;
-	list_titles();
-	win_sliders(&w_list);
-	win_redraw(&w_list, 0);
 }
 
 void list_load(void)
@@ -191,6 +216,7 @@ void list_load(void)
 
 HDR *list_current(void)
 {
+	fresh();
 	if (!cur_folder || sel < 0 || sel >= nview)
 		return 0;
 	return &cur_folder->h[view[sel]];
@@ -199,6 +225,7 @@ HDR *list_current(void)
 void list_select_uid(unsigned long uid)
 {
 	long i;
+	fresh();
 	sel_uid = uid;
 	for (i = 0; i < nview; i++)
 		if (cur_folder->h[view[i]].uid == uid) {
@@ -257,6 +284,7 @@ static void draw(WIN *w, GRECT *clip)
 	long i, rows = win_rows(w) + 1;
 	short x0 = w->work.x + 2;
 	GRECT r;
+	fresh();
 	columns(cols, &c_from, &c_subj, &c_date);
 	fill(clip, 0);
 
@@ -363,8 +391,7 @@ static void load_more(void)
 		if (!mail_load_more(cur_acct, cur_finfo, &added) && mail_err[0])
 			alert(1, "[1][%s][ OK ]", mail_err);
 		busy(0);
-		fold_close(cur_folder);
-		cur_folder = fold_open(cur_acct, cur_finfo);
+		fold_done(cur_folder);	/* it worked on cur_folder itself: saved once */
 	}
 	list_refresh();
 	win_scroll_to(&w_list, keep_top);
@@ -444,6 +471,7 @@ static void mark_click(long i, short kstate)
 void list_select_all(void)
 {
 	long k;
+	fresh();
 	if (!cur_folder || nview < 2)
 		return;
 	for (k = 0; k < nview; k++)
@@ -587,6 +615,7 @@ static int drag_messages(long i, short mx, short my)
 static void click(WIN *w, short mx, short my, short clicks, short kstate)
 {
 	long i;
+	fresh();
 	if (my < w->work.y + w->head_h)
 		return;
 	i = w->top + (my - w->work.y - w->head_h) / ch;
@@ -610,6 +639,7 @@ void message_menu(short mx, short my, int with_open)
 	int imap = cur_finfo && !cur_finfo->local, shown;
 	const char *lab[12];
 	short cmd[12], n = 0, r;
+	fresh();
 	if (nmarks > 1) {
 		/* for all the selected messages */
 		static const char *blab[] = { "Mark as read", "Mark as unread   ^U", "Flag / unflag    ^G",
@@ -674,6 +704,7 @@ void message_menu(short mx, short my, int with_open)
 static void rclick(WIN *w, short mx, short my)
 {
 	long i;
+	fresh();
 	if (my < w->work.y + w->head_h)
 		return;
 	i = w->top + (my - w->work.y - w->head_h) / ch;
@@ -692,6 +723,7 @@ static int key(WIN *w, short kstate, short k)
 {
 	short scan = KEY_SCAN(k);
 	long rows = win_rows(w);
+	fresh();
 	switch (scan) {
 	case 0x48:	/* up (shift: page) */
 		select_row(sel < 0 ? 0 : sel - ((kstate & 3) ? rows : 1), 0);

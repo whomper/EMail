@@ -149,6 +149,26 @@ static void timing(unsigned long t0, long b0, const char *fmt, ...)
 	conn_log("IMAP", " -- ", line, (long)strlen(line));
 }
 
+/* The folder lists are saved once a job: the steps of a check (the
+ * list, the inbox, the other folders' counts, the Outbox) only mark
+ * them changed, and the outermost mail_* call saves them at its end
+ * (guidelines 6.5) */
+static int job_depth;
+
+static void job_in(void)
+{
+	job_depth++;
+}
+
+static int job_out(int r)
+{
+	short i;
+	if (--job_depth == 0)
+		for (i = 0; i < naccts; i++)
+			folders_flush(accts[i]);
+	return r;
+}
+
 /* ---------------- IMAP session ---------------- */
 
 void mail_disconnect(ACCOUNT *a)
@@ -287,7 +307,7 @@ static void list_cb(void *ud, const char *name, char delim, int role, int nosele
 	}
 }
 
-int mail_refresh_folders(ACCOUNT *a)
+static int refresh_folders(ACCOUNT *a)
 {
 	LISTCTX l;
 	short i;
@@ -321,11 +341,19 @@ int mail_refresh_folders(ACCOUNT *a)
 			a->nfolders--;
 		}
 	}
-	folders_save(a);
+	folders_touch(a);
 	timing(t0, b0, "folder list, %d folders", a->nfolders);
 	a->listed = 1;
 	status("%s: %d folders", a->name, a->nfolders);
 	return 1;
+}
+
+int mail_refresh_folders(ACCOUNT *a)
+{
+	int r;
+	job_in();
+	r = refresh_folders(a);
+	return job_out(r);
 }
 
 /* ---------------- IMAP mirror ---------------- */
@@ -538,7 +566,7 @@ static int sync_window(ACCOUNT *a, FINFO *fi, FOLDER *f, long *newmsgs)
 	return 1;
 }
 
-int mail_sync_folder(ACCOUNT *a, FINFO *fi, long *newmsgs)
+static int sync_folder(ACCOUNT *a, FINFO *fi, long *newmsgs)
 {
 	FOLDER *f;
 	long messages = -1, unseen = -1;
@@ -562,20 +590,43 @@ int mail_sync_folder(ACCOUNT *a, FINFO *fi, long *newmsgs)
 	ok = sync_window(a, fi, f, newmsgs);
 	if (ok && flags_pushed)		/* the counts changed with them */
 		imap_status(a->im, fi->server, &messages, &unseen);
+	if (ok) {
+		/* STATUS can be stale for the folder the session has selected
+		   (RFC 3501, 6.3.10): SELECT's EXISTS is the server's now, and a
+		   folder mirrored whole has its unread count in the flags */
+		messages = f->exists;
+		if (f->n >= f->exists) {
+			long k;
+			unseen = 0;
+			for (k = 0; k < f->n; k++)
+				if (!(f->h[k].flags & MF_SEEN))
+					unseen++;
+		}
+	}
 	if (ok)
 		fi->synced = pf_ms() | 1;
+	/* the folder list is written when its counts changed */
+	if ((messages >= 0 && messages != fi->total) || (unseen >= 0 && unseen != fi->unread))
+		folders_touch(a);
 	if (messages >= 0)
 		fi->total = messages;
 	if (unseen >= 0)
 		fi->unread = unseen;
 	fold_close(f);
-	folders_save(a);
 	if (ok)
 		status("");
 	return ok;
 }
 
-int mail_load_more(ACCOUNT *a, FINFO *fi, long *added)
+int mail_sync_folder(ACCOUNT *a, FINFO *fi, long *newmsgs)
+{
+	int r;
+	job_in();
+	r = sync_folder(a, fi, newmsgs);
+	return job_out(r);
+}
+
+static int load_more(ACCOUNT *a, FINFO *fi, long *added)
 {
 	FOLDER *f;
 	long before;
@@ -597,6 +648,14 @@ int mail_load_more(ACCOUNT *a, FINFO *fi, long *added)
 	if (ok)
 		status("");
 	return ok;
+}
+
+int mail_load_more(ACCOUNT *a, FINFO *fi, long *added)
+{
+	int r;
+	job_in();
+	r = load_more(a, fi, added);
+	return job_out(r);
 }
 
 /* ---------------- POP3 ---------------- */
@@ -660,7 +719,8 @@ static int pop_check(ACCOUNT *a, long *newmsgs)
 	POPCTX c;
 	FINFO *inbox = folder_role(a, FR_INBOX);
 	char path[220];
-	int r;
+	unsigned long first = 0;
+	int r, disk = 1;
 	if (!inbox)
 		inbox = folder_add(a, "Inbox", 0, FR_INBOX, 0, 1);
 	if (offline())
@@ -674,6 +734,10 @@ static int pop_check(ACCOUNT *a, long *newmsgs)
 	if (!c.p)
 		return 0;
 	c.f = fold_open(a, inbox);
+	if (c.f) {
+		c.f->bulk = 1;		/* gathered: on disk once, before QUIT */
+		first = c.f->uidnext;
+	}
 	path_join(path, sizeof(path), a->dir, "UIDL.DAT");
 	{
 		char *k = pf_load(path, 0);
@@ -691,15 +755,33 @@ static int pop_check(ACCOUNT *a, long *newmsgs)
 	r = pop3_list(c.p, pop_cb, &c);
 	if (r <= 0 || c.fail)
 		snprintf(mail_err, sizeof(mail_err), "%s: %s", a->name, c.p->err);
+	/* the messages on disk before QUIT deletes them on the server; if
+	   they can't be written, no QUIT: the server keeps them */
+	if (c.f) {
+		c.f->bulk = 0;
+		if (c.got && pack_flush(c.f) != 0) {
+			unsigned long u;
+			disk = 0;
+			conn_close(c.p->c);
+			c.p->c = 0;
+			for (u = first; u < c.f->uidnext; u++)
+				fold_remove(c.f, u);
+			c.f->uidnext = first;
+			c.got = 0;
+			str_copy(mail_err, "Can't write the new mail to disk (disk full?): it stays on the server",
+				 sizeof(mail_err));
+		}
+	}
 	pop3_quit(c.p);
-	pf_save(path, c.keep.s ? c.keep.s : "", c.keep.len);
+	if (disk)
+		pf_save(path, c.keep.s ? c.keep.s : "", c.keep.len);
 	sb_free(&c.keep);
 	free(c.known);
 	fold_close(c.f);
-	folders_save(a);
+	folders_touch(a);
 	if (newmsgs)
 		*newmsgs = c.got;
-	return r > 0 && !c.fail;
+	return r > 0 && !c.fail && disk;
 }
 
 long mail_new_other;
@@ -743,17 +825,18 @@ static int check_counts(ACCOUNT *a, long *newmsgs)
 		}
 		if (messages[k] >= 0 && messages[k] != fi->total)
 			fi->synced = 0;		/* changed: opening it fetches again */
+		if ((messages[k] >= 0 && messages[k] != fi->total) || (unseen[k] >= 0 && unseen[k] != fi->unread))
+			folders_touch(a);
 		if (messages[k] >= 0)
 			fi->total = messages[k];
 		if (unseen[k] >= 0)
 			fi->unread = unseen[k];
 	}
 	timing(t0, b0, "counts of %d folders", n);
-	folders_save(a);
 	return 1;
 }
 
-int mail_check(ACCOUNT *a, long *newmsgs)
+static int check(ACCOUNT *a, long *newmsgs)
 {
 	int ok, sent;
 	a->cut = 0;			/* checking mail is how to try again */
@@ -778,6 +861,14 @@ int mail_check(ACCOUNT *a, long *newmsgs)
 			ok = mail_send_outbox(a, &sent) >= 0;
 	}
 	return ok;
+}
+
+int mail_check(ACCOUNT *a, long *newmsgs)
+{
+	int r;
+	job_in();
+	r = check(a, newmsgs);
+	return job_out(r);
 }
 
 /* ---------------- reading and changing ---------------- */
@@ -849,7 +940,6 @@ char *mail_fetch(FOLDER *f, HDR *h, long *len)
 
 int mail_download(FOLDER *f, HDR *h, int again, const char *what)
 {
-	char path[220];
 	if (f->fi->local) {
 		str_copy(mail_err, "This folder is only on the Atari: there is no copy on the server.", sizeof(mail_err));
 		return 0;
@@ -857,9 +947,7 @@ int mail_download(FOLDER *f, HDR *h, int again, const char *what)
 	if (h->flags & MF_CACHED) {
 		if (!again)
 			return 1;
-		msg_path(f, h->uid, path, sizeof(path));
-		pf_remove(path);
-		h->flags &= ~MF_CACHED;
+		body_drop(f, h);
 		f->dirty = 1;
 	}
 	return download(f, h, 0, 0, what);
@@ -971,7 +1059,7 @@ static void count_gone(FOLDER *f, HDR *h)
 		f->exists--;
 }
 
-int mail_mark_all_read(ACCOUNT *a, FINFO *fi, FOLDER *open)
+static int mark_all_read(ACCOUNT *a, FINFO *fi, FOLDER *open)
 {
 	FOLDER *f;
 	long i;
@@ -1003,8 +1091,16 @@ int mail_mark_all_read(ACCOUNT *a, FINFO *fi, FOLDER *open)
 	fold_count(f);
 	if (!open)
 		fold_close(f);
-	folders_save(a);
+	folders_touch(a);
 	return 1;
+}
+
+int mail_mark_all_read(ACCOUNT *a, FINFO *fi, FOLDER *open)
+{
+	int r;
+	job_in();
+	r = mark_all_read(a, fi, open);
+	return job_out(r);
 }
 
 /* copy a local message file into another local folder */
@@ -1103,7 +1199,7 @@ int mail_move(FOLDER *f, HDR *h, FINFO *dest)
 
 /* ---------------- sending ---------------- */
 
-int mail_queue(ACCOUNT *a, const char *raw, long len)
+static int queue(ACCOUNT *a, const char *raw, long len)
 {
 	FINFO *ob = folder_role(a, FR_OUTBOX);
 	FOLDER *f;
@@ -1125,8 +1221,16 @@ int mail_queue(ACCOUNT *a, const char *raw, long len)
 	h->flags = MF_SEEN | MF_CACHED;
 	f->uidnext++;
 	fold_close(f);
-	folders_save(a);
+	folders_touch(a);
 	return 1;
+}
+
+int mail_queue(ACCOUNT *a, const char *raw, long len)
+{
+	int r;
+	job_in();
+	r = queue(a, raw, len);
+	return job_out(r);
 }
 
 /* a message made here into a local folder (a POP account's Sent) */
@@ -1262,7 +1366,7 @@ static int send_all(ACCOUNT *a, const char *raw, long len, int *sent, int *mine)
 	smtp_quit(s);
 	if (f || saved) {
 		fold_close(f);
-		folders_save(a);
+		folders_touch(a);
 	}
 	status("");
 	return ok;
@@ -1270,19 +1374,23 @@ static int send_all(ACCOUNT *a, const char *raw, long len, int *sent, int *mine)
 
 int mail_send_outbox(ACCOUNT *a, int *sent)
 {
-	int mine;
-	return send_all(a, 0, 0, sent, &mine);
+	int mine, r;
+	job_in();
+	r = send_all(a, 0, 0, sent, &mine);
+	return job_out(r);
 }
 
 int mail_send(ACCOUNT *a, const char *raw, long len, int *sent)
 {
-	int mine, r = send_all(a, raw, len, sent, &mine);
+	int mine, r;
+	job_in();
+	r = job_out(send_all(a, raw, len, sent, &mine));
 	return !mine ? -1 : r < 0 ? -2 : 1;
 }
 
 /* ---------------- folder management ---------------- */
 
-int mail_folder_create(ACCOUNT *a, const char *name)
+static int folder_create(ACCOUNT *a, const char *name)
 {
 	char *m = atari_to_mutf7(name);
 	int r;
@@ -1295,6 +1403,14 @@ int mail_folder_create(ACCOUNT *a, const char *name)
 	if (r <= 0)
 		return imap_failed(a, r);
 	return mail_refresh_folders(a);
+}
+
+int mail_folder_create(ACCOUNT *a, const char *name)
+{
+	int r;
+	job_in();
+	r = folder_create(a, name);
+	return job_out(r);
 }
 
 /* is there a folder of this name on the server? */
@@ -1321,7 +1437,7 @@ static int on_server(ACCOUNT *a, const char *name)
 	return imap_list(a->im, find_cb, &c) > 0 && c.found;
 }
 
-int mail_folder_rename(ACCOUNT *a, FINFO *fi, const char *name, char *newserver, int size)
+static int folder_rename(ACCOUNT *a, FINFO *fi, const char *name, char *newserver, int size)
 {
 	char old[160], to[160], *m;
 	char delim;
@@ -1390,7 +1506,7 @@ int mail_folder_rename(ACCOUNT *a, FINFO *fi, const char *name, char *newserver,
 			folder_set_server(g, sub, delim);
 		}
 	}
-	folders_save(a);
+	folders_touch(a);
 	if (newserver)
 		str_copy(newserver, to, size);
 	/* some servers drop the connection right after a rename: the rename
@@ -1400,7 +1516,15 @@ int mail_folder_rename(ACCOUNT *a, FINFO *fi, const char *name, char *newserver,
 	return !a->im && !a->cut && mail_refresh_folders(a);
 }
 
-int mail_folder_delete(ACCOUNT *a, FINFO *fi)
+int mail_folder_rename(ACCOUNT *a, FINFO *fi, const char *name, char *newserver, int size)
+{
+	int r;
+	job_in();
+	r = folder_rename(a, fi, name, newserver, size);
+	return job_out(r);
+}
+
+static int folder_delete(ACCOUNT *a, FINFO *fi)
 {
 	int r;
 	if (fi->local || fi->role || !mail_connect(a)) {
@@ -1415,4 +1539,12 @@ int mail_folder_delete(ACCOUNT *a, FINFO *fi)
 	if (r <= 0)
 		return imap_failed(a, r);
 	return mail_refresh_folders(a);
+}
+
+int mail_folder_delete(ACCOUNT *a, FINFO *fi)
+{
+	int r;
+	job_in();
+	r = folder_delete(a, fi);
+	return job_out(r);
 }

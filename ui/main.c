@@ -295,8 +295,7 @@ void cmd_check_all(void)
 	refind_current(server);
 	folders_build();
 	if (cur_folder && cur_finfo) {
-		fold_close(cur_folder);
-		cur_folder = fold_open(cur_acct, cur_finfo);
+		fold_done(cur_folder);	/* the check worked on it: saved once */
 		list_refresh();
 	}
 	last_check = pf_ms();
@@ -442,8 +441,12 @@ static void cmd_reply(int all, int forward)
 		return;
 	if (forward) {
 		char path[220];
-		msg_path(cur_folder, cur_uid, path, sizeof(path));
-		text = compose_forward(a, cur_msg, pf_exists(path) ? path : 0);
+		int have = 0;
+		if (cur_msg->nparts) {
+			path_join(path, sizeof(path), cur_folder->dir, "FORWARD.EML");
+			have = msg_export(cur_folder, cur_uid, path) == 0;
+		}
+		text = compose_forward(a, cur_msg, have ? path : 0);
 		editor_open(a, text, 0, 0);
 		return;
 	}
@@ -648,14 +651,10 @@ void cmd_download_all(ACCOUNT *a, FINFO *fi)
 		return;
 	busy(1);
 	mail_err[0] = 0;
-	if (cur && cur_folder) {
-		fold_close(cur_folder);		/* saved first: mirror_all opens it */
-		cur_folder = 0;
-	}
-	ok = mail_mirror_all(a, fi);
+	/* the folder stays open through the job: one FOLDER, the screen's
+	   when it is the one shown, saved once at the end */
 	f = fold_open(a, fi);
-	if (cur)
-		cur_folder = f;
+	ok = f ? mail_mirror_all(a, fi) : 0;
 	if (f) {
 		for (i = 0; i < f->n; i++)
 			if (!(f->h[i].flags & MF_CACHED))
@@ -682,8 +681,8 @@ void cmd_download_all(ACCOUNT *a, FINFO *fi)
 		alert(1, "[1][%s][ OK ]", mail_err[0] ? mail_err : "Can't download the messages.");
 	else
 		alert(1, "[1][All %s messages of %s|are on the Atari.][ OK ]", num(f->n), fi->disp);
-	if (f && !cur)
-		fold_close(f);
+	fold_done(f);			/* the pack, then the index: once */
+	fold_close(f);
 	if (cur) {
 		list_refresh();
 		win_redraw(&w_list, 0);

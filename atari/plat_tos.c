@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "tos.h"
+#include "bigbuf.h"
 #include "../src/plat.h"
 
 void (*pf_idle)(void);
@@ -30,6 +31,31 @@ long pf_read(int h, void *buf, long n) { return Fread((short)h, n, buf); }
 long pf_write(int h, const void *buf, long n) { return Fwrite((short)h, n, buf); }
 void pf_close(int h) { Fclose((short)h); }
 long pf_seek(int h, long off) { return Fseek(off, (short)h, 0); }
+
+long pf_handle_size(int h)
+{
+	long n = Fseek(0, (short)h, 2);
+	if (n < 0 || Fseek(0, (short)h, 0) < 0)
+		return -1;
+	return n;
+}
+
+/* 256 KB in TT RAM; in ST RAM a quarter of what is free, so the heap,
+   GEM and the accessories keep the rest (a 1 MB ST) */
+void *pf_bulk(long *got)
+{
+	long want = 256L * 1024, st = (long)Mxalloc(-1L, 0), tt = (long)Mxalloc(-1L, 1);
+	int in_tt;
+	if (st == -32) {		/* TOS 1.x: no Mxalloc, no TT RAM */
+		st = (long)Malloc(-1L);
+		tt = 0;
+	}
+	if (tt < want + 64L * 1024 && st / 4 < want)
+		want = st / 4;
+	return big_alloc(want, got, &in_tt);
+}
+
+void pf_bulk_free(void *p) { big_free(p); }
 
 static DTA dta;
 
@@ -73,7 +99,7 @@ int pf_exists(const char *path)
 int pf_mkdir(const char *path)
 {
 	long r = Dcreate(path);
-	return (r == 0 || r == -36 || pf_exists(path)) ? 0 : (int)r;
+	return r == 0 ? 1 : (r == -36 || pf_exists(path)) ? 0 : (int)r;
 }
 
 int pf_remove(const char *path) { return (int)Fdelete(path); }

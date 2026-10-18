@@ -10,8 +10,9 @@
  *   EMAIL.INF                  settings and accounts
  *   ADDRESS.TXT                address book, one "Name <a@b>" per line
  *   EMAIL\ACCT1\FOLDERS.LST     folders of account 1
- *   EMAIL\ACCT1\F1A2B3C4\INDEX.DAT   headers of one folder
- *   EMAIL\ACCT1\F1A2B3C4\0000002A.EML  message with UID 42
+ *   EMAIL\ACCT1\F1A2B3C4\INDEX.DAT     headers of one folder, with
+ *                                       each body's place in the pack
+ *   EMAIL\ACCT1\F1A2B3C4\MESSAGES.DAT  the folder's message bodies
  */
 #ifndef STORE_H
 #define STORE_H
@@ -69,6 +70,7 @@ typedef struct {
 	short cut;
 	char cuterr[160];
 	short listed;		/* the folder list was read from the server this session */
+	short fdirty;		/* the folder list changed since it was saved */
 } ACCOUNT;
 
 /* where a screen font keeps the Hebrew letters */
@@ -104,7 +106,11 @@ typedef struct {
 	long size;
 	unsigned long date;	/* seconds since 1970, UTC */
 	char *from, *subject, *to;
+	long off, plen;		/* the body's record in MESSAGES.DAT; off -1: none */
 } HDR;
+
+#define PACK_HEAD 10		/* a record: "EM", the UID, the length, the message */
+#define MF_FLAGSCAN 0x4000	/* runtime, while pack_scan looks for its record */
 
 typedef struct {
 	ACCOUNT *acct;
@@ -117,6 +123,13 @@ typedef struct {
 	HDR *h;
 	long n, cap;
 	short dirty;
+	short refs;		/* the places it is open (one FOLDER per folder) */
+	unsigned gen;		/* counts changes to h[], for views of it */
+	long gaps;		/* bytes of dropped records in the pack */
+	long pend_base;		/* where the pack ends: the waiting records go there */
+	char *pend;		/* bodies waiting to be appended (pf_bulk) */
+	long pend_len, pend_cap;
+	short bulk;		/* a local folder's job that flushes itself (POP) */
 } FOLDER;
 
 extern OPTIONS opt;
@@ -155,6 +168,8 @@ void acct_dirs(ACCOUNT *a);
 /* folders of an account */
 int  folders_load(ACCOUNT *a);
 int  folders_save(ACCOUNT *a);
+void folders_touch(ACCOUNT *a);		/* changed: saved by folders_flush */
+int  folders_flush(ACCOUNT *a);		/* saved if it changed */
 FINFO *folder_find(ACCOUNT *a, const char *server);
 FINFO *folder_role(ACCOUNT *a, short role);
 FINFO *folder_add(ACCOUNT *a, const char *server, char delim, short role, short noselect, short local);
@@ -162,9 +177,11 @@ FINFO *folder_add(ACCOUNT *a, const char *server, char delim, short role, short 
 void folder_set_server(FINFO *f, const char *server, char delim);
 void folder_path(ACCOUNT *a, FINFO *f, char *out, int size);
 
-/* header index of one folder */
+/* header index of one folder. A folder open already is shared: the same
+   FOLDER, with one more to close; each close saves what changed */
 FOLDER *fold_open(ACCOUNT *a, FINFO *fi);
 int  fold_save(FOLDER *f);
+int  fold_done(FOLDER *f);		/* the end of a job: saved if anything changed */
 void fold_close(FOLDER *f);
 HDR *fold_add(FOLDER *f, unsigned long uid);	/* keeps uid order */
 HDR *fold_get(FOLDER *f, unsigned long uid);
@@ -175,10 +192,16 @@ void fold_count(FOLDER *f);		/* local folders: updates fi->total / unread */
 /* fill a header from the raw header block of a message */
 void hdr_from_raw(HDR *h, const char *raw, long len);
 
-/* message bodies */
-void msg_path(FOLDER *f, unsigned long uid, char *out, int size);
+/* message bodies, in the folder's pack. msg_save keeps one from the
+   server in memory until the folder is saved; a local folder's goes to
+   disk at once. msg_load checks the record: NULL if it isn't there or
+   isn't right (an IMAP folder fetches it again) */
+void msg_path(FOLDER *f, unsigned long uid, char *out, int size);	/* the old .EML */
 int  msg_save(FOLDER *f, unsigned long uid, const char *data, long len);
 char *msg_load(FOLDER *f, unsigned long uid, long *len);
+int  msg_export(FOLDER *f, unsigned long uid, const char *path);	/* one body as a file */
+int  pack_flush(FOLDER *f);		/* what waits in memory, to disk now */
+void body_drop(FOLDER *f, HDR *h);	/* the body forgotten: fetched again when wanted */
 /* bodies of IMAP folders (quit without keepcache); each(): the folder being cleared, or 0 */
 void cache_clear_all(void (*each)(const char *account, const char *folder), int all);
 /* all = 0: only the folders opened this session (on quit: the others

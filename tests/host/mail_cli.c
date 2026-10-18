@@ -159,7 +159,7 @@ int main(int argc, char **argv)
 		}
 		printf("loaded %ld of %ld, downloaded %ld, had %ld\n", f->n, f->exists, got, had);
 		fold_close(f);
-	} else if ((!strcmp(cmd, "again") || !strcmp(cmd, "path")) && a && argc > 5) {
+	} else if ((!strcmp(cmd, "again") || !strcmp(cmd, "pack") || !strcmp(cmd, "garble")) && a && argc > 5) {
 		FINFO *fi = find_folder(a, argv[4]);
 		FOLDER *f;
 		HDR *h;
@@ -172,15 +172,39 @@ int main(int argc, char **argv)
 			fprintf(stderr, "no message %s\n", argv[5]);
 			return 1;
 		}
-		if (!strcmp(cmd, "path")) {
-			msg_path(f, h->uid, path, sizeof(path));
-			printf("%s\n", path);
+		if (!strcmp(cmd, "pack")) {
+			/* the folder's pack, and where this message's record is */
+			path_join(path, sizeof(path), f->dir, "MESSAGES.DAT");
+			printf("%s %ld %ld\n", path, h->off, h->plen);
+		} else if (!strcmp(cmd, "garble")) {
+			/* a copy that came wrong, as a bad line would leave it */
+			static const char bad[] = "From: x\r\n\r\ngarbled";
+			if (msg_save(f, h->uid, bad, (long)sizeof(bad) - 1) < 0)
+				return fail("garble");
+			printf("ok\n");
 		} else if (!mail_download(f, h, 1, 0)) {
 			return fail("again");
 		} else {
 			printf("ok\n");
 		}
 		fold_close(f);
+	} else if (!strcmp(cmd, "drop") && a && argc > 5) {
+		/* the first N bodies forgotten: gaps in the pack, which the
+		   close compacts once they are more than half of it */
+		FINFO *fi = find_folder(a, argv[4]);
+		FOLDER *f;
+		long i, k = atol(argv[5]);
+		if (!fi)
+			return 1;
+		f = fold_open(a, fi);
+		for (i = 0; i < f->n && k > 0; i++)
+			if (f->h[i].off >= 0) {
+				body_drop(f, &f->h[i]);
+				f->dirty = 1;
+				k--;
+			}
+		fold_close(f);
+		printf("ok\n");
 	} else if (!strcmp(cmd, "list") && a && argc > 4) {
 		FINFO *fi = find_folder(a, argv[4]);
 		FOLDER *f;

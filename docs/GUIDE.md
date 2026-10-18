@@ -45,7 +45,8 @@ C:\EMAIL\CACERT.PEM    root certificates, for Falcon mode only
 C:\EMAIL\ROOTS.DAT     the same, decoded ahead of time (Falcon mode only)
 C:\EMAIL\EMAIL.HYP     this guide, for EHypView or ST-Guide (the Help key opens it)
 C:\EMAIL\EMAIL.REF     its page names, for ST-Guide's reference list (optional)
-C:\EMAIL\EMAIL\         your mail: one folder per account, one per mailbox
+C:\EMAIL\EMAIL\         your mail: one folder per account, one per mailbox,
+                        each with its messages in one file (MESSAGES.DAT)
 C:\EMAIL\EMAIL\SEED.DAT  randomness kept for Falcon mode's encryption
 ```
 
@@ -64,7 +65,9 @@ Copy the new release's files over the old ones: `EMAIL.PRG`, `EMAIL.HYP`
 and `EMAIL.REF`, and for Falcon mode `CACERT.PEM` and `ROOTS.DAT`.
 `EMAIL.INF`, `EMAIL.KEY` and your mail stay as they are. Keep EMAIL.KEY
 with EMAIL.INF: without it EMail asks for the passwords again. Coming
-from a version before 1.37, type your signature once more, in Options >
+from 1.41 or before, each folder moves its messages into one file the
+first time you open it (the status line says so; it happens once).
+Coming from a version before 1.37, type your signature once more, in Options >
 Settings > Signature. On the Pi, `./update-pi.sh` in the AERA-Gateway
 folder updates the gateway.
 
@@ -405,6 +408,15 @@ are in, not the Outbox). Let go anywhere else and nothing happens; Esc,
 Undo or the right button stops the drag.
 
 ## How your mail is kept
+
+**On disk** each folder keeps its messages in one file, MESSAGES.DAT,
+with an index (INDEX.DAT) of where each one is: a few files to look up
+instead of one per message, which counts on an Atari hard disk. What
+comes from the server (a check, Download all) gathers in memory and is
+written in one go at the end, so the disk works once, not for every
+message; what is only on the Atari (the Outbox, a POP account's
+folders) is written at once. If the Atari is reset in the middle, a
+message that didn't make it whole is fetched from the server again.
 
 **IMAP** accounts are mirrored: EMail keeps the headers of the newest
 messages of each folder, as many as you have loaded (100 to start with),

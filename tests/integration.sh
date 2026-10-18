@@ -401,8 +401,7 @@ expect "download all again: only the new ones" "loaded 310 of 310, downloaded 60
 
 # Download again: a copy that came wrong is replaced by the server's
 U=$(uid_of "$(run list 1 Big)" "Big 007")
-P=$(run path 1 Big "$U")
-[ -f "$P" ] && printf 'From: x\r\n\r\ngarbled' > "$P"
+run garble 1 Big "$U" >/dev/null
 out=$(run show 1 Big "$U")
 expect "download again: the bad copy is what shows first" "garbled" "$out"
 out=$(run again 1 Big "$U")
@@ -411,6 +410,56 @@ out=$(run show 1 Big "$U")
 expect "download again: the server's copy" "message 7" "$out"
 out=$(run again 1 Big 999999)
 expect "download again: a message that isn't there" "no message" "$out"
+
+# The pack: a folder's bodies in one file, MESSAGES.DAT, and each record
+# where the index says (its header names the UID and the length)
+pack_ok() {  # pack_ok FOLDERDIR: every record the index has, checked
+  python3 - "$1" <<'PY'
+import os, struct, sys
+d = sys.argv[1]
+pack = open(os.path.join(d, "MESSAGES.DAT"), "rb").read() if os.path.exists(os.path.join(d, "MESSAGES.DAT")) else b""
+bad = n = 0
+for line in open(os.path.join(d, "INDEX.DAT"), encoding="latin-1").read().split("\n")[1:]:
+    f = line.split("\t")
+    if len(f) < 9 or int(f[7]) < 0:
+        continue
+    uid, off, ln = int(f[0]), int(f[7]), int(f[8])
+    rec = pack[off:off + 10]
+    n += 1
+    end = off + 10 + ln
+    whole = end == len(pack) or pack[end:end + 2] == b"EM"   # followed by a record, or the end
+    if len(rec) < 10 or rec[:2] != b"EM" or struct.unpack(">II", rec[2:]) != (uid, ln) or not whole:
+        bad += 1
+print("records %d, bad %d" % (n, bad))
+PY
+}
+read -r PACK OFF LEN <<<"$(run pack 1 Big "$U")"
+BIGDIR=$(dirname "$PACK")
+[ -s "$PACK" ] && [ -z "$(find "$BIGDIR" -name '*.EML')" ] && { PASS=$((PASS+1)); echo "ok   pack: the bodies are in MESSAGES.DAT, no .EML files"; } \
+  || { FAIL=$((FAIL+1)); echo "FAIL pack: no MESSAGES.DAT, or .EML files left"; }
+expect "pack: every record is where the index says" "records 3[01][0-9], bad 0" "$(pack_ok "$BIGDIR")"
+# a reset in the middle of an append: the pack ends inside a record
+UL=$(uid_of "$(run list 1 Big)" "Big 310")
+read -r PACK OFF LEN <<<"$(run pack 1 Big "$UL")"
+truncate -s $((OFF + 20)) "$PACK"
+out=$(run show 1 Big "$UL")
+expect "pack cut short: the message comes from the server again" "message 310" "$out"
+expect "pack cut short: the index points at whole records again" "bad 0" "$(pack_ok "$BIGDIR")"
+# a record that isn't what the index says is never shown
+U9=$(uid_of "$(run list 1 Big)" "Big 009")
+read -r PACK OFF LEN <<<"$(run pack 1 Big "$U9")"
+printf 'XX' | dd of="$PACK" bs=1 seek="$OFF" conv=notrunc 2>/dev/null
+out=$(run show 1 Big "$U9")
+expect "a damaged record: the server's copy instead" "message 9" "$out"
+# compaction: most bodies dropped, the pack written again without them
+before=$(stat -c %s "$PACK")
+out=$(run drop 1 Big 250)
+after=$(stat -c %s "$PACK")
+[ "$after" -lt $((before / 2)) ] && [ ! -e "$BIGDIR/MESSAGES.DA\$" ] && { PASS=$((PASS+1)); echo "ok   compaction: the pack without its gaps ($before -> $after bytes)"; } \
+  || { FAIL=$((FAIL+1)); echo "FAIL compaction: $before -> $after bytes"; }
+expect "compaction: every record still where the index says" "records [0-9]*, bad 0" "$(pack_ok "$BIGDIR")"
+out=$(run show 1 Big "$UL")
+expect "compaction: a message kept reads from the pack" "message 310" "$out"
 
 out=$(run allread 1 Big)
 out=$(run list 1 Big)
