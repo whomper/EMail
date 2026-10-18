@@ -70,6 +70,7 @@ These come from AERA-Atari's repo template and are the same in every app's CLAUD
   `tools/sync-gateway.sh`. EMail decides emailgate's protocol (STARTTLS,
   the "emailgate:" refusal lines, ports 143/587/110): review changes to
   it there. Its log names who connected where, never what went through.
-- EContact's `integration/EMAIL.patch` makes EContact EMail's address
-  book: when EMail changes, make that patch again in EContact (see its
-  CLAUDE.md) and check it still applies and builds.
+- EContact is EMail's address book through the family's PEOPLE messages
+  (`common/ui/av_people.c`, `people_ask.c`); EContact has no patch for
+  EMail any more. Check it with `econtact_test.py` against EContact's
+  latest release.
