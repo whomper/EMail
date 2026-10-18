@@ -641,7 +641,7 @@ void message_menu(short mx, short my, int with_open)
 	cmd[n++] = C_REPLY;
 	lab[n] = shown ? "Reply to all     ^E" : "~Reply to all     ^E";
 	cmd[n++] = C_REPLYALL;
-	lab[n] = shown ? "Forward          ^F" : "~Forward          ^F";
+	lab[n] = shown ? "Forward         \x01^F" : "~Forward         \x01^F";
 	cmd[n++] = C_FORWARD;
 	lab[n] = "-";
 	cmd[n++] = 0;

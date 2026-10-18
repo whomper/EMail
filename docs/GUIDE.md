@@ -10,7 +10,8 @@ reads and writes Hebrew.
 - An Atari with TOS 1.04 or newer (TOS 4 on the Falcon), EmuTOS, MagiC or
   MiNT, and a screen of at least 640×200 (ST medium); 640×400 (ST high)
   or the Falcon's 640×480 show three windows side by side
-- About 400 KB of free memory, more for big mailboxes
+- 1 MB of memory or more: EMail itself takes about 410 KB, and more
+  memory holds bigger folders
 - A TCP/IP stack:
   - **STinG** on plain TOS (or STiK), or
   - **MiNTnet** under FreeMiNT (with or without GlueSTiK), or MagiC-Net
@@ -24,9 +25,10 @@ reads and writes Hebrew.
 
 The files are in the latest release on EMail's GitHub page
 (github.com/whomper/EMail/releases), each on its own and all together in
-`EMAIL-x.y.zip`. Copy
-`EMAIL.PRG` into a folder of its own, for example `C:\EMAIL\`. EMail
-keeps everything next to itself:
+`EMAIL-x.y.zip`. Copy `EMAIL.PRG` to any folder on any drive: nothing
+has to be in a particular place. EMail keeps everything in the folder it
+is started from, which the desktop makes its own folder, so a folder of
+its own keeps it all together. Here it is `C:\EMAIL\`:
 
 ```
 C:\EMAIL\EMAIL.PRG      the program
@@ -34,12 +36,14 @@ C:\EMAIL\EMAIL.INF      settings and accounts (each setting has a note above it)
 C:\EMAIL\EMAIL.KEY      the key the passwords in EMAIL.INF are encrypted with
 C:\EMAIL\ADDRESS.TXT   the addresses you wrote to (Ctrl+B without EContact)
 C:\EMAIL\EMAIL.LOG      protocol log, when switched on
+C:\EMAIL\EMAIL.FNT      which fonts are fixed-width (see Options > Font)
 C:\EMAIL\CRASH.LOG      what happened, if EMail ever crashes
 C:\EMAIL\CACERT.PEM    root certificates, for Falcon mode only
 C:\EMAIL\ROOTS.DAT     the same, decoded ahead of time (Falcon mode only)
 C:\EMAIL\EMAIL.HYP     this guide, for EHypView or ST-Guide (the Help key opens it)
 C:\EMAIL\EMAIL.REF     its page names, for ST-Guide's reference list (optional)
 C:\EMAIL\EMAIL\         your mail: one folder per account, one per mailbox
+C:\EMAIL\EMAIL\SEED.DAT  randomness kept for Falcon mode's encryption
 ```
 
 Start it. The first time, EMail asks for your account.
@@ -50,6 +54,15 @@ MagiC), the Help key or **Help > EMail help** opens it, from next to
 `EMAIL.PRG` or from the viewer's own help folder. Without a viewer, Help
 says how to get one and offers the list of keys instead; **Help > Keys**
 shows that list at any time.
+
+## Updating
+
+Copy the new release's files over the old ones: `EMAIL.PRG`, `EMAIL.HYP`
+and `EMAIL.REF`, and for Falcon mode `CACERT.PEM` and `ROOTS.DAT`.
+`EMAIL.INF`, `EMAIL.KEY` and your mail stay as they are. Keep EMAIL.KEY
+with EMAIL.INF: without it EMail asks for the passwords again. Coming
+from a version before 1.37, type your signature once more, in Options >
+Settings > Signature.
 
 ## Setting up an account
 
@@ -77,19 +90,21 @@ you to type the passwords again.
 ## Falcon mode
 
 EMail works in one of two ways, chosen with **Options > Falcon mode
-(TLS)** or the checkbox in Options > Settings:
+(TLS)** or "Falcon mode: TLS on this Atari" in Options > Settings >
+Connection:
 
 - **Off** (the default, any Atari): EMail talks plainly to the Raspberry
   Pi gateway, and the Pi encrypts the connection to your provider.
 - **On**: EMail encrypts on the Atari itself (TLS 1.2) and talks straight
   to your provider; no Pi is needed. On a Falcon the DSP56001 checks the
-  servers' certificates (about 0.2 s instead of 1.3 s on the 68030). "use the
-  DSP" in Options > Settings switches that off, leaving all of it to the
-  68030 (slower, but a way to rule the DSP out if something goes wrong).
+  servers' certificates (about 0.12 s each instead of 1.3 s or more on
+  the 68030). "Use the DSP for the signatures" in Settings > Connection
+  switches that off, leaving all of it to the 68030 (slower, but a way to rule the DSP out if something goes wrong).
 
 Falcon mode needs:
 
-- a 68030 (Falcon, or TT without the DSP part); a 68000 ST is too slow
+- a 68020 or better: a Falcon, or a TT (without the DSP part); a 68000
+  ST is too slow, and EMail says so
 - 4 MB of memory or more (1 MB is not enough for TLS next to your mail)
 - `CACERT.PEM` and `ROOTS.DAT` next to `EMAIL.PRG`, both in the
   release. CACERT.PEM holds the root certificates EMail trusts (the
@@ -208,14 +223,15 @@ measure them all again. Menus and dialogs keep the system font.
 the standard Atari font (TOS, EmuTOS) at the Atari character set's,
 Israeli system fonts and many GDOS fonts where ISO-8859-8 or DOS 862 put
 them. If Hebrew shows as other symbols, open Options > Font: the three
-buttons under "Hebrew letters" each show the word shalom as that kind of
+buttons under "Hebrew in bitmap fonts: pick the sample that reads
+right" each show the word shalom as that kind of
 font would; pick the one that reads correctly, and the sample below
 shows the result. Those buttons are for the system and bitmap fonts.
 A vector font (Speedo, TrueType, Type 1) is asked through NVDI 5 for
 its Hebrew letters by Unicode, as FreeMono and Liberation Mono have
 them; the line "Type:" says "Hebrew from the font". A vector font
-without Hebrew (Bitstream's Speedo fonts, or an older NVDI) says
-"Hebrew in the system font": the letters are then drawn in the system
+without Hebrew (Bitstream's Speedo fonts), or any vector font without
+NVDI 5, says "Hebrew in the system font": the letters are then drawn in the system
 font, in the same cells.
 
 **About EMail** (first menu) shows the version, how EMail is connected
@@ -342,11 +358,13 @@ so those are left out when showing a message.
 | F10          | Hebrew keyboard on/off     | Help         | this guide              |
 | Esc          | close the editor; stop     | Ctrl+W       | close the window        |
 | Tab          | next pane                  | Ctrl+Q       | quit                    |
+| Ctrl+,       | settings                   |              |                         |
 | Shift+click  | add/remove one message     | Right button | what you can do there   |
 | Control+click| select a range             |              |                         |
 
-The keys are the AERA programs' own (Ctrl+S saves, Ctrl+W closes, Ctrl+F
-will find), with Mail's on the Mac for the rest. Closing the main window
+The keys are the AERA programs' own (Ctrl+S saves, Ctrl+W closes, Ctrl+,
+opens the settings; Ctrl+F is kept for Find), with Mail's on the Mac for
+the rest. Closing the main window
 ends EMail. Without a help viewer, Help offers the list of keys.
 
 **Esc cancels.** In any dialog box or alert, Esc or Undo does what Cancel
@@ -438,14 +456,19 @@ brown by depth. With 256 colours it sets its own soft shades (and puts
 the palette back when it quits). Settings > Look switches them off;
 monochrome screens look as they always did.
 
-**Settings** (Options > Settings): your time zone, chosen by name from a
+**Settings** (Options > Settings, Ctrl+,) has five parts in its
+sidebar: **Mail** (checking every few minutes, how many messages to load
+at a time, keeping read messages on disk), **Writing** (where lines
+wrap, starting with the Hebrew keyboard), **Signature**, **Look**
+(colours) and **Connection** (the time zone, Falcon mode, the DSP and
+the protocol log).
+
+**The time zone** (Settings > Connection) is chosen by name from a
 list (Asia/Jerusalem, Europe/London, ...) as in ECal; summer time follows
 by itself. The first time, EMail fills it in from the machine: TZ in the
 environment (MiNT, MagiC; a name like Europe/Paris or POSIX like
 IST-2IDT), MiNT's /etc/timezone, or the minutes an older EMAIL.INF kept;
-otherwise UTC. It is kept as TIMEZONE= in EMAIL.INF. Also automatic checking every N
-minutes, how many messages to load at a time, whether read messages stay on disk
-after quitting, the protocol log, and the keyboard EMail starts with.
+otherwise UTC. It is kept as TIMEZONE= in EMAIL.INF.
 
 **Settings > Signature**: up to four lines, added below every new
 message, reply and forward after a "-- " line. There is one signature
@@ -469,12 +492,13 @@ The release has EMail's icon for the desktop (in the zip, in `icons/`): `EMAIL.R
 white and a 16-colour version to copy into `DESKICON.RSC` /
 `DESKCICN.RSC` with a resource editor, and `EMAIL.ICN` / `EMAILMK.ICN` are
 the image and mask for icon editors. For EmuTOS,
-`tools/icon/add_to_emuicon.py` adds it to `EMUICON.RSC`.
+`tools/icon/add_to_emuicon.py`, in EMail's source on GitHub, adds it to
+`EMUICON.RSC`.
 
 ## When something goes wrong
 
-- **"can't connect"**: is the gateway running (`sudo systemctl status
-  emailgate` on the Pi)? Is the address right? Is STinG (or MiNTnet) set
+- **"can't connect"**: is the gateway running (`gateway/aera-gateway
+  status`, or `sudo systemctl status emailgate`, on the Pi)? Is the address right? Is STinG (or MiNTnet) set
   up — can other network programs reach the Pi? An answer that starts
   with "emailgate:" comes from the gateway, and says what it couldn't do
   (reach your provider, trust its certificate, or let your Atari in).
@@ -493,8 +517,9 @@ the image and mask for icon editors. For EmuTOS,
   they are encrypted the next time EMail saves its settings.
 - **Options > Protocol log** writes the conversation with the servers to
   `EMAIL.LOG` (passwords are hidden); it shows exactly what a server said.
-  Each line goes to disk as it happens, so after a crash or a reset the
-  log is complete up to that moment.
+  It is written in blocks, and at once at every step (connecting,
+  logging in, an error), so after a crash or a reset it holds what led
+  up to it.
 - **A crash**: if EMail itself goes wrong (what would be 2 to 8 bombs),
   it says so, writes what happened to `CRASH.LOG` and quits, leaving the
   Atari running. A crash in the system or a driver still gives the

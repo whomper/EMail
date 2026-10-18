@@ -543,7 +543,7 @@ int store_save_settings(void)
 	tls_tz_minutes = zone_offset_now();
 	sb_init(&b);
 	sb_adds(&b, "; EMail settings, written by EMAIL.PRG. Lines starting with ; are notes.\r\n"
-		    "; Most of these are set in Options > Settings; see docs/GUIDE.md.\r\n"
+		    "; Most of these are set in Options > Settings; the Help key opens the guide.\r\n"
 		    "; 1 means on, 0 means off.\r\n\r\n[OPTIONS]\r\n\r\n");
 	put_str(&b, "your time zone, by its name (Asia/Jerusalem); summer time follows by itself",
 		"TIMEZONE", opt.tzname);

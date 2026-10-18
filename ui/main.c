@@ -108,7 +108,7 @@ static const MBAR_ITEM m_fold[] = {
 };
 static const MBAR_ITEM m_opts[] = {
 	{ "Accounts...", 0, C_ACCOUNTS },
-	{ "Settings...", 0, C_SETTINGS },
+	{ "Settings...", "^,", C_SETTINGS },
 	{ "Font...", 0, C_FONT },
 	{ "-", 0, 0 },
 	{ "Work offline", 0, C_OFFLINE },
@@ -1250,10 +1250,13 @@ static int shortcut(short kstate, short key)
 		case 0x1f: cmd = C_SAVEOUT; break;	/* S: into the Outbox */
 		case 0x14: cmd = C_ATTACH; break;	/* T */
 		case 0x30: cmd = C_ABOOK; break;	/* B */
+		case 0x33: cmd = C_SETTINGS; break;	/* , */
 		}
-		if (cmd == C_SEND || cmd == C_SAVEOUT || cmd == C_ATTACH || cmd == C_ABOOK) {
+		if (cmd == C_SEND || cmd == C_SAVEOUT || cmd == C_ATTACH) {
 			if (w_editor.h <= 0)
 				return 1;
+		} else if (cmd == C_ABOOK && w_editor.h <= 0 && !naccts) {
+			return 1;		/* else a new message, as the menu's */
 		} else if ((cmd == C_REPLY || cmd == C_REPLYALL || cmd == C_FORWARD) && !cur_msg) {
 			return 1;
 		} else if ((cmd == C_UNREAD || cmd == C_FLAG || cmd == C_MOVE) && !cur_msg && list_marked() < 2) {

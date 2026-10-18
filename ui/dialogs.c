@@ -1305,6 +1305,7 @@ void dlg_keys(void)
 		"Tab next pane          F10 Hebrew keyboard",
 		"In the editor: \x01^D send  ^S into the Outbox",
 		"               ^T attach  ^B addresses",
+		"^,  settings           Help this guide",
 		"^W  close the window   ^Q  quit"
 	};
 	short i, n = (short)(sizeof(lines) / sizeof(lines[0]));

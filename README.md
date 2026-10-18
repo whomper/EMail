@@ -35,11 +35,12 @@ one is there on its own, and all of them together in `EMAIL-x.y.zip`.
 | `EMAIL.PRG` | the program, for every Atari from the ST to the Falcon |
 | `CACERT.PEM`, `ROOTS.DAT` | the root certificates for Falcon mode (Mozilla's list, and the same decoded ahead of time) |
 | `EMAIL.HYP`, `EMAIL.REF` | the user guide for EHypView or ST-Guide, opened by the Help key |
-| `EMAIL.RSC`, `EMAIL.ICN`, `EMAILMK.ICN` | the desktop icon, in the zip's `icons/` folder (see [The desktop icon](docs/GUIDE.md#the-desktop-icon)) |
+| `EMAIL.RSC`, `EMAIL.ICN`, `EMAILMK.ICN` | the desktop icon, on their own and in the zip's `icons/` folder (see [The desktop icon](docs/GUIDE.md#the-desktop-icon)) |
 | `EMAIL-x.y.zip` | all of the above |
 
-1. Copy `EMAIL.PRG` into a folder of its own on your Atari, e.g. `C:\EMAIL\`, with `EMAIL.HYP` and
-   `EMAIL.REF` beside it.
+1. Copy `EMAIL.PRG` to any folder on any drive, with `EMAIL.HYP` and `EMAIL.REF` beside it. EMail keeps
+   its settings and your mail next to itself, so a folder of its own (`C:\EMAIL\`, say) keeps them
+   together; nothing has to be in a particular place.
 2. Set up the gateway on a Raspberry Pi, in a clone of this repository (or of
    [AERA-Gateway](https://github.com/whomper/AERA-Gateway)):
    `sudo gateway/aera-gateway install mail imap.gmail.com smtp.gmail.com`, with your provider's
@@ -51,10 +52,38 @@ one is there on its own, and all of them together in `EMAIL-x.y.zip`.
 On a Falcon or TT with 4 MB you can skip the Pi: copy `CACERT.PEM` and `ROOTS.DAT` next to `EMAIL.PRG`
 and switch on **Options > Falcon mode**. EMail fills in the servers for the big providers.
 
+**Updating:** copy the new release's files over the old ones. `EMAIL.INF`, `EMAIL.KEY` and your mail stay
+as they are.
+
 **Needs:** TOS 1.04 or newer (TOS 4 on the Falcon), EmuTOS, MagiC or MiNT; 640×200 (ST medium) or
-larger; about 400 KB of free memory, more for big mailboxes; network: STinG (or STiK), MiNTnet or
+larger; 1 MB of memory (EMail itself takes about 410 KB; more memory holds bigger folders); network: STinG (or STiK), MiNTnet or
 MagiC-Net; for providers that need encryption (nearly all), the Pi gateway or Falcon mode (a Falcon or
 TT with 4 MB or more).
+
+### In more detail
+
+- IMAP with a local mirror: headers of the newest messages and every message you've read, kept in step
+  with the server; big folders load 100 messages at a time, with "Load more" for older ones. Read and
+  flag changes are sent in one go when you pause, and at the latest on quit
+- POP3 that downloads into local folders and never fetches a message twice
+- SMTP with login (AUTH PLAIN/LOGIN); Send now goes straight out, with anything waiting in the Outbox
+- Reply, reply to all, forward (with the original's attachments), flags, move (or drag messages onto a
+  folder), delete to Trash, mark a whole folder read, one signature of up to four lines for every account
+- People by name from EContact, the AERA address book: in the list, the message and the To: line,
+  with the address in a tooltip; Ctrl+B picks people and groups in EContact's window
+- Attachments: save them with the file selector; attach files when writing
+- HTML-only mail shown as text
+- Dates with the year, numbers with thousands separators
+- Fonts: the system font in two sizes and any monospaced GDOS font (bitmap, Speedo, TrueType); the
+  selector lists only the fonts EMail can use. A vector font's Hebrew letters are found through NVDI 5
+  by Unicode (FreeMono and Liberation Mono have them); a font without them gets its Hebrew drawn in the
+  system font
+- Your time zone by name (Asia/Jerusalem, Europe/London...), with summer time worked out by itself and
+  found from the machine when it says
+- Passwords encrypted in `EMAIL.INF`, hidden behind an eye button in the dialogs
+- `EMAIL.INF` in capitals, each setting with a note above it
+
+![Settings: a sidebar of parts, here Connection with the time zone by name](docs/settings.png)
 
 ## How it reaches the servers
 
@@ -79,7 +108,7 @@ them keeps both.
 
 The gateway's own README: [gateway/README.md](gateway/README.md).
 
-## Performance: Pi, 68030 and DSP
+### Performance: Pi, 68030 and DSP
 
 What costs time is the TLS handshake, once per connection: EMail keeps its IMAP connection open, so that
 is once per session, plus once for each batch of mail sent.
@@ -89,7 +118,7 @@ is once per session, plus once for each batch of mail sent.
 | Machines | any Atari, 68000 ST too | Falcon, TT (68030) | Falcon |
 | Handshake, stock 16 MHz Falcon | done by the Pi, a fraction of a second | about 9.6 s | about 2.5 s |
 | Handshake, 50 MHz Falcon in TT/fast RAM | done by the Pi | about 5 s | about 1.5 s |
-| Reading mail once connected | as fast as STinG/MiNTnet carry it | 39 KB/s (16 MHz), 66 KB/s (50 MHz, fast RAM) | the same: the DSP only helps the handshake |
+| Mail coming in, once connected | about 37 KB/s | 15 to 25 KB/s on a 50 MHz Falcon (the cipher alone: 39 KB/s at 16 MHz, 66 KB/s at 50 MHz in fast RAM) | the same: the DSP only helps the handshake |
 | Work on the Atari | none, plain IMAP/SMTP | all of TLS | TLS, RSA checks on the DSP |
 
 In a handshake the 68030 does the key exchange (X25519, 0.5 to 1 s each, two of them) and the DSP56001
@@ -100,31 +129,6 @@ TLS in reasonable time and always goes through the Pi.
 
 The 50 MHz figures were measured on a real Falcon with a DFB1X board, the 16 MHz ones in cycle-exact
 emulation; details in [tools/tlsbench](tools/tlsbench/README.md).
-
-## In more detail
-
-- IMAP with a local mirror: headers of the newest messages and every message you've read, kept in step
-  with the server; big folders load 100 messages at a time, with "Load more" for older ones. Read and
-  flag changes are sent in one go when you pause, and at the latest on quit
-- POP3 that downloads into local folders and never fetches a message twice
-- SMTP with login (AUTH PLAIN/LOGIN)
-- Reply, reply to all, forward (with the original's attachments), flags, move (or drag messages onto a
-  folder), delete to Trash, mark a whole folder read, one signature of up to four lines for every account
-- People by name from EContact, the AERA address book: in the list, the message and the To: line,
-  with the address in a tooltip; Ctrl+B picks people and groups in EContact's window
-- Attachments: save them with the file selector; attach files when writing
-- HTML-only mail shown as text
-- Dates with the year, numbers with thousands separators
-- Fonts: the system font in two sizes and any monospaced GDOS font (bitmap, Speedo, TrueType); the
-  selector lists only the fonts EMail can use. A vector font's Hebrew letters are found through NVDI 5
-  by Unicode (FreeMono and Liberation Mono have them); a font without them gets its Hebrew drawn in the
-  system font
-- Your time zone by name (Asia/Jerusalem, Europe/London...), with summer time worked out by itself and
-  found from the machine when it says
-- Passwords encrypted in `EMAIL.INF`, hidden behind an eye button in the dialogs
-- `EMAIL.INF` in capitals, each setting with a note above it
-
-![Settings: a sidebar of parts, here Connection with the time zone by name](docs/settings.png)
 
 ## Building
 
@@ -176,7 +180,8 @@ common/   code shared with the other AERA programs, from AERA-Atari: the TOS run
 gateway/  the Raspberry Pi gateways (emailgate.py is EMail's) and aera-gateway, their installer:
           a copy of AERA-Gateway's; change it there, then run tools/sync-gateway.sh
 tests/    unit, fuzz and integration tests, the Hatari rigs (tests/hatari)
-tools/    the icon generator, sync-common.sh, sync-gateway.sh, bump.py, the TLS measurements (tlsbench)
+tools/    the icon generator, mkhelp.py (the help file), sync-common.sh, sync-gateway.sh, bump.py,
+          the TLS measurements (tlsbench)
 icons/    the desktop icon (RSC and ICN files), from tools/icon
 docs/     the user guide (GUIDE.md and front.json, its first page: the source of EMAIL.HYP) and the pictures
 binary/   what make builds for the Atari (not committed: the releases have it)
@@ -216,7 +221,8 @@ tests/hatari/help_test.py /tmp/mail-help           # EMAIL.HYP in EHypView's lat
 
 In `net_test.py` EMail logs in to Dovecot, mirrors the inbox, opens a
 Hebrew message and sends a Hebrew reply; the test checks the reply and its copy in Sent on the server.
-`select_test.py`, `rename_test.py` and `colour_tour.py` run the same way. The tests that need another
+`select_test.py`, `rename_test.py`, `drag_test.py` (messages dragged onto a folder), `esc_test.py`
+(Esc and Undo cancel every dialog and alert) and `colour_tour.py` run the same way. The tests that need another
 AERA program take its latest release, as you would have it (`common/tools/getrelease.py`; add `vX.Y`
 for another one): `econtact_test.py` with EContact, `help_test.py` with EHypView. `people_test.py`
 checks the same conversation with a stand-in for EContact (`build/fakecontact.acc`). Hatari has no network card,
