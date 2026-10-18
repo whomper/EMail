@@ -55,6 +55,10 @@ These come from AERA-Atari's repo template and are the same in every app's CLAUD
   short context and the decision. Findings: the information, your
   assessment and what he should do, nothing more. Messages to the hub
   stay complete, with the evidence.
+- **Docs-only changes** (README, docs/, CLAUDE.md) take the short path
+  (guidelines 1.2): push once they read right and `make help` still
+  builds the help file with the version; no rigs, itest or real-TOS run.
+  A docs-only release still needs Erez's yes.
 - **A release** carries `EMAIL.PRG`, `EMAIL.HYP` and `.REF` (hcp from `common/tools/build-hcp.sh`),
   `CACERT.PEM`, `ROOTS.DAT` and the icon. The icons are committed in `icons/` (`make icons`).
 - The help file's front page (guidelines 4.3) is `docs/front.json`, laid out by
