@@ -69,8 +69,9 @@ These come from AERA-Atari's repo template and are the same in every app's CLAUD
   gateway), `make itest` (against Dovecot: dovecot-imapd, dovecot-pop3d;
   also `TLS=1` and `FALCON=1` when the connection code changes), and
   `make` with no warnings. When the GEM side changes,
-  `tests/hatari/net_test.py` and `tests/hatari/stop_test.py` in Hatari
-  with EmuTOS. With EContact: `econtact_test.py` (its latest release);
+  `tests/hatari/net_test.py`, `tests/hatari/stop_test.py` and
+  `tests/hatari/disk_test.py` (each job's opens within its budget,
+  guidelines 6.5) in Hatari with EmuTOS. With EContact: `econtact_test.py` (its latest release);
   the help file: `help_test.py` (EHypView's latest release).
 - `gateway/` is a read-only copy of
   [AERA-Gateway](https://github.com/whomper/AERA-Gateway)'s (emailgate,
