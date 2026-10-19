@@ -141,6 +141,20 @@ static int is_heb(unsigned char c)
 	return c >= 0xC2 && c <= 0xDC;
 }
 
+/* a run of characters, in their cells: the system font in one call; a
+   GDOS font one character to a cell (font_cells), spaces left out */
+static void cells_at(short x, short y, const char *s, short n)
+{
+	short k;
+	if (!font_cells) {
+		v_gtext_n(vdi_h, x, y, s, n);
+		return;
+	}
+	for (k = 0; k < n; k++)
+		if (s[k] != ' ')
+			v_gtext_n(vdi_h, x + k * cw, y, s + k, 1);
+}
+
 /* a vector font: the Hebrew letters by the font's own indices (NVDI's
    map mode 0), or in the system font, one cell each; the rest as usual */
 static void runs_at(short x, short y, const char *s, short n)
@@ -151,14 +165,15 @@ static void runs_at(short x, short y, const char *s, short n)
 		while (j < n && is_heb((unsigned char)s[j]) == heb && j - i < 120)
 			j++;
 		if (!heb) {
-			v_gtext_n(vdi_h, x + i * cw, y, s + i, j - i);
+			cells_at(x + i * cw, y, s + i, j - i);
 		} else if (heb_mode == HM_UNICODE) {
-			unsigned short w[120];
+			unsigned short w;
 			short k;
-			for (k = i; k < j; k++)
-				w[k - i] = heb_idx[(unsigned char)s[k] - 0xC2];
 			vst_map_mode(vdi_h, 0);
-			v_gtext_w(vdi_h, x + i * cw, y, w, j - i);
+			for (k = i; k < j; k++) {
+				w = heb_idx[(unsigned char)s[k] - 0xC2];
+				v_gtext_w(vdi_h, x + k * cw, y, &w, 1);
+			}
 			vst_map_mode(vdi_h, 1);
 		} else {
 			/* the system font, each letter centred in its cell */
@@ -220,7 +235,7 @@ void text_at(short x, short y, const char *s, long n, short cols, short flags)
 	vst_effects(vdi_h, (flags & TX_BOLD) ? 1 : (flags & TX_LIGHT) ? 2 : 0);
 	for (i = 0; i < n; i += 120) {
 		short k = n - i > 120 ? 120 : (short)(n - i);
-		v_gtext_n(vdi_h, x + i * cw, y, out + i, k);
+		cells_at(x + i * cw, y, out + i, k);
 	}
 	if (flags & (TX_BOLD | TX_LIGHT))
 		vst_effects(vdi_h, 0);

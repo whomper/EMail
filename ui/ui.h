@@ -206,6 +206,7 @@ void font_apply(void);		/* opt.font_id/pt -> cw, ch */
 void font_sys_push(void);	/* the system font, for a popup or the About box */
 void font_sys_pop(void);	/* back to the window's font */
 void font_reselect(void);	/* the text font again, after drawing in another */
+extern short font_cells;	/* 1: a GDOS font, drawn a character to a cell */
 /* how the text font gets its Hebrew letters */
 #define HM_MAP     0		/* where opt.hebfont says (system and bitmap fonts) */
 #define HM_UNICODE 1		/* a vector font's own, found by Unicode (NVDI) */

@@ -15,7 +15,9 @@ the windows redrew, no dialog is left (against the dialog's own shot:
 the shot after it would hide a dialog that stayed), and EMAIL.INF says
 FONT= that font. Then ^Q, EMAIL.INF set offline, and EMail starts again
 in that font: the message list draws, and the Hebrew message, read from
-disk, draws right to left. Whether its letters are the right Hebrew ones
+disk, draws right to left; the hint in the reader's header bar stands
+clear of the subject, and each header's label of its value (Erez's NVDI,
+Courier 14: they ran together). Whether its letters are the right Hebrew ones
 is for the eye: shots/g2-hebrew-line.png is the first body line, enlarged.
 
 Without a GDOS the dialog lists only the system font: "no GDOS fonts",
@@ -124,6 +126,87 @@ def ink_rows(shot, box):
     return rows
 
 
+def header_bar(shot, x0, x1):
+    """the reader's header bar: the lowest run of 8 rows or more, below
+    the top third, where under 60% of the pixels are the windows' white"""
+    from PIL import Image
+    im = Image.open(shot).convert("RGB")
+    W, H = im.size
+    px = im.load()
+    best, run, start = None, 0, 0
+    for y in range(H // 3, H):
+        white = sum(px[x, y] == (255, 255, 255) for x in range(x0, x1))
+        dark = white < 0.6 * (x1 - x0)
+        if dark:
+            if not run:
+                start = y
+            run += 1
+        else:
+            if run >= 8:
+                best = (start, y - 1)
+            run = 0
+    return best
+
+
+def bar_gap(shot, x0, x1, y0, y1):
+    """in a header bar: (whether its text reaches the right end, the
+    widest gap in it, the next widest)"""
+    from PIL import Image
+    band = Image.open(shot).convert("RGB").crop((x0, y0, x1, y1 + 1))
+    w, h = band.size
+    p = band.load()
+    bg = max(band.getcolors(w * h), key=lambda c: c[0])[1]
+    rows = [y for y in range(h) if sum(p[x, y] != bg for x in range(w)) < 0.9 * w]   # not a rule
+    ink = [any(p[x, y] != bg for y in rows) for x in range(w)]
+    xs = [x for x in range(w) if ink[x]]
+    if not xs:
+        return False, 0, 0
+    gaps, s = [], None
+    for x in range(xs[0], xs[-1] + 1):
+        if not ink[x] and s is None:
+            s = x
+        if ink[x] and s is not None:
+            gaps.append(x - s)
+            s = None
+    gaps = sorted(gaps, reverse=True) + [0, 0]
+    return xs[-1] > 0.9 * w, gaps[0], gaps[1]
+
+
+def label_gaps(shot, x0, x1, y0, y1, labels):
+    """the header lines under the bar: for each, the gap between its label
+    (the dim colour, bold) and its value (the text colour), in the label's
+    own character widths"""
+    from PIL import Image
+    im = Image.open(shot).convert("RGB").crop((x0, y0, x1, y1))
+    w, h = im.size
+    p = im.load()
+    bg = max(im.getcolors(w * h), key=lambda c: c[0])[1]
+    lines, s = [], None
+    for y in range(h + 1):
+        on = y < h and any(p[x, y] != bg for x in range(w))
+        if on and s is None:
+            s = y
+        if not on and s is not None:
+            lines.append((s, y - 1))
+            s = None
+    out = []
+    for (a, z), label in zip(lines, labels):
+        cols = {}
+        for y in range(a, z + 1):
+            for x in range(w):
+                if p[x, y] != bg:
+                    cols.setdefault(p[x, y], []).append(x)
+        first = min(cols.items(), key=lambda kv: min(kv[1]))      # the label's colour: leftmost
+        lab = first[1]
+        rest = [x for c, v in cols.items() if c != first[0] for x in v if x > min(lab)]
+        if not rest:
+            out.append((label, None))
+            continue
+        cell = (max(lab) - min(lab) + 1) / float(len(label))
+        out.append((label, (min(rest) - max(lab) - 1) / cell))
+    return out
+
+
 def size():
     from PIL import Image
     return Image.open(start).size
@@ -229,6 +312,26 @@ try:
         im = Image.open(heb).crop((rbox[0] + bw // 2, rbox[1] + y0 - 2, rbox[2], rbox[1] + y1 + 3))
         im.resize((im.size[0] * 3, im.size[1] * 3), Image.NEAREST).save(
             os.path.join(work, "shots", "g2-hebrew-line.png"))
+    # the reader's header bar: the subject, and the hint at the right
+    # with clear space before it; the labels clear of their values
+    from PIL import Image
+    mono = len(Image.open(heb).convert("RGB").getcolors(1 << 16) or []) <= 2
+    bar = None if mono else header_bar(heb, 220, W - 24)
+    if mono:
+        print("  (a mono screen: labels and values share a colour, the header checks skipped)", flush=True)
+    elif not bar:
+        check("the reader's header bar found", False)
+    else:
+        right_end, widest, next_ = bar_gap(heb, 220, W - 24, bar[0], bar[1])
+        if right_end:
+            check("the hint stands clear of the subject", widest >= 1.6 * max(next_, 1),
+                  "widest gap %d px, next %d px" % (widest, next_))
+        else:
+            print("  (the hint didn't fit: not shown)", flush=True)
+        for label, g in label_gaps(heb, 220, W - 24, bar[1] + 2, bar[1] + 2 + 5 * 40,
+                                   ["From:", "To:", "Date:", "Subject:"]):
+            check("%s stands clear of its value" % label, g is not None and g >= 0.6,
+                  "a gap of %s characters" % ("no" if g is None else "%.1f" % g))
     r.ctrl("q")
     time.sleep(4)
 finally:

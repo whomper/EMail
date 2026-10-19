@@ -277,8 +277,8 @@ static void draw_header(WIN *w)
 	h.w = w->box.w;
 	h.h = header_h();
 	fill(&h, dark ? pen[P_HEAD] : pen[P_PANEL]);
-	if (il > cols - tl - 1)
-		il = cols - tl - 1;
+	if (il > cols - tl - 3)
+		il = 0;			/* a hint shows whole, two cells clear, or not at all */
 	text_at(h.x + cw / 2, h.y + 2, w->title, tl, cols, TX_BOLD | TX_LTR | (dark ? TX_INVERSE : 0));
 	if (il > 0) {
 		if (dark || !colour)
