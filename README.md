@@ -64,7 +64,8 @@ and switch on **Options > Falcon mode**. EMail fills in the servers for the big 
 as they are. On the Pi, `./update-pi.sh` in `AERA-Gateway` updates the gateway.
 
 **Needs:** TOS 1.04 or newer (TOS 4 on the Falcon), EmuTOS, MagiC or MiNT; 640×200 (ST medium) or
-larger; 1 MB of memory (EMail itself takes about 410 KB; more memory holds bigger folders); network: STinG (or STiK), MiNTnet or
+larger; 1 MB of memory (EMail itself takes about 410 KB; more memory holds bigger folders), 2 MB or more with
+EContact's accessory (on a 1 MB ST, use EContact as a program, `ECONTACT.PRG`); network: STinG (or STiK), MiNTnet or
 MagiC-Net; for providers that need encryption (nearly all), the Pi gateway or Falcon mode (a Falcon or
 TT with 4 MB or more).
 

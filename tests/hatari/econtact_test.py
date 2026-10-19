@@ -6,7 +6,8 @@ latest release, as Erez has it, not a build of its main.
 
 As people_test.py (Dovecot, the SMTP stand-in, FAKESTNG.PRG over the
 serial port), but C:\\ECONTACT.ACC is EContact's release (ECONTST.ACC, the ST
-edition, on ST and ST-1, as a user there has it), with an address
+edition, on ST, as a user there has it; not on ST-1, where the two don't
+fit together and EContact runs as a program: Erez, 19 Oct 2026), with an address
 book of Dana, Avi and Grace (tests/hatari/people.vcf) made by EContact's
 card-cli from the same release's source. EMail replies to Dana, types
 "Grace" on the To: line and presses ^B: EContact's window opens searching
@@ -32,6 +33,9 @@ ROOT = os.path.normpath(os.path.join(HERE, "..", ".."))
 IMAP, SMTP = 10143, 10025
 
 work, machine, more = rig.cli("Falcon")
+if machine.partition(":")[0] == "ST-1":
+    print("SKIP on %s: 1 MB: EMail and the accessory don't fit together, Erez 19 Oct" % machine)
+    sys.exit(0)
 os.makedirs(work, exist_ok=True)
 srv = os.path.join(work, "srv")
 hd = os.path.join(work, "hd")
@@ -64,7 +68,7 @@ rig.stop_at_exit(srv, smtp)
 ec_spec = "EContact@" + more[0] if more else "EContact"
 ec_dir = os.path.join(work, "econtact")
 shutil.rmtree(ec_dir, ignore_errors=True)
-acc = "ECONTST.ACC" if machine.partition(":")[0] in ("ST", "ST-1") else "ECONTACT.ACC"
+acc = "ECONTST.ACC" if machine.partition(":")[0] == "ST" else "ECONTACT.ACC"
 tag = rig.release(ec_spec, ec_dir, acc)
 print("EContact", tag)
 ec_src = os.path.join(ec_dir, "src")

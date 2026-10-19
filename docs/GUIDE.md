@@ -11,7 +11,9 @@ reads and writes Hebrew.
   MiNT, and a screen of at least 640×200 (ST medium); 640×400 (ST high)
   or the Falcon's 640×480 show three windows side by side
 - 1 MB of memory or more: EMail itself takes about 410 KB, and more
-  memory holds bigger folders
+  memory holds bigger folders. With EContact's accessory loaded, 2 MB or
+  more: on a 1 MB ST the two don't fit together, so there use EContact as
+  a program (`ECONTACT.PRG`), between EMail's runs
 - A TCP/IP stack:
   - **STinG** on plain TOS (or STiK), or
   - **MiNTnet** under FreeMiNT (with or without GlueSTiK), or MagiC-Net
@@ -297,7 +299,8 @@ References). Forwarding a message with attachments attaches the original.
 ## From other programs
 
 **EContact**, the AERA address book, is EMail's address book when it is
-loaded (as the accessory, or alongside under MiNT or MagiC). EMail asks it
+loaded (as the accessory, which needs 2 MB or more next to EMail, or
+alongside under MiNT or MagiC). EMail asks it
 for the names behind the addresses it shows: in the list, in the From:,
 To: and Cc: lines of a message (a name's tooltip is its address) and when
 writing. Nothing is copied between their folders. Without EContact,
