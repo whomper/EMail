@@ -157,15 +157,18 @@ static int job_depth;
 
 static void job_in(void)
 {
-	job_depth++;
+	if (job_depth++ == 0)
+		conn_log_hold(1);	/* the log's milestones go with the buffer */
 }
 
 static int job_out(int r)
 {
 	short i;
-	if (--job_depth == 0)
+	if (--job_depth == 0) {
 		for (i = 0; i < naccts; i++)
 			folders_flush(accts[i]);
+		conn_log_hold(0);
+	}
 	return r;
 }
 

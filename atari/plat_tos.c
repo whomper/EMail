@@ -27,8 +27,60 @@ int pf_open(const char *path, int mode)
 	return (int)h;
 }
 
-long pf_read(int h, void *buf, long n) { return Fread((short)h, n, buf); }
-long pf_write(int h, const void *buf, long n) { return Fwrite((short)h, n, buf); }
+/* TT RAM goes to the disk as it is only when the hard disk driver says it
+   bounces DMA itself (_FRB, bigbuf.h); else through a piece of ST RAM.
+   The program and its heap may be in TT RAM (PRGFLAGS 7), not only
+   pf_bulk's buffer. */
+#define TT_RAM 0x01000000UL
+#define BOUNCE (16L * 1024)
+
+static char *bounce;
+static int direct = -1;
+
+static int via_st(const void *buf)
+{
+	if ((unsigned long)buf < TT_RAM)
+		return 0;
+	if (direct < 0)
+		direct = big_direct();
+	if (!direct && !bounce && (long)(bounce = Mxalloc(BOUNCE, 0)) <= 0)
+		bounce = 0;		/* none to spare: as before, straight */
+	return !direct && bounce;
+}
+
+long pf_read(int h, void *buf, long n)
+{
+	long got = 0, k, r;
+	if (!via_st(buf))
+		return Fread((short)h, n, buf);
+	while (got < n) {
+		k = n - got < BOUNCE ? n - got : BOUNCE;
+		if ((r = Fread((short)h, k, bounce)) < 0)
+			return got ? got : r;
+		memcpy((char *)buf + got, bounce, r);
+		got += r;
+		if (r < k)
+			break;
+	}
+	return got;
+}
+
+long pf_write(int h, const void *buf, long n)
+{
+	long put = 0, k, r;
+	if (!via_st(buf))
+		return Fwrite((short)h, n, buf);
+	while (put < n) {
+		k = n - put < BOUNCE ? n - put : BOUNCE;
+		memcpy(bounce, (const char *)buf + put, k);
+		if ((r = Fwrite((short)h, k, bounce)) < 0)
+			return put ? put : r;
+		put += r;
+		if (r < k)
+			break;
+	}
+	return put;
+}
 void pf_close(int h) { Fclose((short)h); }
 long pf_seek(int h, long off) { return Fseek(off, (short)h, 0); }
 
