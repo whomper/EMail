@@ -5,7 +5,8 @@
 latest release, as Erez has it, not a build of its main.
 
 As people_test.py (Dovecot, the SMTP stand-in, FAKESTNG.PRG over the
-serial port), but C:\\ECONTACT.ACC is EContact's release, with an address
+serial port), but C:\\ECONTACT.ACC is EContact's release (ECONTST.ACC, the ST
+edition, on ST and ST-1, as a user there has it), with an address
 book of Dana, Avi and Grace (tests/hatari/people.vcf) made by EContact's
 card-cli from the same release's source. EMail replies to Dana, types
 "Grace" on the To: line and presses ^B: EContact's window opens searching
@@ -63,7 +64,8 @@ rig.stop_at_exit(srv, smtp)
 ec_spec = "EContact@" + more[0] if more else "EContact"
 ec_dir = os.path.join(work, "econtact")
 shutil.rmtree(ec_dir, ignore_errors=True)
-tag = rig.release(ec_spec, ec_dir, "ECONTACT.ACC")
+acc = "ECONTST.ACC" if machine.partition(":")[0] in ("ST", "ST-1") else "ECONTACT.ACC"
+tag = rig.release(ec_spec, ec_dir, acc)
 print("EContact", tag)
 ec_src = os.path.join(ec_dir, "src")
 subprocess.run(["git", "-c", "advice.detachedHead=false", "clone", "-q", "--depth", "1", "--branch", tag, "https://github.com/whomper/EContact",
@@ -81,7 +83,7 @@ inf = re.sub(rb"\nSTART=[^\r\n]*", rb"\nSTART=now", inf)
 inf = re.sub(rb"\nFOLDER=[^\r\n]*", rb"\nFOLDER=C:\\ECONTACT", inf)
 os.remove(os.path.join(book, "ECONTACT.INF"))
 open(os.path.join(hd, "ECONTACT.INF"), "wb").write(inf)
-shutil.copy(os.path.join(ec_dir, "ECONTACT.ACC"), hd)
+shutil.copy(os.path.join(ec_dir, acc), hd)
 
 # drive C:
 os.makedirs(os.path.join(hd, "AUTO"))
