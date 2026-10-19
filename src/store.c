@@ -1137,9 +1137,14 @@ int msg_save(FOLDER *f, unsigned long uid, const char *data, long len)
 	put4(head + 2, uid);
 	put4(head + 6, (unsigned long)len);
 	if (!f->pend && !f->pend_len) {
+		char note[48];
 		f->pend = pf_bulk(&f->pend_cap);
 		if (!f->pend)
 			f->pend_cap = 0;
+		/* for the rigs (the emulator's console, no disk): a job's appends
+		   are its bodies' bytes over this, rounded up */
+		snprintf(note, sizeof(note), "EMail: pack buffer %ld bytes", f->pend_cap);
+		pf_debug(note);
 	}
 	if (f->pend_len + PACK_HEAD + len > f->pend_cap && pack_flush(f) < 0)
 		return -1;

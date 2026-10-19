@@ -113,9 +113,14 @@ def index_records(folder):
     return out
 
 
+HLOG = os.path.join(work, "hatari.log")
+logmarks = {}
+
+
 def mark(name):
     time.sleep(1)
     marks.append((name, os.path.getsize(TR)))
+    logmarks[name] = os.path.getsize(HLOG) if os.path.exists(HLOG) else 0
 
 
 try:
@@ -182,7 +187,7 @@ json.dump(marks, open(os.path.join(work, "marks.json"), "w"))
 
 # ---- the counts ----
 OPS = {"3D": "Fopen", "3C": "Fcreate", "4E": "Fsfirst", "41": "Fdelete", "56": "Frename", "39": "Dcreate"}
-BUDGET = {"A1": 6, "A2": 6, "B1": 8, "B2": 1}
+BUDGET = {"A1": 6, "A2": 5, "B1": 8, "B2": 1}
 WHAT = {"A1": "Check mail, 50 new in the open Inbox (headers)",
         "A2": "Download all messages, 53 bodies",
         "B1": "open a 500-message folder the first time (100 headers)",
@@ -190,6 +195,40 @@ WHAT = {"A1": "Check mail, 50 new in the open Inbox (headers)",
 trace = open(TR, "rb").read()
 at = dict(marks)
 fails = 0
+
+
+def pack_writes(job):
+    """the bytes the job wrote to the packs"""
+    fd, n = {}, 0
+    last = None
+    for line in trace[at[job + " begin"]:at[job + " end"]].decode("latin-1").splitlines():
+        m = re.match(r'GEMDOS 0x(3D|3C) \w+\("([^"]*)"', line)
+        if m:
+            last = m.group(2)
+            continue
+        m = re.match(r"-> FD (\d+)", line)
+        if m and last:
+            fd[m.group(1)] = last
+            last = None
+            continue
+        m = re.match(r"GEMDOS 0x40 Fwrite\((\d+), (\d+),", line)
+        if m and fd.get(m.group(1), "").endswith("MESSAGES.DAT"):
+            n += int(m.group(2))
+    return n
+
+
+# A2 goes to disk a buffer at a time: as many appends as its bytes need
+# buffers, the buffer's size as EMail says it (a quarter of the free ST
+# RAM on a 1 MB ST, 256 KB of TT RAM)
+log = open(HLOG, "rb").read()[logmarks["A2 begin"]:logmarks["A2 end"]].decode("latin-1") if os.path.exists(HLOG) else ""
+bufs = [int(b) for b in re.findall(r"EMail: pack buffer (\d+) bytes", log)]
+wrote = pack_writes("A2")
+if bufs and bufs[0] > 0:
+    pieces = -(-wrote // bufs[0])
+    BUDGET["A2"] += max(pieces, 1) - 1
+    print("  A2 wrote %d bytes to the pack through a %d-byte buffer: %d piece(s)" % (wrote, bufs[0], max(pieces, 1)))
+else:
+    print("  A2: EMail didn't say its buffer size (%d bytes written)" % wrote)
 for job in ("A1", "A2", "B1", "B2"):
     count = collections.Counter()
     files = collections.Counter()
