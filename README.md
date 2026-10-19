@@ -233,6 +233,7 @@ tests/hatari/screenshots.py WORKDIR                # the pictures in docs/, Engl
 tests/hatari/falcon_test.py /tmp/mail-tls          # Falcon mode, TLS and the DSP (or: ... TT)
 tests/hatari/econtact_test.py /tmp/mail-ec         # names and ^B with EContact's latest release
 tests/hatari/help_test.py /tmp/mail-help           # EMAIL.HYP in EHypView's latest release
+AERA_WITH_NVDI=1 tests/hatari/font_test.py /tmp/mail-font   # a GDOS font under NVDI (Falcon, Falcon-4)
 ```
 
 In `net_test.py` EMail logs in to Dovecot, mirrors the inbox, opens a
@@ -240,7 +241,10 @@ Hebrew message and sends a Hebrew reply; the test checks the reply and its copy 
 `disk_test.py` counts each job's file opens and lookups from Hatari's GEMDOS trace and fails above its
 budget (the AERA guidelines, 6.5), and cuts a folder's file short to see the message fetched again.
 `select_test.py`, `rename_test.py`, `drag_test.py` (messages dragged onto a folder), `esc_test.py`
-(Esc and Undo cancel every dialog and alert) and `colour_tour.py` run the same way. The tests that need another
+(Esc and Undo cancel every dialog and alert) and `colour_tour.py` run the same way. `font_test.py` chooses the
+first GDOS font in Options > Font, checks the windows redraw in it and that it is saved, then starts EMail
+again in it and reads a Hebrew message from disk; under NVDI it needs Erez's NVDI (`AERA_WITH_NVDI=1`,
+`common/tools/machines.py`), and without a GDOS it checks the restart in the system font. The tests that need another
 AERA program take its latest release, as you would have it (`common/tools/getrelease.py`; add `vX.Y`
 for another one): `econtact_test.py` with EContact, `help_test.py` with EHypView. `people_test.py`
 checks the same conversation with a stand-in for EContact (`build/fakecontact.acc`). Hatari has no network card,
