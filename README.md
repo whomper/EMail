@@ -68,6 +68,10 @@ larger; 1 MB of memory (EMail itself takes about 410 KB; more memory holds bigge
 MagiC-Net; for providers that need encryption (nearly all), the Pi gateway or Falcon mode (a Falcon or
 TT with 4 MB or more).
 
+**Under TOS, put Atari's `FOLDR100.PRG` first in `AUTO`**, renamed for more room (`FOLDR400.PRG`).
+TOS keeps an entry in a small internal pool for every folder a program or accessory has looked
+into, and halts with "OUT OF INTERNAL MEMORY" when it runs out; FOLDRxxx makes the pool bigger.
+
 ### In more detail
 
 - A folder's messages in one file on disk, written in one go at the end of a check or a download (few
