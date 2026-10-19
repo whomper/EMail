@@ -315,7 +315,8 @@ try:
     # the reader's header bar: the subject, and the hint at the right
     # with clear space before it; the labels clear of their values
     from PIL import Image
-    mono = len(Image.open(heb).convert("RGB").getcolors(1 << 16) or []) <= 2
+    im = Image.open(heb).convert("RGB")
+    mono = sum(1 for n, c in im.getcolors(1 << 16) if n > 0.01 * im.size[0] * im.size[1]) <= 2   # (Hatari's drive light aside)
     bar = None if mono else header_bar(heb, 220, W - 24)
     if mono:
         print("  (a mono screen: labels and values share a colour, the header checks skipped)", flush=True)

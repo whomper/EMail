@@ -124,7 +124,7 @@ def mark(name):
 
 
 try:
-    time.sleep(45)                       # boot, log in, mirror the inbox
+    r.settle(45, 300)                    # boot, log in, mirror the inbox
     mark("start")
     r.shot("a0-start")
     for i in range(50):

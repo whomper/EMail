@@ -174,6 +174,30 @@ class Rig:
             time.sleep(0.1)
         raise RuntimeError("no screenshot")
 
+    def settle(self, least, most):
+        """wait at least `least` seconds, then until EMail's windows are up
+        (some ink, mostly white: not a blank screen, not the desktop) and
+        the same in two shots 3 s apart, up to `most`:
+        a real TOS 1.04 on an 8 MHz ST boots slower than EmuTOS, and a
+        job counted too soon catches EMail's own start"""
+        from PIL import Image, ImageChops
+        time.sleep(least)
+        end, last = time.time() + most - least, None
+        while True:
+            cur = self.shot("settle-%d" % int(time.time() * 10), 0.3)
+            im = Image.open(cur).convert("RGB")
+            w, h = im.size
+            ink = sum(n for n, c in im.getcolors(w * h) if c != (255, 255, 255))
+            drawn = 0.03 * w * h < ink < 0.4 * w * h     # EMail's white windows, not the desktop
+            same = last is not None and not ImageChops.difference(Image.open(last).convert("RGB"), im).getbbox()
+            if last:
+                os.remove(last)
+            last = cur
+            if (drawn and same) or time.time() > end:
+                os.remove(cur)
+                return drawn and same
+            time.sleep(3)
+
     # ---- mouse ----
     def xdo(self, *args):
         return subprocess.run(["xdotool", *args], env=self.env, capture_output=True, text=True).stdout
