@@ -118,8 +118,9 @@ try:
     log = open(os.path.join(hd, "PEOPLE.LOG"), errors="replace").read() if os.path.exists(
         os.path.join(hd, "PEOPLE.LOG")) else ""
     print("PEOPLE.LOG:", log.replace("\r\n", " | "))
-    check("EMail asked EContact for names", "names:EMAIL " in log and "dana@example.com" in log)
-    check("^B asked EContact to pick", "pick:EMAIL" in log)
+    asker = rig.PRG.split(".")[0]        # the AES name: EMAIL, or EMAILST (the ST edition)
+    check("EMail asked EContact for names as %s" % asker, "names:%s " % asker in log and "dana@example.com" in log)
+    check("^B asked EContact to pick", "pick:%s" % asker in log)
 
     m = imaplib.IMAP4("127.0.0.1", IMAP)
     m.login("dana", "secret")
