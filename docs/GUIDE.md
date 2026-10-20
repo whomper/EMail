@@ -206,7 +206,7 @@ folder with thousands of messages opens as quickly as a small one.
 | On            | Menu                                                                   |
 |---------------|------------------------------------------------------------------------|
 | a message     | Open, Reply, Reply to all, Forward, Mark as read/unread, Flag, Move to, Download again, Delete |
-| a folder      | Open, Check for new mail, Mark all as read, Download all messages, New folder, Rename folder, Delete folder |
+| a folder      | Open, Check for new mail, Mark all as read, Download missing messages, New folder, Rename folder, Delete folder |
 | an account    | Check mail, New message, Edit account, Refresh folder list             |
 | an attachment | Save attachment                                                        |
 | the editor    | Send now, Put in Outbox, Attach file, Address book, Hebrew keyboard, Cut line, Copy line, Paste |
@@ -415,7 +415,7 @@ Undo or the right button stops the drag.
 **On disk** each folder keeps its messages in one file, MESSAGES.DAT,
 with an index (INDEX.DAT) of where each one is: a few files to look up
 instead of one per message, which counts on an Atari hard disk. What
-comes from the server (a check, Download all) gathers in memory and is
+comes from the server (a check, Download missing messages) gathers in memory and is
 written in one go at the end, so the disk works once, not for every
 message; what is only on the Atari (the Outbox, a POP account's
 folders) is written at once. If the Atari is reset in the middle, a
@@ -444,12 +444,14 @@ away the copy on the Atari and fetches the server's again: for a message
 that came cut off or garbled over a bad line. It works on a selection
 too, and on a message that didn't open at all.
 
-**Download all messages** (Folder menu, or a right-click on the folder)
-puts every message of an IMAP folder on the Atari, to read without the
-server: all the headers, not 100 at a time, and then each message the
-Atari hasn't got yet, counted on the status line. Esc stops it; what
-came stays. From then on the folder keeps all its messages listed, and
-doing it again fetches only the new ones. With "Keep read messages on
+**Download missing messages** (Folder menu, or a right-click on the
+folder) puts every message of an IMAP folder on the Atari, to read
+without the server: all the headers, not 100 at a time, and then only
+the messages the Atari hasn't got yet, counted on the status line;
+nothing already there is downloaded again. It asks first, saying how
+many are on the Atari already. Esc stops it; what came stays. From then
+on the folder keeps all its messages listed, and doing it again fetches
+only the new ones. With "Keep read messages on
 disk" off (Settings), they are kept only until EMail quits.
 
 **POP3** accounts download new mail into local folders (Inbox, Sent,

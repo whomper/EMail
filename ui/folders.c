@@ -253,7 +253,7 @@ static void rclick(WIN *w, short mx, short my)
 		lab[0] = fi->noselect ? "~Open" : "Open";
 		lab[1] = imap && !fi->noselect ? "Check for new mail" : "~Check for new mail";
 		lab[2] = fi->noselect ? "~Mark all as read" : "Mark all as read";
-		lab[3] = imap && !fi->noselect ? "Download all messages" : "~Download all messages";
+		lab[3] = imap && !fi->noselect ? "Download missing messages" : "~Download missing messages";
 		lab[4] = "-";
 		lab[5] = a->pop ? "~New folder..." : "New folder...";
 		lab[6] = can_delete ? "Rename folder..." : "~Rename folder...";

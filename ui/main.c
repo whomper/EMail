@@ -103,7 +103,7 @@ static const MBAR_ITEM m_fold[] = {
 	{ "Rename folder...", 0, C_RENFOLDER },
 	{ "Delete folder...", 0, C_DELFOLDER },
 	{ "-", 0, 0 },
-	{ "Download all messages", 0, C_GETALL },
+	{ "Download missing messages", 0, C_GETALL },
 	{ 0, 0, 0 }
 };
 static const MBAR_ITEM m_opts[] = {
@@ -641,29 +641,37 @@ static void cmd_download_again(void)
 	menu_update();
 }
 
-/* Folder > Download all messages: every message of the folder on the
-   Atari, to read without the server; the folder mirrors all of them from
-   now on, not the newest opt.page */
+/* Folder > Download missing messages: every message of the folder on
+   the Atari, to read without the server, fetching only those it hasn't
+   got; the folder mirrors all of them from now on, not the newest
+   opt.page */
 void cmd_download_all(ACCOUNT *a, FINFO *fi)
 {
 	FOLDER *f;
-	long k, n = 0, done = 0, i;
+	long k, n = 0, done = 0, had = 0, i;
 	int ok = 1, cur = fi == cur_finfo;
-	char what[40];
+	char what[80], here[16];
 	if (!a || !fi || fi->local || fi->noselect)
 		return;
-	if (fi->total > 0)
-		snprintf(what, sizeof(what), fi->total == 1 ? "|The server has 1 message." : "|The server has %s.", num(fi->total));
-	else
-		what[0] = 0;
-	if (alert(1, "[2][Download all the messages|of %s to the Atari?%s%s][Download|Cancel]", fi->disp, what,
-		  opt.keepcache ? "" : "|(Settings: they are kept|only until EMail quits.)") != 1)
-		return;
-	busy(1);
-	mail_err[0] = 0;
 	/* the folder stays open through the job: one FOLDER, the screen's
 	   when it is the one shown, saved once at the end */
 	f = fold_open(a, fi);
+	for (i = 0; f && i < f->n; i++)
+		if (f->h[i].flags & MF_CACHED)
+			had++;
+	str_copy(here, num(had), sizeof(here));
+	if (fi->total > 0)
+		snprintf(what, sizeof(what), "|The server has %s message%s;|%s %s on the Atari already.", num(fi->total),
+			 fi->total == 1 ? "" : "s", here, had == 1 ? "is" : "are");
+	else
+		snprintf(what, sizeof(what), "|%s %s on the Atari already.", here, had == 1 ? "is" : "are");
+	if (alert(1, "[2][Download what isn't on the|Atari yet of %s?%s%s][Download|Cancel]", fi->disp, what,
+		  opt.keepcache ? "" : "|(Kept only until EMail quits.)") != 1) {
+		fold_close(f);
+		return;
+	}
+	busy(1);
+	mail_err[0] = 0;
 	ok = f ? mail_mirror_all(a, fi) : 0;
 	if (f) {
 		for (i = 0; i < f->n; i++)
@@ -689,8 +697,10 @@ void cmd_download_all(ACCOUNT *a, FINFO *fi)
 		alert(1, "[1][Stopped: %s of %s|messages downloaded.][ OK ]", num(done), num(n));
 	else if (!ok)
 		alert(1, "[1][%s][ OK ]", mail_err[0] ? mail_err : "Can't download the messages.");
+	else if (!done)
+		alert(1, "[1][All %s messages of %s|were on the Atari already:|nothing to download.][ OK ]", num(f->n), fi->disp);
 	else
-		alert(1, "[1][All %s messages of %s|are on the Atari.][ OK ]", num(f->n), fi->disp);
+		alert(1, "[1][%s downloaded: all %s|messages of %s|are on the Atari.][ OK ]", num(done), num(f->n), fi->disp);
 	fold_done(f);			/* the pack, then the index: once */
 	fold_close(f);
 	if (cur) {
