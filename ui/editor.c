@@ -1155,7 +1155,7 @@ void editor_insert_address(void)
 			}
 	}
 	if (people_picking()) {
-		av_send("ECONTACT", "");	/* its window is open already: up with it */
+		av_send("ECONTACT|ECONTST", "");	/* its window is open already: up with it */
 		return;
 	}
 	if (people_pick(partial)) {
