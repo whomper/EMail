@@ -21,6 +21,10 @@ Dovecot (as net_test.py: FAKESTNG.PRG and serial_bridge.py), it checks:
   blank before the message.
 
     scroll_test.py WORKDIR [MACHINE]     (needs Xvfb, xdotool, dovecot)
+
+AERA_FONT=5419,10 (a GDOS font's id and size, under AERA_WITH_NVDI=1)
+starts EMail with that font, as Erez runs it; a row's height is taken
+from what is drawn.
 """
 import os
 import re
@@ -40,7 +44,7 @@ IMAP, SMTP = 10143, 10025
 TRACE = os.path.join(ROOT, "build", "trace", rig.PRG)
 # EMail's first layout with the system font: where the arrows and the
 # rows are, by the screen's height (the Falcon's 640x480, ST high)
-ROW = 16                                 # a list row
+ROW = 16                                 # a list row with the system font, until one is drawn
 SPOTS = {480: dict(arrow=(630, 219), list_box=(214, 98, 620, 226),
                    rarrow=(630, 456), reader_box=(214, 254, 620, 462)),
          400: dict(arrow=(630, 184), list_box=(214, 95, 620, 192),
@@ -92,7 +96,8 @@ os.makedirs(os.path.join(hd, "AUTO"))
 rig.install_prg(hd, TRACE)
 rig.fakesting(os.path.join(hd, "AUTO"))
 with open(os.path.join(hd, "EMAIL.INF"), "w", newline="") as f:
-    f.write("[options]\r\ntz=180\r\nlog=1\r\n[account]\r\nname=Dana\r\nfullname=Dana Falcon\r\n"
+    font = os.environ.get("AERA_FONT")
+    f.write("[options]\r\ntz=180\r\nlog=1\r\n" + ("font=%s\r\n" % font if font else "") + "[account]\r\nname=Dana\r\nfullname=Dana Falcon\r\n"
             "email=dana@test.local\r\nin=imap\r\nhost=127.0.0.1\r\nport=%d\r\nuser=dana\r\n"
             "pass=secret\r\nsmtphost=127.0.0.1\r\nsmtpport=%d\r\n"
             % (IMAP, SMTP))
@@ -160,10 +165,14 @@ try:
     r.settle(3, 20)
     t = since(n)
     print("reader:", t)
-    check("three steps down the reader: three copies, a line drawn at each",
+    # a row's height from what was drawn: 16 with the system font, 17
+    # with a GDOS font of 10 points (the hub's run under NVDI)
+    drawn = [x for x in t if x[0] == "DRAW"]
+    row = drawn[0][3] if drawn else ROW
+    check("three steps down the reader: three copies, a line (%d) drawn at each" % row,
           len([x for x in t if x[0] == "COPY" and x[1] == "reader"]) == 3 and
-          len([x for x in t if x[0] == "DRAW" and x[1] == "reader" and x[3] <= ROW]) == 3 and
-          not [x for x in t if x[0] == "DRAW" and x[3] > ROW])
+          len([x for x in drawn if x[1] == "reader" and x[3] == row]) == 3 and
+          len(drawn) == 3 and row < 30)
     rscrolled = shot("s2b-reader")
     r.ctrl(",")                          # Settings, OK: everything drawn from scratch
     time.sleep(3)
@@ -201,14 +210,14 @@ try:
           diff is None)
 
     n = mark()
-    r.click(330, 108 + ROW)              # another message
+    r.click(330, 108 + row)              # another message
     r.settle(10, 60)
     shot("s6-other")
     t = since(n)
     print("other:", t)
     folders = [x for x in t if x[1] == "folders"]
     check("another message: the folder pane draws no more than a row at a time (%s)" % [x[3] for x in folders],
-          all(x[3] <= ROW for x in folders))
+          all(x[3] <= row for x in folders))
     readers = [x for x in t if x[1] == "reader"]
     check("and the reader is drawn once with the message, not blank first (%d)" % len(readers), len(readers) <= 2)
 finally:
