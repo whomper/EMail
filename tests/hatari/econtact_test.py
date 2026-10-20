@@ -151,6 +151,33 @@ try:
     print("To:", to)
     check("the reply went to Dana", "dana@example.com" in to)
     check("and to Grace, chosen in EContact %s" % tag, "Grace Baker <grace@example.net>" in to)
+
+    # the other way: EContact's mail button hands EMail (either edition,
+    # av_send "EMAIL|EMAILST") a mailto:, and EMail opens a new message
+    r.click(40, 9)                       # the Desk menu
+    time.sleep(1)
+    r.click(60, 60)                      # EContact, the first accessory under About EMail
+    time.sleep(8)
+    r.type("Avi")                        # its search
+    time.sleep(4)
+    r.shot("c6-econtact")
+    r.click(447, 182)                    # mail, under his name
+    time.sleep(10)
+    r.shot("c7-mailto")
+    r.type("Hello Avi, from EContact's mail button.")
+    r.key(rig.SCAN["d"], shift=True, ctrl=True)   # Shift+^D: send now
+    time.sleep(35)
+    r.shot("c8-sent")
+    m.select("INBOX")
+    typ, data = m.search(None, "ALL")
+    to = ""
+    for num in data[0].split():
+        typ, msg = m.fetch(num, "(RFC822)")
+        e = email.message_from_bytes(msg[0][1])
+        if b"from EContact's mail button" in msg[0][1]:
+            to = str(email.header.make_header(email.header.decode_header(e["To"])))
+    print("mailto To:", to)
+    check("EContact's mail button opened a message in %s, to Avi" % rig.PRG, "avi@" in to.lower())
 finally:
     r.stop()
     bridge.terminate()
