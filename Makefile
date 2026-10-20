@@ -31,6 +31,7 @@ CFLAGS  := -m68000 -Os -fomit-frame-pointer -ffreestanding -fno-builtin \
            -fno-asynchronous-unwind-tables -Wall -Wno-pointer-sign \
            -DMAIL_TOS -nostdinc -isystem $(GCCINC) -Iatari/include -Icommon/atari/include \
            -Isrc -Icommon/src -Iatari -Icommon/atari -Iui -Icommon/ui -Icommon/third_party/bearssl/inc
+CFLAGS  += $(TRACECF)
 LDFLAGS := -m68000 -nostdlib -static -no-pie -Wl,--emit-relocs -Wl,-T,common/atari/link.ld \
            -Wl,--build-id=none -Wl,-z,noexecstack -Wl,--no-warn-rwx-segments
 
@@ -143,6 +144,16 @@ $(OBJDIR)/crash_s.o: common/atari/crash.S | $(OBJDIR)
 	$(CC) -m68000 -c -o $@ $<
 $(OBJDIR)/nf.o: common/atari/nf.S | $(OBJDIR)
 	$(CC) -m68000 -c -o $@ $<
+
+# EMail saying on the emulator's console what each pane draws ("DRAW
+# list y h", "COPY list ..."), for tests/hatari/scroll_test.py (never
+# released): its own objects, so binary/ is left as it is
+$(OBJDIR)/trace/EMAIL.PRG: FORCE
+	$(MAKE) OBJDIR=$(OBJDIR)/trace TRACECF=-DDRAW_TRACE $(OBJDIR)/trace/mail.elf
+	PRGFLAGS=7 python3 common/tools/elf2tos.py $(OBJDIR)/trace/mail.elf $@
+$(OBJDIR)/trace/EMAILST.PRG: FORCE
+	$(MAKE) OBJDIR=$(OBJDIR)/trace TRACECF=-DDRAW_TRACE $(OBJDIR)/trace/st/mail.elf
+	PRGFLAGS=7 python3 common/tools/elf2tos.py $(OBJDIR)/trace/st/mail.elf $@
 
 # a stand-in for EContact's answering side, for tests/hatari/people_test.py
 # (never released)

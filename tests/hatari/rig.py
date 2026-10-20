@@ -37,10 +37,11 @@ PRG = "EMAILST.PRG" if os.environ.get("AERA_EDITION", "").lower() == "st" else "
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..")
 
 
-def install_prg(hd):
-    """the edition under test onto drive C: (work/hd), from binary/"""
-    shutil.copy(os.path.join(ROOT, "binary", PRG), os.path.join(hd, PRG))
-    print("program:", PRG, flush=True)
+def install_prg(hd, src=None):
+    """the edition under test onto drive C: (work/hd), from binary/ (or
+    src, a test build such as build/trace/EMAIL.PRG)"""
+    shutil.copy(src or os.path.join(ROOT, "binary", PRG), os.path.join(hd, PRG))
+    print("program:", PRG, "from", src or "binary/", flush=True)
 
 
 def cli(default, usage=None):
