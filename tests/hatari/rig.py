@@ -109,6 +109,8 @@ class Rig:
         self.env = self.machine.env(dict(os.environ, DISPLAY=display, SDL_VIDEODRIVER="x11",
                                          SDL_AUDIODRIVER="dummy"))
         self.fifo = os.path.join(work, "cmd.fifo")
+        if os.path.exists(self.fifo):    # left by a run that was stopped: Hatari won't start on it
+            os.remove(self.fifo)
         self.shots = os.path.join(work, "shots")
         os.makedirs(self.shots, exist_ok=True)
         self.win = None
