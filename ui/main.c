@@ -1390,7 +1390,29 @@ int main(void)
 	cw = gl_wchar;
 	ch = gl_hchar;
 	(void)work_in_dummy;
-	vdi_h = v_opnvwk_(vdi_h, work_out);
+	{
+		/* the workstation before any of EMail's memory: NVDI needs some
+		   for it (more with many fonts). 0 is no workstation: drawing
+		   with it brings NVDI's "Invalid handle" alert, so say why and go */
+		short aes_h = vdi_h, tries;
+		char note[80];
+		for (tries = 0; tries < 2; tries++) {
+			vdi_h = v_opnvwk_(aes_h, work_out);
+			snprintf(note, sizeof(note), "EMail: v_opnvwk -> %d (%ld KB free before)", vdi_h, free_kb);
+			pf_debug(note);
+			if (vdi_h > 0)
+				break;
+			evnt_timer_(200);
+		}
+		if (vdi_h <= 0) {
+			char a[200];
+			snprintf(a, sizeof(a), "[3][EMail can't open its screen:|the VDI has no memory for it.|%ld KB were free; the|accessories hold the rest.|Load fewer, or add memory.][ Quit ]",
+				 free_kb);
+			form_alert(1, a);
+			appl_exit();
+			return 1;
+		}
+	}
 	scr_w = work_out[0] + 1;
 	scr_h = work_out[1] + 1;
 	vq_extnd(vdi_h, 1, work_out);
