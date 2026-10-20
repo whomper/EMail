@@ -659,12 +659,13 @@ void cmd_download_all(ACCOUNT *a, FINFO *fi)
 	for (i = 0; f && i < f->n; i++)
 		if (f->h[i].flags & MF_CACHED)
 			had++;
-	str_copy(here, num(had), sizeof(here));
+	if (had)
+		snprintf(here, sizeof(here), "%s %s", num(had), had == 1 ? "is" : "are");
 	if (fi->total > 0)
-		snprintf(what, sizeof(what), "|The server has %s message%s;|%s %s on the Atari already.", num(fi->total),
-			 fi->total == 1 ? "" : "s", here, had == 1 ? "is" : "are");
+		snprintf(what, sizeof(what), "|The server has %s message%s;|%s on the Atari %s.", num(fi->total),
+			 fi->total == 1 ? "" : "s", had ? here : "none are", had ? "already" : "yet");
 	else
-		snprintf(what, sizeof(what), "|%s %s on the Atari already.", here, had == 1 ? "is" : "are");
+		snprintf(what, sizeof(what), "|%s on the Atari %s.", had ? here : "None are", had ? "already" : "yet");
 	if (alert(1, "[2][Download what isn't on the|Atari yet of %s?%s%s][Download|Cancel]", fi->disp, what,
 		  opt.keepcache ? "" : "|(Kept only until EMail quits.)") != 1) {
 		fold_close(f);
