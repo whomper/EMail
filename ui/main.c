@@ -336,8 +336,16 @@ const char *person_shown(const char *addr)
 	return n && *n ? n : addr;
 }
 
+/* names that came while a dialog was up: drawn after it (the windows
+   would be drawn over it) */
+static int in_modal, names_wait;
+
 static void names_came(void)
 {
+	if (in_modal) {
+		names_wait = 1;
+		return;
+	}
 	editor_names_came();
 	reader_names_came();
 	list_names_came();
@@ -357,6 +365,7 @@ static char *kept_start;		/* a VA_START that came meanwhile */
 void ui_modal_message(const short *msg)
 {
 	const char *s;
+	in_modal = 1;
 	switch (av_message(msg, &s)) {
 	case AV_PEOPLE:
 		people_message(s, msg[1]);
@@ -372,6 +381,7 @@ void ui_modal_message(const short *msg)
 			memcpy(kept[nkept++], msg, sizeof(kept[0]));
 	}
 	people_poll();
+	in_modal = 0;
 }
 
 /* the redraws the AES has queued, done now: a window closed before a
@@ -1449,6 +1459,10 @@ int main(void)
 		short which, hovering = !tip_tried && hover_x >= 0;
 		conn_stop = 0;		/* a stop is for one operation */
 		/* a key typed while busy comes first, as if typed now */
+		if (names_wait) {		/* names that came during a dialog */
+			names_wait = 0;
+			names_came();
+		}
 		if (kept_start) {		/* what came during a dialog */
 			char *v = kept_start;
 			kept_start = 0;
