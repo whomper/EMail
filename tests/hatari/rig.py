@@ -150,10 +150,16 @@ class Rig:
         time.sleep(0.05)
 
     def key(self, scancode, shift=False, ctrl=False, alt=False):
+        mods = shift or ctrl or alt
         for on, k in ((ctrl, K["CTRL"]), (shift, K["SHIFT"]), (alt, K["ALT"])):
             if on:
                 self.cmd("hatari-event", "keydown", str(k))
         self.cmd("hatari-event", "keypress", "0x%02x" % scancode)
+        if mods:
+            # held as a hand holds them: the AES gives a key's Shift and
+            # Control as they are when the program takes it, and an 8 MHz
+            # ST busy drawing took Shift+^D after they were up (a plain ^D)
+            time.sleep(0.5)
         for on, k in ((alt, K["ALT"]), (shift, K["SHIFT"]), (ctrl, K["CTRL"])):
             if on:
                 self.cmd("hatari-event", "keyup", str(k))
