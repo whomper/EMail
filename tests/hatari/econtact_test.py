@@ -170,13 +170,13 @@ try:
     r.key(rig.SCAN["d"], shift=True, ctrl=True)   # Shift+^D: send now
     time.sleep(35)
     r.shot("c8-sent")
-    m.select("INBOX")
-    typ, data = m.search(None, "ALL")
+    # Avi has no mailbox here: the SMTP stand-in files his mail in srv/sink
     to = ""
-    for num in data[0].split():
-        typ, msg = m.fetch(num, "(RFC822)")
-        e = email.message_from_bytes(msg[0][1])
-        if b"from EContact's mail button" in msg[0][1]:
+    sink = os.path.join(srv, "sink", "new")
+    for name in sorted(os.listdir(sink)) if os.path.isdir(sink) else []:
+        raw = open(os.path.join(sink, name), "rb").read()
+        if b"from EContact's mail button" in raw:
+            e = email.message_from_bytes(raw)
             to = str(email.header.make_header(email.header.decode_header(e["To"])))
     print("mailto To:", to)
     check("EContact's mail button opened a message in %s, to Avi" % rig.PRG, "avi@" in to.lower())
