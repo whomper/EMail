@@ -103,6 +103,7 @@ leave=1
 smtphost=127.0.0.1
 smtpport=$SMTP
 INF
+
 if [ -n "${FALCON:-}" ]; then
   # Falcon mode: EMail talks TLS to the servers itself; the test
   # certificate is the only root it trusts
@@ -510,6 +511,52 @@ expect "the next Send now takes the Outbox along" "sent: 2 result: 1" "$out"
 out=$(run list 1 Outbox)
 [ -z "$(grep -v '^ *$' <<<"$out")" ] && { PASS=$((PASS+1)); echo "ok   the Outbox is empty again"; } \
   || { FAIL=$((FAIL+1)); echo "FAIL the Outbox still holds:"; sed 's/^/     | /' <<<"$out"; }
+
+# invitations for ECal: an inline text/calendar alternative and an .ics
+# attachment, each decoded to INVITE.ICS as it came (Add to ECal)
+python3 - $IMAP "$D" <<'PY'
+import base64, imaplib, sys
+ics1 = ("BEGIN:VCALENDAR\r\nVERSION:2.0\r\nMETHOD:REQUEST\r\nBEGIN:VEVENT\r\n"
+        "UID:lunch-1@example.com\r\nDTSTART:20261023T120000Z\r\nDTEND:20261023T130000Z\r\n"
+        "SUMMARY;LANGUAGE=en:Team lunch\\, Friday שלום and a ver\r\n y long title\r\n"
+        "END:VEVENT\r\nEND:VCALENDAR\r\n").encode("utf-8")
+ics2 = (b"BEGIN:VCALENDAR\r\nVERSION:2.0\r\nBEGIN:VEVENT\r\nUID:review-2@example.com\r\n"
+        b"DTSTART:20261026T090000Z\r\nSUMMARY:Design review\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n")
+open(sys.argv[2] + "/invite1.ics", "wb").write(ics1)
+open(sys.argv[2] + "/invite2.ics", "wb").write(ics2)
+b64 = lambda b: b"\r\n".join(base64.encodebytes(b).splitlines())
+m1 = (b"From: Dana <dana@example.com>\r\nTo: dana@test.local\r\nSubject: Lunch\r\nMIME-Version: 1.0\r\n"
+      b"Content-Type: multipart/alternative; boundary=AA\r\n\r\n--AA\r\nContent-Type: text/plain\r\n\r\n"
+      b"Lunch on Friday?\r\n--AA\r\nContent-Type: text/calendar; method=REQUEST; charset=utf-8\r\n"
+      b"Content-Transfer-Encoding: base64\r\n\r\n" + b64(ics1) + b"\r\n--AA--\r\n")
+m2 = (b"From: Avi <avi@example.org>\r\nTo: dana@test.local\r\nSubject: Review\r\nMIME-Version: 1.0\r\n"
+      b"Content-Type: multipart/mixed; boundary=BB\r\n\r\n--BB\r\nContent-Type: text/plain\r\n\r\nSee the invite.\r\n"
+      b"--BB\r\nContent-Type: application/ics; name=meeting.ics\r\nContent-Disposition: attachment; filename=meeting.ics\r\n"
+      b"Content-Transfer-Encoding: base64\r\n\r\n" + b64(ics2) + b"\r\n--BB--\r\n")
+m3 = b"From: Avi <avi@example.org>\r\nTo: dana@test.local\r\nSubject: Plain\r\n\r\nNo invitation here.\r\n"
+m = imaplib.IMAP4("127.0.0.1", int(sys.argv[1]))
+m.login("dana", "secret")
+m.create("Invites")
+for x in (m1, m2, m3):
+    m.append("Invites", "()", None, x)
+m.logout()
+PY
+out=$(run sync 1 Invites)
+expect "the invitations' folder synced" "synced: 3 total" "$out"
+out=$(run show 1 Invites 1)
+expect "an inline invitation is a part, for ECal" "Attachment: invite.ics (text/calendar" "$out"
+expect "its summary: unescaped, unfolded, Hebrew in the Atari set" "Invitation: Team lunch, Friday .* and a very long title" "$out"
+expect "the inline invitation's text is still the message" "Lunch on Friday?" "$out"
+out=$(run invite 1 Invites 1 "$W/INVITE.ICS")
+cmp -s "$W/INVITE.ICS" "$D/invite1.ics" && { PASS=$((PASS+1)); echo "ok   INVITE.ICS is the inline invitation, byte for byte"; } \
+  || { FAIL=$((FAIL+1)); echo "FAIL INVITE.ICS differs from the invitation sent"; echo "$out"; }
+out=$(run show 1 Invites 2)
+expect "an .ics attachment is an invitation" "Invitation: Design review" "$out"
+out=$(run invite 1 Invites 2 "$W/INVITE.ICS")
+cmp -s "$W/INVITE.ICS" "$D/invite2.ics" && { PASS=$((PASS+1)); echo "ok   INVITE.ICS overwritten by the attachment, byte for byte"; } \
+  || { FAIL=$((FAIL+1)); echo "FAIL INVITE.ICS differs from the attachment"; echo "$out"; }
+out=$(run invite 1 Invites 3 "$W/INVITE.ICS")
+expect "a message without one has no invitation" "no invitation" "$out"
 
 if [ -n "${FALCON:-}" ]; then
   out=$(run send 2 "$W/msg.txt")

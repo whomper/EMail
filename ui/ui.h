@@ -140,6 +140,7 @@ extern char *cur_raw;
 extern long cur_rawlen;
 extern unsigned long cur_uid;
 void reader_save_attachment(short i);
+void reader_to_ecal(short i);		/* an invitation to ECal (INVITE.ICS, VA_START) */
 
 void editor_open(ACCOUNT *a, char *text, const char *in_reply_to, const char *references);
 int  editor_dirty(void);

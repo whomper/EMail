@@ -494,9 +494,60 @@ static void add_part(WALK *w, const char *name, const char *type, long off, long
 	p->len = len;
 	p->enc = enc;
 	p->size = enc == ENC_BASE64 ? len * 3 / 4 : len;
+	p->summary = 0;
 }
 
 static void walk(WALK *w, long start, long end, int depth, int in_alt);
+
+int mime_is_calendar(const MIMEPART *p)
+{
+	long n = (long)strlen(p->name);
+	return str_istarts(p->type, "text/calendar") || str_istarts(p->type, "application/ics") ||
+	       (n > 4 && str_istarts(p->name + n - 4, ".ics"));
+}
+
+/* an invitation's SUMMARY (RFC 5545: "SUMMARY;LANGUAGE=en:...", folded
+   onto lines that start with a space, \, \; \n escaped), in the Atari
+   character set; NULL when it has none */
+static char *ics_summary(const char *raw, const MIMEPART *p)
+{
+	long n, i, k = 0;
+	char *d = decode_body(raw + p->off, p->len, p->enc, &n), *v, *out = 0;
+	if (!d)
+		return 0;
+	for (i = 0; i < n; i++) {
+		if ((i == 0 || d[i - 1] == '\n') && n - i > 7 && str_istarts(d + i, "SUMMARY") &&
+		    (d[i + 7] == ':' || d[i + 7] == ';'))
+			break;
+	}
+	if (i < n && (v = malloc(n - i + 1)) != 0) {
+		while (i < n && d[i] != ':' && d[i] != '\n')
+			i++;
+		for (i++; i < n; i++) {
+			if (d[i] == '\r')
+				continue;
+			if (d[i] == '\n') {
+				if (i + 1 < n && (d[i + 1] == ' ' || d[i + 1] == '\t')) {
+					i++;		/* folded: goes on */
+					continue;
+				}
+				break;
+			}
+			if (d[i] == '\\' && i + 1 < n) {
+				i++;
+				v[k++] = d[i] == 'n' || d[i] == 'N' ? ' ' : d[i];
+			} else {
+				v[k++] = d[i];
+			}
+		}
+		v[k] = 0;
+		if (k)
+			out = cs_to_atari(v, k, CS_UTF8, 0);
+		free(v);
+	}
+	free(d);
+	return out;
+}
 
 static void walk_multipart(WALK *w, long start, long end, const char *boundary, int depth, int alt)
 {
@@ -528,7 +579,9 @@ static void walk_multipart(WALK *w, long start, long end, const char *boundary, 
 					short is_html = ct && str_istr(ct, "text/html") ? 1 : 0;
 					short is_plain = !ct || str_istr(ct, "text/plain");
 					short is_multi = ct && str_istr(ct, "multipart/");
-					if (is_multi || is_plain || is_html) {
+					if (ct && str_istr(ct, "text/calendar"))	/* an invitation: kept, for ECal */
+						walk(w, part_start, pe, depth + 1, 0);
+					else if (is_multi || is_plain || is_html) {
 						short rank = is_plain ? 0 : is_multi ? 0 : 1;
 						if (rank < best_html || best_s < 0) {
 							best_html = rank;
@@ -603,8 +656,12 @@ static void walk(WALK *w, long start, long end, int depth, int in_alt)
 		}
 		if (!name && !strcmp(type, "message/rfc822"))
 			name = strdup("message.eml");
+		if (!name && !strcmp(type, "text/calendar"))
+			name = strdup("invite.ics");
 		add_part(w, name, type, start + hl, n - hl, enc);
 		free(name);
+		if (w->m->nparts && mime_is_calendar(&w->m->parts[w->m->nparts - 1]))
+			w->m->parts[w->m->nparts - 1].summary = ics_summary(w->raw, &w->m->parts[w->m->nparts - 1]);
 	}
 	free(ct);
 	free(cte);
@@ -690,6 +747,7 @@ void mime_free(MSG *m)
 	for (i = 0; i < m->nparts; i++) {
 		free(m->parts[i].name);
 		free(m->parts[i].type);
+		free(m->parts[i].summary);
 	}
 	free(m);
 }

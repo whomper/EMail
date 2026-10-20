@@ -124,6 +124,15 @@ $(OBJDIR)/fakecontact.acc: tests/atari/fakecontact.c $(addprefix $(OBJDIR)/,$(ad
 		$(addprefix $(OBJDIR)/,$(addsuffix .o,$(FAKEC))) $(OBJDIR)/nf.o -lgcc
 	python3 common/tools/elf2tos.py $(OBJDIR)/fakecontact.elf $@
 
+# a stand-in for ECal's receiving side, for tests/hatari/invite_test.py
+# (never released)
+FAKECAL := crt0 gem libc tos av av_people
+$(OBJDIR)/fakecal.acc: tests/atari/fakecal.c $(addprefix $(OBJDIR)/,$(addsuffix .o,$(FAKECAL))) $(OBJDIR)/nf.o
+	$(CC) $(CFLAGS) -c -o $(OBJDIR)/fakecal.o $<
+	$(CC) $(LDFLAGS) -o $(OBJDIR)/fakecal.elf $(OBJDIR)/fakecal.o \
+		$(addprefix $(OBJDIR)/,$(addsuffix .o,$(FAKECAL))) $(OBJDIR)/nf.o -lgcc
+	python3 common/tools/elf2tos.py $(OBJDIR)/fakecal.elf $@
+
 $(OBJDIR) binary:
 	mkdir -p $@
 

@@ -2,8 +2,9 @@
  * Copyright (C) 2026 AERA | Erez Yaary */
 /*
  * reader.c - the message window: headers, attachments (click one to
- * save it) and the text, word-wrapped to the window. Hebrew paragraphs
- * are laid out right to left; quoted lines are drawn light.
+ * save it; double-click an invitation to add it to ECal) and the text,
+ * word-wrapped to the window. Hebrew paragraphs are laid out right to
+ * left; quoted lines are drawn light.
  */
 #include <string.h>
 #include <stdio.h>
@@ -13,6 +14,7 @@
 #include "../src/mail.h"
 #include "util.h"
 #include "../src/plat.h"
+#include "av.h"
 
 MSG *cur_msg;
 char *cur_raw;
@@ -393,8 +395,13 @@ show:
 		char t[100];
 		snprintf(t, sizeof(t), "%.90s", cur_msg->subject[0] ? cur_msg->subject : "(no subject)");
 		win_title(&w_reader, t);
+		short k, invite = 0;
+		for (k = 0; k < cur_msg->nparts; k++)
+			invite |= mime_is_calendar(&cur_msg->parts[k]);
 		if (cur_msg->html)
 			win_info(&w_reader, "HTML shown as text");
+		else if (invite)
+			win_info(&w_reader, "double-click the invitation for ECal");
 		else if (cur_msg->nparts)
 			win_info(&w_reader, "click an attachment to save it");
 		else
@@ -454,17 +461,27 @@ static void draw(WIN *w, GRECT *clip)
 			   so a Hebrew file name doesn't turn the line around */
 			char t[80], sz[16];
 			MIMEPART *p = &cur_msg->parts[l->attach];
-			short nl = (short)strlen(p->name);
-			if (nl > cols - 4)
-				nl = cols - 4;
+			const char *nm = p->name;
+			short pre = 0, nl;
+			if (mime_is_calendar(p)) {	/* "» Invitation: its summary" */
+				text_at(x0 + 2 * cw, y, "Invitation:", 11, cols - 2, TX_BOLD);
+				pre = 12;
+				if (p->summary)
+					nm = p->summary;
+			}
+			nl = (short)strlen(nm);
+			if (nl > cols - 4 - pre)
+				nl = cols - 4 - pre;
+			if (nl < 0)
+				nl = 0;
 			if (p->size < 1024)
 				snprintf(sz, sizeof(sz), "%s bytes", num(p->size));
 			else
 				snprintf(sz, sizeof(sz), "%s KB", num((p->size + 512) / 1024));
 			snprintf(t, sizeof(t), "  (%s, %s)", p->type, sz);
 			text_at(x0, y, "\xAF", 1, cols, TX_BOLD);
-			text_at(x0 + 2 * cw, y, p->name, nl, nl, TX_BOLD);
-			text_at(x0 + (2 + nl) * cw, y, t, strlen(t), cols - 2 - nl, 0);
+			text_at(x0 + (2 + pre) * cw, y, nm, nl, nl, TX_BOLD);
+			text_at(x0 + (2 + pre + nl) * cw, y, t, strlen(t), cols - 2 - pre - nl, 0);
 			break;
 		}
 		case L_RULE:
@@ -545,14 +562,72 @@ void reader_save_attachment(short i)
 	status("");
 }
 
+#define AV_STARTED 0x4738
+
+/* ECal's AV_STARTED for our VA_START, up to 3 s; the rest wait as in
+   any modal loop (EContact's answers are read at once) */
+static int ecal_answered(short id)
+{
+	short m[8], tenths = 30;
+	AEVENT e;
+	while (tenths-- > 0) {
+		if (!(evnt_multi_(MU_MESAG | MU_TIMER, 0, 0, 0, 100, m, &e) & MU_MESAG))
+			continue;
+		if (m[0] == AV_STARTED && m[1] == id)
+			return 1;
+		ui_modal_message(m);
+	}
+	return 0;
+}
+
+/* an invitation to ECal (the guidelines, 4.1): written whole as
+   INVITE.ICS in EMail's folder, closed, then named to ECal (the program
+   or the accessory) with VA_START. ECal reads it, answers AV_STARTED and
+   opens its New Event dialog filled from it; the next one overwrites it */
+void reader_to_ecal(short i)
+{
+	static const char *const names[2] = { "ECAL    ", "ECALST  " };
+	char path[220], cmd[230], *data;
+	long len;
+	short id = -1, k;
+	int ok;
+	if (!cur_msg || i < 0 || i >= cur_msg->nparts)
+		return;
+	for (k = 0; k < 2 && id < 0; k++)
+		id = appl_find(names[k]);
+	if (id < 0) {
+		alert(1, "[1][ECal isn't running: open it|and try again, or save the|invitation.][ OK ]");
+		return;
+	}
+	path_join(path, sizeof(path), opt.workdir, "INVITE.ICS");
+	busy(1);
+	data = mime_part_data(cur_raw, &cur_msg->parts[i], &len);
+	ok = data && pf_save(path, data, len) >= 0;
+	free(data);
+	busy(0);
+	if (!ok) {
+		alert(1, "[1][Can't write|%s][ OK ]", path);
+		return;
+	}
+	snprintf(cmd, sizeof(cmd), strchr(path, ' ') ? "'%s'" : "%s", path);
+	av_send(names[k - 1], cmd);
+	status(ecal_answered(id) ? "The invitation is in ECal: confirm it there"
+				 : "ECal didn't answer: try again when it's free");
+}
+
 static void click(WIN *w, short mx, short my, short clicks, short kstate)
 {
 	long i = w->top + (my - w->work.y) / ch;
 	(void)mx;
-	(void)clicks;
 	(void)kstate;
-	if (i >= 0 && i < nlines && lines[i].kind == L_ATTACH)
+	if (i < 0 || i >= nlines || lines[i].kind != L_ATTACH)
+		return;
+	if (!mime_is_calendar(&cur_msg->parts[lines[i].attach]))
 		reader_save_attachment(lines[i].attach);
+	else if (clicks >= 2)			/* (a click alone opens no dialog: the second comes) */
+		reader_to_ecal(lines[i].attach);
+	else
+		status("Double-click the invitation to add it to ECal; right-click to save it");
 }
 
 void message_menu(short mx, short my, int with_open);
@@ -561,9 +636,14 @@ static void rclick(WIN *w, short mx, short my)
 {
 	long i = w->top + (my - w->work.y) / ch;
 	if (i >= 0 && i < nlines && lines[i].kind == L_ATTACH) {
-		static const char *const lab[] = { "Save attachment..." };
-		if (popup(mx, my, lab, 1) == 0)
-			reader_save_attachment(lines[i].attach);
+		static const char *const lab[] = { "Save attachment...", "Add to ECal" };
+		short a = lines[i].attach, inv = mime_is_calendar(&cur_msg->parts[a]);
+		/* an invitation: Add to ECal first, beside Save */
+		short r = popup(mx, my, inv ? lab + 1 : lab, inv ? 2 : 1);
+		if (inv && r == 0)
+			reader_to_ecal(a);
+		else if (r == (inv ? 1 : 0))
+			reader_save_attachment(a);
 		return;
 	}
 	message_menu(mx, my, 0);

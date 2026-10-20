@@ -18,6 +18,7 @@ typedef struct {
 	long off, len;		/* encoded body inside the raw message */
 	short enc;		/* ENC_* */
 	long size;		/* approximate decoded size */
+	char *summary;		/* a calendar invitation's SUMMARY (Atari charset), or NULL */
 } MIMEPART;
 
 typedef struct {
@@ -34,6 +35,8 @@ MSG  *mime_parse(const char *raw, long len);
 void  mime_free(MSG *m);
 /* decoded bytes of an attachment, malloc'ed */
 char *mime_part_data(const char *raw, const MIMEPART *p, long *outlen);
+/* 1: a calendar invitation (text/calendar, application/ics, or *.ics), for ECal */
+int mime_is_calendar(const MIMEPART *p);
 
 /* the unfolded value of header `name` in the header block hdr[0..n), malloc'ed, or NULL */
 char *mime_header(const char *hdr, long n, const char *name);
