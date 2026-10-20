@@ -56,6 +56,8 @@ for m in sorted(os.listdir(os.path.join(ROOT, "tests", "mail"))):
     shutil.copy(os.path.join(ROOT, "tests", "mail", m), os.path.join(MD, "new", m))
 ICS = ("BEGIN:VCALENDAR\r\nVERSION:2.0\r\nMETHOD:REQUEST\r\nBEGIN:VEVENT\r\nUID:lunch-1@example.com\r\n"
        "DTSTART:20261023T120000Z\r\nDTEND:20261023T130000Z\r\nSUMMARY:Team lunch\r\n"
+       "ORGANIZER;CN=Dana:mailto:dana@example.com\r\n"
+       "ATTENDEE;CN=Dana Falcon;RSVP=TRUE:mailto:dana@test.local\r\n"
        "LOCATION:Tel Aviv\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n").encode()
 with open(os.path.join(MD, "new", "4-invite.eml"), "wb") as f:
     f.write(b"From: Dana <dana@example.com>\r\nTo: dana@test.local\r\nSubject: Lunch\r\n"
