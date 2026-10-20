@@ -229,6 +229,7 @@ if bufs and bufs[0] > 0:
     print("  A2 wrote %d bytes to the pack through a %d-byte buffer: %d piece(s)" % (wrote, bufs[0], max(pieces, 1)))
 else:
     print("  A2: EMail didn't say its buffer size (%d bytes written)" % wrote)
+OTHERS = re.compile(r"^[A-Z]:\\(ECAL|ECALST|ECONTACT|ECONTST|EHYPVIEW|EFTP)(\\|\.|$)", re.I)
 for job in ("A1", "A2", "B1", "B2"):
     count = collections.Counter()
     files = collections.Counter()
@@ -239,6 +240,8 @@ for job in ("A1", "A2", "B1", "B2"):
         path = re.findall(r'"([^"]*)"', m.group(2))
         if path and path[0].endswith("FASTCLK"):
             continue                     # FAKESTNG.PRG's, the test's network
+        if path and OTHERS.match(path[0]):
+            continue                     # the family's accessories (AERA_WITH_ACCS): theirs, not EMail's
         count[OPS[m.group(1)]] += 1
         files[re.sub(r"^C:\\EMAIL\\ACCT1\\", "", path[0]) if path else "?"] += 1
     total = sum(count.values())
