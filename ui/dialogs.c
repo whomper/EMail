@@ -903,7 +903,7 @@ static void part_signature(short x, short y)
 	d_add(G_BOX, 0, 0, 0x00FF1100L, x, ROW(0), SIG_W, SIG_ROWS);
 	for (k = 0; k < SIG_ROWS; k++)
 		d_edit(x, (short)((y + k) | (2 << 8)), s_sig[k], SIG_W, 'X');
-	d_add(G_STRING, 0, 0, (long)"Added below new messages, replies and", x, (short)(y + SIG_ROWS + 1), 37, 1);
+	d_add(G_STRING, 0, 0, (long)"Added to new messages, replies and", x, (short)(y + SIG_ROWS + 1), 34, 1);
 	d_add(G_STRING, 0, 0, (long)"forwards from every account.", x, (short)(y + SIG_ROWS + 2), 28, 1);
 }
 
@@ -923,10 +923,17 @@ static void part_connection(short x, short y)
 	zone_label();
 	zone_btn = d_add(G_BOXTEXT, TOUCHEXIT, 0, (long)d_ted(s_zlabel, 0, 0x1180), x + 11, ROW(0), 29, 1);
 	((TEDINFO *)tree[zone_btn].ob_spec)->te_thickness = -1;
+#ifdef MAIL_ST
+	/* the ST edition has no TLS of its own (common/src/tls_none.c) */
+	d_add(G_STRING, 0, 0, (long)"Secure servers through the Pi gateway", x, ROW(1), 37, 1);
+	d_add(G_STRING, 0, 0, (long)"(Falcon mode is in EMAIL.PRG)", x + 3, ROW(2), 29, 1);
+	d_tick(x, ROW(3), "Write a protocol log (EMAIL.LOG)", T_LOG);
+#else
 	d_tick(x, ROW(1), "Falcon mode: TLS on this Atari", T_FALCON);
 	d_add(G_STRING, 0, 0, (long)"off: plain, through the Pi gateway", x + 3, ROW(2), 34, 1);
 	d_tick(x + 3, ROW(3), "Use the DSP for the signatures", T_DSP);
 	d_tick(x, ROW(4), "Write a protocol log (EMAIL.LOG)", T_LOG);
+#endif
 }
 
 #define SW 13			/* the list's width */

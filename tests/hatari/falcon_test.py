@@ -81,7 +81,7 @@ rig.stop_at_exit(srv, smtp)
 
 # drive C:
 os.makedirs(os.path.join(hd, "AUTO"))
-shutil.copy(os.path.join(ROOT, "binary", "EMAIL.PRG"), hd)
+rig.install_prg(hd)
 # the full Mozilla list EMail ships, plus the test certificate
 with open(os.path.join(hd, "CACERT.PEM"), "wb") as f:
     f.write(open(os.path.join(ROOT, "binary", "CACERT.PEM"), "rb").read() + open(cert, "rb").read())

@@ -2,7 +2,8 @@
 # Copyright (C) 2026 AERA | Erez Yaary
 # EMail - an email client for the Atari ST/STE/TT/Falcon, in C.
 #
-#   make            builds EMAIL.PRG with a stock m68k ELF cross compiler
+#   make            builds EMAIL.PRG and the ST edition EMAILST.PRG with a
+#                   stock m68k ELF cross compiler
 #                   (Debian/Ubuntu: apt install gcc-m68k-linux-gnu).
 #                   No MiNTLib needed: the program is freestanding and
 #                   common/tools/elf2tos.py writes the TOS header.
@@ -56,10 +57,24 @@ OBJS    := $(OBJDIR)/crt0.o $(OBJDIR)/sting_s.o $(OBJDIR)/nf.o $(OBJDIR)/crash_s
 HDRS    := $(wildcard src/*.h atari/*.h atari/include/*.h ui/*.h \
            common/src/*.h common/atari/*.h common/atari/include/*.h common/ui/*.h common/dsp/*.h)
 
+# the ST edition, EMAILST.PRG: no TLS of its own (common/src/tls_none.c),
+# so no BearSSL and no DSP: about 115 KB less for a 1 MB ST. It reaches
+# secure servers through the Pi gateway, as EMAIL.PRG does out of Falcon
+# mode, with the same EMAIL.INF and folders.
+STDIR   := $(OBJDIR)/st
+STCORE  := $(filter-out tls,$(CORE)) tls_none
+STATARI := $(filter-out dsprsa,$(ATARI))
+STUI    := $(filter-out dsp,$(UI))
+STOBJS  := $(OBJDIR)/crt0.o $(OBJDIR)/sting_s.o $(OBJDIR)/nf.o $(OBJDIR)/crash_s.o \
+           $(addprefix $(STDIR)/,$(addsuffix .o,$(STCORE) $(STATARI) $(STUI)))
+STCF    := $(CFLAGS) -DMAIL_ST -DTLS_FULL_EDITION=\"EMAIL.PRG\"
+
 # what goes onto the Atari: binary/ (built, never committed)
-all: binary/EMAIL.PRG binary/ROOTS.DAT
+all: binary/EMAIL.PRG binary/EMAILST.PRG binary/ROOTS.DAT
 
 binary/EMAIL.PRG: $(OBJDIR)/mail.elf common/tools/elf2tos.py | binary
+	PRGFLAGS=7 python3 common/tools/elf2tos.py $< $@
+binary/EMAILST.PRG: $(STDIR)/mail.elf common/tools/elf2tos.py | binary
 	PRGFLAGS=7 python3 common/tools/elf2tos.py $< $@
 
 # the version: VERSION holds the last release (major.minor, e.g. 1.30),
@@ -77,6 +92,8 @@ $(OBJDIR)/build.o: $(OBJDIR)/build.c
 
 $(OBJDIR)/mail.elf: $(OBJS) $(OBJDIR)/build.o $(OBJDIR)/libbearssl.a common/atari/link.ld
 	$(CC) $(LDFLAGS) -o $@ $(OBJS) $(OBJDIR)/build.o $(OBJDIR)/libbearssl.a -lgcc
+$(STDIR)/mail.elf: $(STOBJS) $(OBJDIR)/build.o common/atari/link.ld
+	$(CC) $(LDFLAGS) -o $@ $(STOBJS) $(OBJDIR)/build.o -lgcc
 
 # EMail's icon for the desktop: icons/, drawn by tools/icon and
 # committed; a release carries them
@@ -103,6 +120,18 @@ $(OBJDIR)/%.o: common/atari/%.c $(HDRS) | $(OBJDIR)
 	$(CC) $(CFLAGS) -c -o $@ $<
 $(OBJDIR)/%.o: common/ui/%.c $(HDRS) | $(OBJDIR)
 	$(CC) $(CFLAGS) -c -o $@ $<
+$(STDIR)/%.o: src/%.c $(HDRS) | $(STDIR)
+	$(CC) $(STCF) -c -o $@ $<
+$(STDIR)/%.o: atari/%.c $(HDRS) | $(STDIR)
+	$(CC) $(STCF) -c -o $@ $<
+$(STDIR)/%.o: ui/%.c $(HDRS) | $(STDIR)
+	$(CC) $(STCF) -c -o $@ $<
+$(STDIR)/%.o: common/src/%.c $(HDRS) | $(STDIR)
+	$(CC) $(STCF) -c -o $@ $<
+$(STDIR)/%.o: common/atari/%.c $(HDRS) | $(STDIR)
+	$(CC) $(STCF) -c -o $@ $<
+$(STDIR)/%.o: common/ui/%.c $(HDRS) | $(STDIR)
+	$(CC) $(STCF) -c -o $@ $<
 # the stack: 32 KB instead of crt0's 48. The most EMail was seen to use,
 # with the stack painted in falcon_test (RSA on the 68030), net_test,
 # stop_test and a 1.4 MB message, is 15 KB; the 16 KB saved help a 1 MB ST
@@ -133,7 +162,7 @@ $(OBJDIR)/fakecal.acc: tests/atari/fakecal.c $(addprefix $(OBJDIR)/,$(addsuffix 
 		$(addprefix $(OBJDIR)/,$(addsuffix .o,$(FAKECAL))) $(OBJDIR)/nf.o -lgcc
 	python3 common/tools/elf2tos.py $(OBJDIR)/fakecal.elf $@
 
-$(OBJDIR) binary:
+$(OBJDIR) $(STDIR) binary:
 	mkdir -p $@
 
 # ---- host build: the same mail core, for tests and mail-cli ----
@@ -227,7 +256,7 @@ binary/EMAIL.HYP: docs/GUIDE.md tools/mkhelp.py VERSION docs/front.json docs/hel
 
 # a release's files: each one in dist/, and all of them in
 # dist/EMAIL-x.y.zip (the icons in icons/), for the release workflow
-DIST    := binary/EMAIL.PRG binary/CACERT.PEM binary/ROOTS.DAT binary/EMAIL.HYP binary/EMAIL.REF
+DIST    := binary/EMAIL.PRG binary/EMAILST.PRG binary/CACERT.PEM binary/ROOTS.DAT binary/EMAIL.HYP binary/EMAIL.REF
 ICONS   := icons/EMAIL.RSC icons/EMAIL.ICN icons/EMAILMK.ICN
 dist: all help
 	rm -rf dist

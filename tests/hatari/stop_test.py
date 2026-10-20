@@ -61,7 +61,7 @@ def main():
 
     stop = threading.Event()
     threading.Thread(target=silent_server, args=(stop,), daemon=True).start()
-    shutil.copy(os.path.join(ROOT, "binary", "EMAIL.PRG"), hd)
+    rig.install_prg(hd)
     rig.fakesting(os.path.join(hd, "AUTO"))
     with open(os.path.join(hd, "EMAIL.INF"), "w", newline="") as f:
         f.write("[options]\r\ntz=180\r\nlog=1\r\n[account]\r\nname=Dana\r\nfullname=Dana Falcon\r\n"

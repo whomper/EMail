@@ -57,10 +57,13 @@ rig.stop_at_exit(srv, smtp)
 
 # drive C:
 os.makedirs(os.path.join(hd, "AUTO"))
-shutil.copy(os.path.join(ROOT, "binary", "EMAIL.PRG"), hd)
+rig.install_prg(hd)
 rig.fakesting(os.path.join(hd, "AUTO"))
 with open(os.path.join(hd, "EMAIL.INF"), "w", newline="") as f:
-    f.write("[options]\r\ntz=180\r\nlog=1\r\nsignature=Sent from my Falcon\r\n[account]\r\nname=Dana\r\nfullname=Dana Falcon\r\n"
+    # the ST edition finds Falcon mode on, as EMAIL.PRG left it: it must go
+    # through the gateway all the same, and leave the setting as it was
+    f.write("[options]\r\n" + ("falcon=1\r\n" if rig.PRG == "EMAILST.PRG" else "") +
+            "tz=180\r\nlog=1\r\nsignature=Sent from my Falcon\r\n[account]\r\nname=Dana\r\nfullname=Dana Falcon\r\n"
             "email=dana@test.local\r\nin=imap\r\nhost=127.0.0.1\r\nport=%d\r\nuser=dana\r\n"
             "pass=secret\r\nsmtphost=127.0.0.1\r\nsmtpport=%d\r\n"
             % (IMAP, SMTP))
@@ -111,10 +114,19 @@ try:
             print("REPLY ARRIVED:", subj)
             print(body)
             ok = "שלום Dana, this reply comes from a Falcon." in body and "> " in body
+            # the signature goes with the reply, above the quote (Erez, 20 Oct 2026)
+            sig, said = body.find("Sent from my Falcon"), body.find(" wrote:")
+            print("signature above the quote:", 0 < sig < said)
+            ok = ok and 0 < sig < said
     m.select("Sent")
     typ, data = m.search(None, "ALL")
     print("in Sent:", len(data[0].split()))
     print("inbox subjects:", subjects)
+    if rig.PRG == "EMAILST.PRG":
+        inf = open(os.path.join(hd, "EMAIL.INF"), errors="replace").read()
+        kept = "FALCON=1" in inf
+        print("ST edition: Falcon mode kept for EMAIL.PRG:", kept)
+        ok = ok and kept
 finally:
     r.stop()
     bridge.terminate()

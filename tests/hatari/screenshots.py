@@ -99,7 +99,7 @@ rig.stop_at_exit(srv, smtp)
 
 # drive C:
 os.makedirs(os.path.join(hd, "AUTO"))
-shutil.copy(os.path.join(ROOT, "binary", "EMAIL.PRG"), hd)
+rig.install_prg(hd)
 rig.fakesting(os.path.join(hd, "AUTO"))
 with open(os.path.join(hd, "EMAIL.INF"), "w", newline="") as f:
     f.write("[OPTIONS]\r\nTIMEZONE=Europe/London\r\nHEBREW=0\r\nSIGNATURE=Sent from my Falcon\r\n[ACCOUNT]\r\nNAME=Home\r\n"

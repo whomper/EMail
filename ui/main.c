@@ -112,7 +112,9 @@ static const MBAR_ITEM m_opts[] = {
 	{ "Font...", 0, C_FONT },
 	{ "-", 0, 0 },
 	{ "Work offline", 0, C_OFFLINE },
+#ifndef MAIL_ST
 	{ "Falcon mode (TLS)", 0, C_FALCON },
+#endif
 	{ "Hebrew keyboard", "F10", C_HEBREW },
 	{ "Protocol log", 0, C_LOG },
 	{ 0, 0, 0 }
@@ -170,7 +172,9 @@ void menu_update(void)
 	enable(C_DELFOLDER, cur_finfo && !cur_finfo->local && !cur_finfo->role);
 	enable(C_RENFOLDER, cur_finfo && !cur_finfo->local && !cur_finfo->role && !cur_finfo->noselect);
 	menu_icheck(mb.tree, mbar_object(&mb, C_OFFLINE), opt.offline);
+#ifndef MAIL_ST
 	menu_icheck(mb.tree, mbar_object(&mb, C_FALCON), opt.falcon);
+#endif
 	menu_icheck(mb.tree, mbar_object(&mb, C_HEBREW), hebrew_kbd);
 	menu_icheck(mb.tree, mbar_object(&mb, C_LOG), opt.log);
 }
@@ -1431,7 +1435,7 @@ int main(void)
 	store_init(dir);
 	crash_install(dir, "EMail", mail_version);
 	help_init();			/* memory the help viewer may read */
-	av_init("EMAIL");		/* the desktop's AV server, if there is one */
+	av_init("EMAIL|EMAILST");	/* the desktop's AV server, if there is one */
 	people_init(64, 0, names_came, picked);	/* names from EContact */
 	crash_cleanup = crash_quit;
 	crash_report = conn_log_append;	/* the report in the protocol log too */

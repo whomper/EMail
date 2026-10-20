@@ -10,8 +10,8 @@ reads and writes Hebrew.
 - An Atari with TOS 1.04 or newer (TOS 4 on the Falcon), EmuTOS, MagiC or
   MiNT, and a screen of at least 640×200 (ST medium); 640×400 (ST high)
   or the Falcon's 640×480 show three windows side by side
-- 1 MB of memory or more: EMail itself takes about 410 KB, and more
-  memory holds bigger folders. With EContact's accessory loaded, 2 MB or
+- 1 MB of memory or more: EMail itself takes about 424 KB, the ST
+  edition (below) about 303 KB, and more memory holds bigger folders. With EContact's accessory loaded, 2 MB or
   more: on a 1 MB ST the two don't fit together, so there use EContact as
   a program (`ECONTACT.PRG`), between EMail's runs
 - A TCP/IP stack:
@@ -36,7 +36,15 @@ reads and writes Hebrew.
 The files are in the latest release on EMail's GitHub page
 (github.com/whomper/EMail/releases), each on its own and all together in
 `EMAIL-x.y.zip`. Copy `EMAIL.PRG` to any folder on any drive: nothing
-has to be in a particular place. EMail keeps everything in the folder it
+has to be in a particular place.
+
+On an ST, take `EMAILST.PRG` instead, **the ST edition**: the same
+program without Falcon mode (an ST is too slow for the encryption, and
+reaches secure servers through the Pi gateway), about 120 KB smaller in
+memory, which leaves a 1 MB ST more room for your mail. It reads the same
+`EMAIL.INF` and folders, so you can move between the two; it leaves the
+Falcon mode setting as it found it for `EMAIL.PRG`. Use one of them at a
+time. EMail keeps everything in the folder it
 is started from, which the desktop makes its own folder, so a folder of
 its own keeps it all together. Here it is `C:\EMAIL\`:
 

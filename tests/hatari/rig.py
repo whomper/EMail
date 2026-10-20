@@ -31,6 +31,17 @@ import machines  # noqa: E402  the family's test machines (guidelines, The machi
 # FAKESTNG.PRG and its bridge are common's: make -C common/tools/fakesting
 FAKESTING = os.path.join(COMMON_TOOLS, "fakesting")
 
+# the edition under test: EMAIL.PRG, or with AERA_EDITION=st the ST
+# edition, EMAILST.PRG, under its own name (its AES name is EMAILST)
+PRG = "EMAILST.PRG" if os.environ.get("AERA_EDITION", "").lower() == "st" else "EMAIL.PRG"
+ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..")
+
+
+def install_prg(hd):
+    """the edition under test onto drive C: (work/hd), from binary/"""
+    shutil.copy(os.path.join(ROOT, "binary", PRG), os.path.join(hd, PRG))
+    print("program:", PRG, flush=True)
+
 
 def cli(default, usage=None):
     """A rig's arguments, WORKDIR [MACHINE] [MORE...]: the work folder, the
@@ -101,7 +112,7 @@ K = dict(RETURN=0x1c, ESC=0x01, TAB=0x0f, BACKSPACE=0x0e, DELETE=0x53, UP=0x48, 
 
 class Rig:
     def __init__(self, work, machine="Falcon", display=":99", serial=None, extra=(),
-                 auto="C:\\EMAIL.PRG"):
+                 auto="C:\\" + PRG):
         """machine: one of machines.py's (Falcon, ST:mono...), drive C: is work/hd"""
         self.work, self.display = work, display
         self.machine = machines.Machine(machine, os.path.join(work, "hd"))

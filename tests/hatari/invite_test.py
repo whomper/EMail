@@ -81,7 +81,7 @@ rig.stop_at_exit(srv, smtp)
 
 # drive C:, with the stand-in ECal
 os.makedirs(os.path.join(hd, "AUTO"))
-shutil.copy(os.path.join(ROOT, "binary", "EMAIL.PRG"), hd)
+rig.install_prg(hd)
 if real:
     ec_dir = os.path.join(work, "ecal")
     shutil.rmtree(ec_dir, ignore_errors=True)

@@ -404,6 +404,11 @@ static void zone_detect(void)
 		 sizeof(opt.tzname));
 }
 
+/* EMAIL.INF's Falcon mode as it was read: the ST edition, which has no
+   TLS (tls_available 0), runs through the gateway and writes it back as
+   it found it, for EMAIL.PRG */
+static short falcon_inf;
+
 static void set_opt(const char *k, const char *v)
 {
 	short n = (short)atoi(v);
@@ -421,7 +426,10 @@ static void set_opt(const char *k, const char *v)
 	else if (!strcmp(k, "panes")) shorts(v, &opt.pane_w, 2);
 	else if (!strcmp(k, "editor")) shorts(v, &opt.ed_x, 4);
 	else if (!strcmp(k, "font")) shorts(v, &opt.font_id, 2);
-	else if (!strcmp(k, "falcon")) opt.falcon = n != 0;
+	else if (!strcmp(k, "falcon")) {
+		falcon_inf = n != 0;
+		opt.falcon = tls_available && falcon_inf;
+	}
 	else if (!strcmp(k, "dsp")) opt.dsp = n != 0;
 	else if (!strcmp(k, "colour") || !strcmp(k, "color")) opt.colour = n != 0;
 	else if (!strcmp(k, "hebfont")) opt.hebfont = n >= 0 && n <= 2 ? n : 0;
@@ -574,7 +582,7 @@ int store_save_settings(void)
 	put_fmt(&b, "the font's Hebrew letters: 0 = Atari places, 1 = ISO-8859-8, 2 = DOS 862 (Options > Font)",
 		"HEBFONT", "%d", opt.hebfont);
 	put_fmt(&b, "1 = Falcon mode: TLS on the Atari, straight to the providers; 0 = through the Pi gateway",
-		"FALCON", "%d", opt.falcon);
+		"FALCON", "%d", tls_available ? opt.falcon : falcon_inf);
 	put_fmt(&b, "Falcon mode: 1 = the DSP checks the servers' signatures, 0 = the 68030 does",
 		"DSP", "%d", opt.dsp);
 	put_fmt(&b, "1 = colours (selection, unread counts, flags, quotes) on screens with 16 or more",

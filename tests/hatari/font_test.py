@@ -74,7 +74,7 @@ rig.stop_at_exit(srv, smtp)
 
 # drive C:
 os.makedirs(os.path.join(hd, "AUTO"))
-shutil.copy(os.path.join(ROOT, "binary", "EMAIL.PRG"), hd)
+rig.install_prg(hd)
 rig.fakesting(os.path.join(hd, "AUTO"))
 INF = os.path.join(hd, "EMAIL.INF")
 with open(INF, "w", newline="") as f:

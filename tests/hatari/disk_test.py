@@ -80,7 +80,7 @@ smtp = subprocess.Popen([sys.executable, os.path.join(ROOT, "tests", "smtp_serve
 rig.stop_at_exit(srv, smtp)
 
 os.makedirs(os.path.join(hd, "AUTO"))
-shutil.copy(os.path.join(ROOT, "binary", "EMAIL.PRG"), hd)
+rig.install_prg(hd)
 rig.fakesting(os.path.join(hd, "AUTO"))
 with open(os.path.join(hd, "EMAIL.INF"), "w", newline="") as f:
     f.write("[options]\r\ntz=180\r\nlog=0\r\n[account]\r\nname=Dana\r\nfullname=Dana Falcon\r\n"

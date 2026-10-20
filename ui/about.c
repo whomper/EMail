@@ -20,7 +20,12 @@ void dlg_about(void)
 	static char conn[80], where[60];
 	char avail[60];
 	short i, online = 0;
-	ABOUT a = { "EMail", mail_version, "E-mail for the Atari ST, TT and Falcon", { conn, where, 0 }, { 0, 0, 0 },
+#ifdef MAIL_ST
+#define EDITION "The ST edition, EMAILST.PRG"
+#else
+#define EDITION 0
+#endif
+	ABOUT a = { "EMail", mail_version, "E-mail for the Atari ST, TT and Falcon", { conn, where, EDITION }, { 0, 0, 0 },
 		    icon_bits, icon16_px, icon16_rgb };
 	for (i = 0; i < naccts; i++)
 		if (accts[i]->im)

@@ -33,12 +33,14 @@ one is there on its own, and all of them together in `EMAIL-x.y.zip`.
 | File | What it is |
 |---|---|
 | `EMAIL.PRG` | the program, for every Atari from the ST to the Falcon |
+| `EMAILST.PRG` | the ST edition: the same program without Falcon mode, about 120 KB smaller in memory, for an ST with 1 MB (use one of the two) |
 | `CACERT.PEM`, `ROOTS.DAT` | the root certificates for Falcon mode (Mozilla's list, and the same decoded ahead of time) |
 | `EMAIL.HYP`, `EMAIL.REF` | the user guide for EHypView or ST-Guide, opened by the Help key |
 | `EMAIL.RSC`, `EMAIL.ICN`, `EMAILMK.ICN` | the desktop icon, on their own and in the zip's `icons/` folder (see [The desktop icon](docs/GUIDE.md#the-desktop-icon)) |
 | `EMAIL-x.y.zip` | all of the above |
 
-1. Copy `EMAIL.PRG` to any folder on any drive, with `EMAIL.HYP` and `EMAIL.REF` beside it. EMail keeps
+1. Copy `EMAIL.PRG` (on an ST, `EMAILST.PRG`) to any folder on any drive, with `EMAIL.HYP` and
+   `EMAIL.REF` beside it. EMail keeps
    its settings and your mail next to itself, so a folder of its own (`C:\EMAIL\`, say) keeps them
    together; nothing has to be in a particular place.
 2. Set up the gateway on a Raspberry Pi from [AERA-Gateway](https://github.com/whomper/AERA-Gateway),
@@ -64,7 +66,8 @@ and switch on **Options > Falcon mode**. EMail fills in the servers for the big 
 as they are. On the Pi, `./update-pi.sh` in `AERA-Gateway` updates the gateway.
 
 **Needs:** TOS 1.04 or newer (TOS 4 on the Falcon), EmuTOS, MagiC or MiNT; 640×200 (ST medium) or
-larger; 1 MB of memory (EMail itself takes about 410 KB; more memory holds bigger folders), 2 MB or more with
+larger; 1 MB of memory (EMail itself takes about 424 KB, the ST edition `EMAILST.PRG` about 303 KB; more
+memory holds bigger folders), 2 MB or more with
 EContact's accessory (on a 1 MB ST, use EContact as a program, `ECONTACT.PRG`); network: STinG (or STiK), MiNTnet or
 MagiC-Net; for providers that need encryption (nearly all), the Pi gateway or Falcon mode (a Falcon or
 TT with 4 MB or more).
@@ -157,7 +160,7 @@ emulation; details in [tools/tlsbench](tools/tlsbench/README.md).
 
 ```sh
 sudo apt install gcc-m68k-linux-gnu python3   # Debian/Ubuntu; no MiNTLib needed
-make                          # binary/EMAIL.PRG, CACERT.PEM and ROOTS.DAT
+make                          # binary/EMAIL.PRG, EMAILST.PRG, CACERT.PEM and ROOTS.DAT
 make test                     # unit tests on this computer, the fuzz inputs again, the gateway's tests
 make itest                    # against a local Dovecot and a test SMTP server
 make help HCP=/path/to/hcp    # binary/EMAIL.HYP and EMAIL.REF from docs/GUIDE.md
@@ -179,7 +182,10 @@ notes. Pushing a tag `v1.31` made with `git tag -a` does the same, with the tag'
 
 No MiNTLib is needed: the program is freestanding (`common/atari/` and `atari/`) and
 `common/tools/elf2tos.py` writes the TOS executable. It is built for the 68000, so it runs on every
-Atari from the ST to the Falcon; only BearSSL, used in Falcon mode, is 68030 code. `ROOTS.DAT` is
+Atari from the ST to the Falcon; only BearSSL, used in Falcon mode, is 68030 code. The ST edition
+`EMAILST.PRG` is the same source built with `-DMAIL_ST` and `common/src/tls_none.c` in place of
+`tls.c`: no BearSSL, no DSP code, no Falcon mode in the menu or the settings. Both read the same
+`EMAIL.INF` and folders; the ST edition keeps the Falcon mode setting as it found it. `ROOTS.DAT` is
 `CACERT.PEM` decoded on the build computer by `common/tools/mkroots.c`, so the Atari doesn't have to.
 The DSP program is `common/dsp/rsa.a56`; `common/dsp/mkh.py` turns it into `common/dsp/rsa_prog.h`
 (with the `a56` assembler: `cd common/dsp && a56 rsa.a56 && python3 mkh.py a56.out rsa_prog.h
@@ -243,6 +249,7 @@ make build/fakecal.acc && tests/hatari/invite_test.py /tmp/mail-inv   # an invit
 tests/hatari/invite_test.py /tmp/mail-inv Falcon ECal  # the same with ECal's latest release, its New Event saved
 tests/hatari/help_test.py /tmp/mail-help           # EMAIL.HYP in EHypView's latest release
 AERA_WITH_NVDI=1 tests/hatari/font_test.py /tmp/mail-font   # a GDOS font under NVDI (Falcon, Falcon-4)
+AERA_EDITION=st tests/hatari/net_test.py /tmp/mail-st ST-1  # any rig with the ST edition, EMAILST.PRG
 ```
 
 In `net_test.py` EMail logs in to Dovecot, mirrors the inbox, opens a
