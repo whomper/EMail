@@ -17,6 +17,11 @@ reads and writes Hebrew.
 - A TCP/IP stack:
   - **STinG** on plain TOS (or STiK), or
   - **MiNTnet** under FreeMiNT (with or without GlueSTiK), or MagiC-Net
+
+  With STinG, set the Delay in `STING.CPX` to suit the machine: 10 on a
+  Falcon or TT, 25 to 50 on an ST, as STinG's manual says. STinG looks at
+  the network card that often, so it sets the speed of every STinG
+  program, EMail's checks and downloads among them.
 - For providers that need encryption (nearly all), one of:
   - a Raspberry Pi or other Linux computer on your network as a gateway
     (any Atari), set up from AERA-Gateway
