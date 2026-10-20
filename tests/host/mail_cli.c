@@ -259,10 +259,44 @@ int main(int argc, char **argv)
 			printf("Attachment: ");
 			say(m->parts[i].name);
 			printf(" (%s, %ld bytes)\n", m->parts[i].type, m->parts[i].size);
+			if (mime_is_calendar(&m->parts[i])) {
+				printf("Invitation: ");
+				say(m->parts[i].summary ? m->parts[i].summary : "");
+				printf("\n");
+			}
 		}
 		printf("\n");
 		say(m->text);
 		printf("\n");
+		mime_free(m);
+		free(raw);
+		fold_close(f);
+	} else if (!strcmp(cmd, "invite") && a && argc > 6) {
+		/* the reader's Add to ECal without the VA_START: the message's
+		   first invitation, decoded, to the file named (INVITE.ICS) */
+		FINFO *fi = find_folder(a, argv[4]);
+		FOLDER *f;
+		HDR *h;
+		char *raw, *data = 0;
+		long len, dl = 0;
+		MSG *m;
+		short i;
+		if (!fi)
+			return 1;
+		f = fold_open(a, fi);
+		h = fold_get(f, strtoul(argv[5], 0, 10));
+		if (!h || !(raw = mail_fetch(f, h, &len)))
+			return fail("fetch");
+		m = mime_parse(raw, len);
+		for (i = 0; m && i < m->nparts && !data; i++)
+			if (mime_is_calendar(&m->parts[i]))
+				data = mime_part_data(raw, &m->parts[i], &dl);
+		if (!data)
+			return fail("no invitation");
+		if (pf_save(argv[6], data, dl) < 0)
+			return fail("write");
+		printf("invite: %ld bytes\n", dl);
+		free(data);
 		mime_free(m);
 		free(raw);
 		fold_close(f);

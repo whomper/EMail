@@ -180,7 +180,9 @@ like a modern mail program:
   Sent and the Outbox it shows who you wrote to. Its header shows how
   many messages are loaded and how many there are.
 - **Message** (bottom right): the selected message. Click an attachment
-  line (`»`) to save it with the file selector. HTML-only mail is shown
+  line (`»`) to save it with the file selector. A calendar invitation
+  shows as `» Invitation:` and its title: double-click it to add it to
+  ECal (see From other programs). HTML-only mail is shown
   as text. Quoted lines are coloured by how deep they are quoted (light
   grey in black and white).
 
@@ -213,7 +215,7 @@ folder with thousands of messages opens as quickly as a small one.
 | a message     | Open, Reply, Reply to all, Forward, Mark as read/unread, Flag, Move to, Download again, Delete |
 | a folder      | Open, Check for new mail, Mark all as read, Download missing messages, New folder, Rename folder, Delete folder |
 | an account    | Check mail, New message, Edit account, Refresh folder list             |
-| an attachment | Save attachment                                                        |
+| an attachment | Save attachment; an invitation: Add to ECal, Save attachment           |
 | the editor    | Send now, Put in Outbox, Attach file, Address book, Hebrew keyboard, Cut line, Copy line, Paste |
 
 Pick with a click, press-drag-release, or the arrow keys and Return;
@@ -311,6 +313,15 @@ To: and Cc: lines of a message (a name's tooltip is its address) and when
 writing. Nothing is copied between their folders. Without EContact,
 EMail shows the addresses as they are (the list keeps the name the
 message gives).
+
+**ECal**, the AERA calendar, takes the invitations that come by mail
+(an `.ics` file, or a calendar part sent with the text, as most
+invitations are). Double-click the `» Invitation:` line in the message,
+or right-click it and choose Add to ECal: EMail writes it as
+`INVITE.ICS` next to `EMAIL.PRG` and hands it to ECal, whose New Event
+dialog opens filled in from it, for you to confirm. ECal must be running
+(the accessory, or alongside under MiNT or MagiC); when it isn't, EMail
+says so, and you can save the invitation instead.
 
 **mail** in EContact opens a new message to the
 person or group you chose. Any program, or a desktop such as Thing,

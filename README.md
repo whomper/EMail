@@ -92,6 +92,8 @@ took EFTP's downloads from 40 to 75 KB/s.
 - People by name from EContact, the AERA address book: in the list, the message and the To: line,
   with the address in a tooltip; Ctrl+B picks people and groups in EContact's window
 - Attachments: save them with the file selector; attach files when writing
+- Calendar invitations go to ECal, the AERA calendar: double-click one and ECal's New Event dialog
+  opens filled in from it
 - HTML-only mail shown as text
 - Dates with the year, numbers with thousands separators
 - Fonts: the system font in two sizes and any monospaced GDOS font (bitmap, Speedo, TrueType); the
@@ -237,6 +239,7 @@ tests/hatari/ui_tour.py WORKDIR                    # screenshots of the interfac
 tests/hatari/screenshots.py WORKDIR                # the pictures in docs/, English sample mail
 tests/hatari/falcon_test.py /tmp/mail-tls          # Falcon mode, TLS and the DSP (or: ... TT)
 tests/hatari/econtact_test.py /tmp/mail-ec         # names and ^B with EContact's latest release
+make build/fakecal.acc && tests/hatari/invite_test.py /tmp/mail-inv   # an invitation to (a stand-in for) ECal
 tests/hatari/help_test.py /tmp/mail-help           # EMAIL.HYP in EHypView's latest release
 AERA_WITH_NVDI=1 tests/hatari/font_test.py /tmp/mail-font   # a GDOS font under NVDI (Falcon, Falcon-4)
 ```
@@ -252,7 +255,8 @@ again in it and reads a Hebrew message from disk; under NVDI it needs Erez's NVD
 `common/tools/machines.py`), and without a GDOS it checks the restart in the system font. The tests that need another
 AERA program take its latest release, as you would have it (`common/tools/getrelease.py`; add `vX.Y`
 for another one): `econtact_test.py` with EContact, `help_test.py` with EHypView. `people_test.py`
-checks the same conversation with a stand-in for EContact (`build/fakecontact.acc`). Hatari has no network card,
+checks the same conversation with a stand-in for EContact (`build/fakecontact.acc`), and `invite_test.py` an
+invitation handed to a stand-in for ECal (`build/fakecal.acc`), and the alert when ECal isn't there. Hatari has no network card,
 so `FAKESTNG.PRG` (the AERA apps' shared one, in `common/tools/fakesting`) stands in for STinG and
 carries EMail's connections over the emulated serial port to `serial_bridge.py` next to it. It's for
 the emulator only; never install it on a real Atari.
