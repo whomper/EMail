@@ -158,7 +158,9 @@ try:
     time.sleep(1)
     r.click(60, 60)                      # EContact, the first accessory under About EMail
     time.sleep(8)
-    r.type("Avi")                        # its search
+    r.ctrl("f")                          # a new search: the pick left "Grace" in it
+    time.sleep(1)
+    r.type("Avi")
     time.sleep(4)
     r.shot("c6-econtact")
     r.click(447, 182)                    # mail, under his name
