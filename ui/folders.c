@@ -27,6 +27,29 @@ typedef struct {
 static ENTRY ent[MAXACCT * (MAXFOLDER + 1)];
 static long nent, sel = -1;
 
+/* what each row showed when folders_build last drew: a new build draws
+   only the rows that look different (choosing a message, a check that
+   found nothing, redrew every row: Erez's video, 20 Oct 2026) */
+static unsigned long look[MAXACCT * (MAXFOLDER + 1)];
+static long nlook = -1;
+
+static unsigned long row_look(long i)
+{
+	ENTRY *e = &ent[i];
+	const char *s = e->fi ? e->fi->disp : e->a->name;
+	unsigned long h = (unsigned long)e->a * 31 + (unsigned long)e->fi;
+	while (*s)
+		h = h * 31 + (unsigned char)*s++;
+	h = h * 31 + (i == sel);
+	if (e->fi) {
+		h = h * 31 + (unsigned long)e->fi->unread;
+		h = h * 31 + (unsigned long)(e->fi->role == FR_OUTBOX ? e->fi->total : 0);
+		h = h * 31 + (unsigned long)e->fi->noselect;
+		h = h * 31 + (unsigned long)e->fi->depth;
+	}
+	return h;
+}
+
 static short role_rank(FINFO *f)
 {
 	switch (f->role) {
@@ -72,28 +95,46 @@ void folders_build(void)
 		if (ent[i].fi && ent[i].fi == cur_finfo)
 			sel = i;
 	w_folders.total = nent;
-	win_sliders(&w_folders);
-	win_redraw(&w_folders, 0);
+	if (nent != nlook) {
+		win_sliders(&w_folders);
+		win_redraw(&w_folders, 0);
+		for (i = 0; i < nent; i++)
+			look[i] = row_look(i);
+		nlook = nent;
+		return;
+	}
+	for (i = 0; i < nent; i++) {
+		unsigned long l = row_look(i);
+		if (l != look[i]) {
+			look[i] = l;
+			win_redraw_lines(&w_folders, i, 1);
+		}
+	}
 }
 
 static void draw(WIN *w, GRECT *clip)
 {
 	long i, rows = win_rows(w) + 1;
 	short cols = w->work.w / cw;
-	fill(clip, 0);
+	GRECT r;
+	/* each row fills its own background as it is drawn, so the pane
+	   drawn again changes row by row and is never white first */
+	r.x = w->work.x;
+	r.w = w->work.w;
+	r.y = w->work.y + (short)(((nent < w->top + rows ? nent : w->top + rows) - w->top) * ch);
+	if (r.y < w->work.y)
+		r.y = w->work.y;
+	r.h = w->work.y + w->work.h - r.y;
+	if (r.h > 0)
+		fill(&r, 0);
 	for (i = w->top; i < nent && i < w->top + rows; i++) {
 		ENTRY *e = &ent[i];
 		short y = w->work.y + (short)((i - w->top) * ch);
 		short flags = (i == sel) ? TX_INVERSE : 0;
 		char cnt[16];
-		if (i == sel) {
-			GRECT r;
-			r.x = w->work.x;
-			r.y = y;
-			r.w = w->work.w;
-			r.h = ch;
-			fill(&r, pen[P_SEL]);
-		}
+		r.y = y;
+		r.h = ch;
+		fill(&r, i == sel ? pen[P_SEL] : 0);
 		if (!e->fi) {
 			text_at(w->work.x + 2, y, e->a->name, strlen(e->a->name), cols, flags | TX_BOLD);
 			continue;

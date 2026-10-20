@@ -139,6 +139,23 @@ static unsigned view_gen;
 
 static void build_view(void);
 
+/* the messages drawn while EContact hadn't said their names yet: when
+   its answers come, only those rows are drawn again, and only if a name
+   came (it answers a moment after a scroll brings new people in) */
+#define NPEND 64
+static unsigned long pend[NPEND];
+static int npend;
+
+static void pend_add(unsigned long uid)
+{
+	int k;
+	for (k = 0; k < npend; k++)
+		if (pend[k] == uid)
+			return;
+	if (npend < NPEND)
+		pend[npend++] = uid;
+}
+
 static void fresh(void)
 {
 	if (cur_folder != view_of || (cur_folder && cur_folder->gen != view_gen)) {
@@ -149,14 +166,43 @@ static void fresh(void)
 	}
 }
 
+/* what the list shows, in a number: a check that found nothing new
+   leaves it as it was, and the list isn't drawn again (a GDOS font's
+   rows are drawn a letter at a time, and the pane is seen filling in) */
+static unsigned long shows(void)
+{
+	unsigned long s = (unsigned long)cur_folder ^ ((unsigned long)cur_finfo << 1);
+	long i;
+	s = s * 31 + (unsigned long)nview;
+	s = s * 31 + (unsigned long)more;
+	s = s * 31 + (unsigned long)sel;
+	s = s * 31 + (unsigned long)nmarks;
+	s = s * 31 + (unsigned long)w_list.top;
+	for (i = 0; i < nview; i++) {
+		HDR *h = &cur_folder->h[view[i]];
+		s = s * 31 + h->uid;
+		s = s * 31 + h->flags;
+	}
+	return s;
+}
+
+static unsigned long shown_sig;
+static int shown_valid;
+
 void list_refresh(void)
 {
+	unsigned long s;
 	build_view();
 	w_list.total = nview + (more ? 1 : 0);
 	if (w_list.top > nview)
 		w_list.top = 0;
 	list_titles();
 	win_sliders(&w_list);
+	s = shows();
+	if (shown_valid && s == shown_sig)
+		return;
+	shown_sig = s;
+	shown_valid = 1;
 	win_redraw(&w_list, 0);
 }
 
@@ -286,7 +332,26 @@ static void draw(WIN *w, GRECT *clip)
 	GRECT r;
 	fresh();
 	columns(cols, &c_from, &c_subj, &c_date);
-	fill(clip, 0);
+	/* each row fills its own background as it is drawn: a list drawn
+	   again changes row by row, and is never white first */
+	if (!cur_folder || !nview) {
+		fill(clip, 0);
+	} else {
+		long end = nview + (more ? 1 : 0);
+		if (end > w->top + rows)
+			end = w->top + rows;
+		if (end < w->top)
+			end = w->top;
+		r.x = w->work.x;
+		r.y = w->work.y;
+		r.w = w->work.w;
+		r.h = w->head_h;
+		fill(&r, 0);
+		r.y = w->work.y + w->head_h + (short)((end - w->top) * ch);
+		r.h = w->work.y + w->work.h - r.y;
+		if (r.h > 0)
+			fill(&r, 0);
+	}
 
 	/* column titles */
 	{
@@ -329,13 +394,11 @@ static void draw(WIN *w, GRECT *clip)
 		char marks[4], date[24], size[8];
 		const char *who = show_to() ? h->to : h->from;
 		char name[64];
-		if (lit) {
-			r.x = w->work.x;
-			r.y = y;
-			r.w = w->work.w;
-			r.h = ch;
-			fill(&r, pen[P_SEL]);
-		}
+		r.x = w->work.x;
+		r.y = y;
+		r.w = w->work.w;
+		r.h = ch;
+		fill(&r, lit ? pen[P_SEL] : 0);
 		if (!(h->flags & MF_SEEN))
 			fl |= TX_BOLD;
 		/* fixed places: ! flagged, @ attachments */
@@ -355,6 +418,8 @@ static void draw(WIN *w, GRECT *clip)
 			const char *known;
 			addr_split(who ? who : "", name, sizeof(name), mail, sizeof(mail));
 			known = mail[0] ? people_name(mail) : 0;
+			if (mail[0] && !known)
+				pend_add(h->uid);	/* asked: it may come */
 			if (known && *known)
 				str_copy(name, known, sizeof(name));
 			else if (!name[0])
@@ -418,16 +483,30 @@ static void select_row(long i, int open)
 		win_redraw(&w_list, 0);
 	}
 	anchor = i;
+	if (i == old && cur_msg && !reader_missing && cur_uid == cur_folder->h[view[i]].uid) {
+		/* the message shown already: nothing is drawn again (Erez's
+		   video, 20 Oct: a click on it redrew the row twice, the
+		   reader and the folders) */
+		win_ensure_visible(&w_list, sel);
+		if (open)
+			win_focus(&w_reader);
+		return;
+	}
 	sel = i;
 	sel_uid = cur_folder->h[view[i]].uid;
-	win_redraw_lines(&w_list, old, 1);
+	if (old != sel)
+		win_redraw_lines(&w_list, old, 1);
 	win_redraw_lines(&w_list, sel, 1);
 	win_ensure_visible(&w_list, sel);
-	reader_show(&cur_folder->h[view[i]]);
-	/* reading may have marked it read */
-	win_redraw_lines(&w_list, sel, 1);
+	{
+		unsigned short was = cur_folder->h[view[i]].flags;
+		reader_show(&cur_folder->h[view[i]]);
+		/* reading may have marked it read: then the row, the counts */
+		if (cur_folder->h[view[i]].flags != was)
+			win_redraw_lines(&w_list, sel, 1);
+	}
 	list_titles();
-	folders_build();
+	folders_build();	/* draws only the rows that changed */
 	if (open)
 		win_focus(&w_reader);
 }
@@ -757,6 +836,27 @@ void list_init(void)
 /* EContact's names came, or changed */
 void list_names_came(void)
 {
-	if (cur_folder)
-		win_redraw(&w_list, 0);
+	long i, rows = win_rows(&w_list) + 1;
+	unsigned long was[NPEND];
+	int n = npend, k;
+	if (!cur_folder || !n)
+		return;
+	memcpy(was, pend, n * sizeof(*was));
+	npend = 0;		/* drawing again asks again for what is still out */
+	fresh();
+	for (i = w_list.top; i < nview && i < w_list.top + rows; i++) {
+		HDR *h = &cur_folder->h[view[i]];
+		const char *who = show_to() ? h->to : h->from, *known;
+		char name[64], mail[PEOPLE_ADDR];
+		for (k = 0; k < n && was[k] != h->uid; k++)
+			;
+		if (k == n)
+			continue;
+		addr_split(who ? who : "", name, sizeof(name), mail, sizeof(mail));
+		known = mail[0] ? people_name(mail) : 0;
+		if (!known)
+			pend_add(h->uid);	/* not yet */
+		else if (*known)
+			win_redraw_lines(&w_list, i, 1);
+	}
 }

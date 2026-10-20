@@ -46,7 +46,10 @@ static void free_layout(void)
 
 static long selection;		/* several messages selected: how many */
 
-void reader_clear(void)
+/* the message shown is forgotten, not drawn: reader_show draws the next
+   once it is laid out, so the pane doesn't go blank meanwhile (Erez's
+   video, 20 Oct 2026: "No message selected" for the layout's time) */
+static void forget(void)
 {
 	reader_missing = 0;
 	selection = 0;
@@ -61,6 +64,11 @@ void reader_clear(void)
 	body = 0;
 	cur_uid = 0;
 	w_reader.top = 0;
+}
+
+void reader_clear(void)
+{
+	forget();
 	win_title(&w_reader, "Message");
 	win_info(&w_reader, "");
 	win_sliders(&w_reader);
@@ -317,9 +325,19 @@ static void make_head(void)
 void reader_names_came(void)
 {
 	long top = w_reader.top;
+	char *was = head;
 	if (!cur_msg || !head)
 		return;
+	head = 0;
 	make_head();
+	if (head && !strcmp(head, was)) {
+		/* no name it shows changed: nothing drawn. The lines laid out
+		   point into the old text, which stays */
+		free(head);
+		head = was;
+		return;
+	}
+	free(was);
 	layout();
 	win_scroll_to(&w_reader, top);
 	win_redraw(&w_reader, 0);
@@ -365,7 +383,7 @@ void reader_show(HDR *h)
 	if (!raw && mail_unreachable) {
 		MSG *m = missing_note(h, cur_folder->acct);
 		if (m) {
-			reader_clear();
+			forget();
 			reader_missing = 1;
 			cur_msg = m;
 			cur_uid = h->uid;
@@ -377,7 +395,7 @@ void reader_show(HDR *h)
 		alert(1, "[1][%s][ OK ]", mail_err[0] ? mail_err : "Can't read this message.");
 		return;
 	}
-	reader_clear();
+	forget();
 	cur_raw = raw;
 	cur_rawlen = len;
 	cur_uid = h->uid;

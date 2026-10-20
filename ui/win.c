@@ -310,6 +310,22 @@ static void draw_divider(GRECT *r)
 }
 
 /* everything of the main window inside clip (already set as VDI clip) */
+#ifdef DRAW_TRACE
+#include <stdio.h>
+#include "../src/plat.h"
+/* a test build (tests/hatari/scroll_test.py) says on the emulator's
+   console what each pane drew: "DRAW list y h" */
+static void trace(const char *what, WIN *w, GRECT *r)
+{
+	char t[60];
+	snprintf(t, sizeof(t), "%s %s %d %d", what,
+		 w == &w_folders ? "folders" : w == &w_list ? "list" : "reader", r->y - w->work.y, r->h);
+	pf_debug(t);
+}
+#else
+#define trace(what, w, r) ((void)0)
+#endif
+
 static void draw_main(GRECT *clip)
 {
 	short i;
@@ -327,6 +343,7 @@ static void draw_main(GRECT *clip)
 			draw_header(w);
 		r = w->work;
 		if (intersect(clip, &r) && w->draw) {
+			trace("DRAW", w, &r);
 			clip_on(&r);
 			w->draw(w, &r);
 			clip_on(clip);
@@ -689,8 +706,58 @@ int win_is_top(WIN *w)
 
 /* ---------------- scrolling ---------------- */
 
+/* A pane scrolled by fewer rows than it shows: the rows that stay move
+   on the screen with one raster copy and only the new ones are drawn. A
+   GDOS font's rows are drawn a letter at a time, so a pane drawn afresh
+   at every step was seen filling in (Erez's video, 20 Oct 2026). Only
+   where nothing covers the pane; else 0, and it is drawn as before */
+static int scroll_copy(WIN *w, GRECT *a, long d)
+{
+	GRECT r, strip;
+	short pxy[8], dy;
+	MFDB scr;
+	long rows = win_rows(w);
+	if (!w->pane || main_h <= 0 || main_iconified || !d || d >= rows || -d >= rows)
+		return 0;
+	dy = (short)((d < 0 ? -d : d) * w->line_h);
+	if (dy >= a->h)
+		return 0;
+	wind_update(BEG_UPDATE);
+	wind_get(main_h, WF_FIRSTXYWH, &r.x, &r.y, &r.w, &r.h);
+	if (r.x > a->x || r.y > a->y || r.x + r.w < a->x + a->w || r.y + r.h < a->y + a->h) {
+		wind_update(END_UPDATE);
+		return 0;
+	}
+	memset(&scr, 0, sizeof(scr));	/* the screen */
+	pxy[0] = pxy[4] = a->x;
+	pxy[2] = pxy[6] = a->x + a->w - 1;
+	strip = *a;
+	strip.h = dy;
+	if (d > 0) {			/* down the list: the rows move up */
+		pxy[1] = a->y + dy;
+		pxy[3] = a->y + a->h - 1;
+		pxy[5] = a->y;
+		pxy[7] = a->y + a->h - 1 - dy;
+		strip.y = a->y + a->h - dy;
+	} else {
+		pxy[1] = a->y;
+		pxy[3] = a->y + a->h - 1 - dy;
+		pxy[5] = a->y + dy;
+		pxy[7] = a->y + a->h - 1;
+	}
+	graf_mouse(M_OFF, 0);
+	clip_on(a);			/* NVDI clips raster copies: the pane's own */
+	vro_cpyfm(vdi_h, 3, pxy, &scr, &scr);
+	trace("COPY", w, a);
+	graf_mouse(M_ON, 0);
+	wind_update(END_UPDATE);
+	win_redraw(w, &strip);
+	return 1;
+}
+
 void win_scroll_to(WIN *w, long top)
 {
+	long old = w->top;
 	long rows = win_rows(w), max = w->total - rows;
 	if (max < 0)
 		max = 0;
@@ -706,7 +773,8 @@ void win_scroll_to(WIN *w, long top)
 		GRECT a = w->work;
 		a.y += w->head_h;
 		a.h -= w->head_h;
-		win_redraw(w, &a);
+		if (!scroll_copy(w, &a, top - old))
+			win_redraw(w, &a);
 	}
 	if (w->scrolled)
 		w->scrolled(w);
