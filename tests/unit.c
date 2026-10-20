@@ -235,6 +235,34 @@ static void t_compose(void)
 	raw = compose_mailto(&a, "q@r.example?body=Hi");
 	CHECK(!strcmp(raw, "To: q@r.example\nCc: \nSubject: \n\nHi\n\n-- \nYaary"), "mailto: body, then the signature [%s]", raw);
 	free(raw);
+
+	/* a reply and a forward: the signature goes with what is typed, above the quote */
+	{
+		MSG o;
+		memset(&o, 0, sizeof(o));
+		o.from = "dana@example.com";
+		o.date = "Tue, 20 Oct 2026 10:00:00 +0300";
+		o.subject = "Lunch";
+		o.to = "me@example.com";
+		o.cc = o.reply_to = "";
+		o.text = "See you at one.";
+		raw = compose_reply(&a, &o, 0);
+		CHECK(!strcmp(raw, "To: dana@example.com\nCc: \nSubject: Re: Lunch\n\n\n\nYaary\n\n"
+			      "On Tue, 20 Oct 2026 10:00:00 +0300,\ndana@example.com wrote:\n> See you at one.\n"),
+		      "reply: the signature above the quote [%s]", raw);
+		free(raw);
+		raw = compose_forward(&a, &o, 0);
+		CHECK(!strcmp(raw, "To: \nCc: \nSubject: Fwd: Lunch\n\n\n\nYaary\n\n---------- Forwarded message ----------\n"
+			      "From: dana@example.com\nDate: Tue, 20 Oct 2026 10:00:00 +0300\nSubject: Lunch\nTo: me@example.com\n\n"
+			      "See you at one."),
+		      "forward: the signature above the forwarded text [%s]", raw);
+		free(raw);
+		opt.signature[0] = 0;
+		raw = compose_reply(&a, &o, 0);
+		CHECK(!strncmp(raw, "To: dana@example.com\nCc: \nSubject: Re: Lunch\n\n\n\nOn Tue", 50),
+		      "reply without a signature, as before [%s]", raw);
+		free(raw);
+	}
 }
 
 static void t_bidi(void)

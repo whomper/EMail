@@ -366,6 +366,17 @@ static void add_signature(SBUF *b)
 	}
 }
 
+/* in a reply or a forward it goes with what is typed, above the quote
+   (Erez, 20 Oct); without the "-- " line, after which some mail programs
+   hide the rest, the quote too */
+static void add_signature_above(SBUF *b)
+{
+	if (opt.signature[0]) {
+		sb_adds(b, "\n\n");
+		sb_adds(b, opt.signature);
+	}
+}
+
 char *compose_new(ACCOUNT *a, const char *to)
 {
 	SBUF b;
@@ -498,10 +509,11 @@ char *compose_reply(ACCOUNT *a, MSG *m, int all)
 	if (!str_istarts(m->subject, "Re:"))
 		sb_adds(&b, "Re: ");
 	sb_adds(&b, m->subject);
-	/* an empty line for the cursor above the quote */
-	sb_printf(&b, "\n\n\n\nOn %s,\n%s wrote:\n", m->date, m->from);
+	/* an empty line for the cursor, the signature under it, then the quote */
+	sb_adds(&b, "\n\n");
+	add_signature_above(&b);
+	sb_printf(&b, "\n\nOn %s,\n%s wrote:\n", m->date, m->from);
 	quote_text(&b, m->text ? m->text : "");
-	add_signature(&b);
 	return sb_steal(&b);
 }
 
@@ -515,9 +527,10 @@ char *compose_forward(ACCOUNT *a, MSG *m, const char *eml)
 	sb_adds(&b, m->subject);
 	if (eml && m->nparts)
 		sb_printf(&b, "\nAttach: %s", eml);
+	sb_adds(&b, "\n\n");			/* the cursor's line, then the signature */
+	add_signature_above(&b);
 	sb_adds(&b, "\n\n---------- Forwarded message ----------\n");
 	sb_printf(&b, "From: %s\nDate: %s\nSubject: %s\nTo: %s\n\n", m->from, m->date, m->subject, m->to);
 	sb_adds(&b, m->text ? m->text : "");
-	add_signature(&b);
 	return sb_steal(&b);
 }

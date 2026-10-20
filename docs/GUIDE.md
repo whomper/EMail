@@ -507,9 +507,11 @@ environment (MiNT, MagiC; a name like Europe/Paris or POSIX like
 IST-2IDT), MiNT's /etc/timezone, or the minutes an older EMAIL.INF kept;
 otherwise UTC. It is kept as TIMEZONE= in EMAIL.INF.
 
-**Settings > Signature**: up to four lines, added below every new
-message, reply and forward after a "-- " line. There is one signature
-for all your accounts.
+**Settings > Signature**: up to four lines. A new message has it at the
+end, after a "-- " line. A reply or a forward has it under the line
+where you type, above the quoted or forwarded text, so it goes with
+what you write (there without the "-- " line, after which some mail
+programs hide the rest). There is one signature for all your accounts.
 
 ## Folders
 
