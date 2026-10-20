@@ -1353,6 +1353,7 @@ int main(void)
 {
 	short work_in_dummy, work_out[57], msg[8], d;
 	char dir[200];
+	long free_kb;
 	AEVENT ev;
 
 	{
@@ -1367,7 +1368,8 @@ int main(void)
 			st = (long)Malloc(-1L);
 			tt = 0;
 		}
-		if ((st > 0 ? st : 0) + (tt > 0 ? tt : 0) < 2048L * 1024)
+		free_kb = ((st > 0 ? st : 0) + (tt > 0 ? tt : 0)) / 1024;
+		if (free_kb < 2048)
 			conn_bufsize = 4096;
 	}
 	ap_id = appl_init();
@@ -1436,6 +1438,9 @@ int main(void)
 	reader_clear();
 
 	crash_offer("EMail", "next to EMAIL.PRG");
+	if (free_kb < 300)		/* say so now, not with a failed send or TLS later */
+		alert(1, "[3][Only %ld KB of memory is free|for EMail: the accessories|hold the rest. Mail and secure|connections need more: load|fewer, or add memory.][ OK ]",
+		      free_kb);
 
 	if (!naccts) {
 		alert(1, "[1][Welcome to EMail!||Let's set up your mail account.][ OK ]");
