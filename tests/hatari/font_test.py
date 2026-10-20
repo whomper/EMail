@@ -247,10 +247,11 @@ try:
         r.key(K["RETURN"])               # OK
         time.sleep(8 if nvdi else 4)
         after = r.shot("f4-chosen")
-        # the dialog's box: 64 x 23 cells of the system font, in the middle
-        cw, chh = 8, (16 if H >= 400 else 8)
-        dw, dh = 64 * cw, 23 * chh
-        box = ((W - dw) // 2 + 8, (H - dh) // 2 + 8, (W + dw) // 2 - 8, (H + dh) // 2 - 8)
+        # the dialog's box: what changed when it opened (the menu bar aside)
+        from PIL import Image, ImageChops
+        bb = ImageChops.difference(Image.open(read).convert("RGB").crop((0, 20, W, H)),
+                                   Image.open(dlg).convert("RGB").crop((0, 20, W, H))).getbbox()
+        box = (bb[0] + 8, bb[1] + 28, bb[2] - 8, bb[3] + 12) if bb else (64, 64, W - 64, H - 64)
         check("no dialog left (against the dialog's own shot)", changed(moved, after, box) > 0.15,
               "%.0f%% of its box changed" % (100 * changed(moved, after, box)))
         check("the windows redrew in the new font", changed(read, after) > 0.01,
