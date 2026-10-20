@@ -13,6 +13,12 @@ EMAIL.PRG and names it to ECal. The test checks the file, byte for byte, and wha
 double-click says ECal isn't running, and nothing is written.
 
     invite_test.py WORKDIR [MACHINE]  (make build/fakecal.acc first)
+    invite_test.py WORKDIR [MACHINE] ECal|vX.Y   (ECal's latest release, or that one)
+
+With ECal (or a version) after the machine, ECal's own ECAL.ACC from its
+release stands in place of the stand-in: its New Event dialog must open
+filled in, and Return must save the event, with the invitation's UID,
+into ECal's folder.
 """
 import base64
 import os
@@ -29,6 +35,7 @@ ROOT = os.path.normpath(os.path.join(HERE, "..", ".."))
 IMAP, SMTP = 10143, 10025
 
 work, machine, more = rig.cli("Falcon")
+real = bool(more)                       # ECal's release, not the stand-in
 if machine.partition(":")[0] not in ("Falcon", "Falcon-4", "TT"):
     print("SKIP on %s: the clicks are placed for a 640x480 screen" % machine)
     sys.exit(0)
@@ -75,7 +82,32 @@ rig.stop_at_exit(srv, smtp)
 # drive C:, with the stand-in ECal
 os.makedirs(os.path.join(hd, "AUTO"))
 shutil.copy(os.path.join(ROOT, "binary", "EMAIL.PRG"), hd)
-shutil.copy(os.path.join(ROOT, "build", "fakecal.acc"), os.path.join(hd, "ECAL.ACC"))
+if real:
+    ec_dir = os.path.join(work, "ecal")
+    shutil.rmtree(ec_dir, ignore_errors=True)
+    spec = "ECal" if more[0].lower() == "ecal" else "ECal@" + more[0]
+    print("ECal", rig.release(spec, ec_dir, "ECAL.ACC"), flush=True)
+    shutil.copy(os.path.join(ec_dir, "ECAL.ACC"), os.path.join(hd, "ECAL.ACC"))
+    # an On My Atari calendar, made by cal-cli from the same release's
+    # source, as ECal's own rigs do: no first-time questions
+    src = os.path.join(ec_dir, "src")
+    subprocess.run(["git", "-c", "advice.detachedHead=false", "clone", "-q", "--depth", "1", "--branch",
+                    open(os.path.join(ec_dir, "ECAL.VERSION")).read().strip(), "https://github.com/whomper/ECal", src],
+                   check=True)
+    subprocess.run(["make", "-s", "-C", src, "build/cal-cli"], check=True, stdout=subprocess.DEVNULL)
+    seed = os.path.join(ec_dir, "seed")
+    for a in (("zone", "Asia/Jerusalem"), ("local", "Home")):
+        subprocess.run([os.path.join(src, "build", "cal-cli"), seed] + list(a), check=True, stdout=subprocess.DEVNULL)
+    folder = os.path.join(hd, "ECAL")
+    os.makedirs(os.path.join(folder, "CACHE"))
+    for n in ("ECAL.INF", "ECAL.KEY"):
+        shutil.copy(os.path.join(seed, n), os.path.join(folder, n))
+    for n in os.listdir(os.path.join(seed, "CACHE")):
+        shutil.copy(os.path.join(seed, "CACHE", n), os.path.join(folder, "CACHE", n.upper()))
+    with open(os.path.join(folder, "ECAL.INF"), "a") as f:
+        f.write("sync_open=0\r\n")       # no network for it here (the accessory finds C:\\ECAL\\ itself)
+else:
+    shutil.copy(os.path.join(ROOT, "build", "fakecal.acc"), os.path.join(hd, "ECAL.ACC"))
 rig.fakesting(os.path.join(hd, "AUTO"))
 with open(os.path.join(hd, "EMAIL.INF"), "w", newline="") as f:
     f.write("[options]\r\ntz=180\r\n[account]\r\nname=Dana\r\nfullname=Dana Falcon\r\n"
@@ -116,17 +148,37 @@ try:
     time.sleep(12)
     read = r.shot("i2-read")
     r.click(330, 324, double=True)       # "» Invitation: Team lunch"
-    time.sleep(6)
-    r.shot("i3-to-ecal")
+    time.sleep(10 if real else 6)
+    sent = r.shot("i3-to-ecal")
+    if real:                             # ECal's New Event, filled in from it: Return adds it
+        check("ECal's New Event dialog opened", changed(read, sent) > 0.05,
+              "%.0f%% of the screen" % (100 * changed(read, sent)))
+        r.key(K["RETURN"])
+        time.sleep(6)
+        r.shot("i4-added")
+        r.key(K["ESC"])                  # ECal's window, if it stayed up
+        time.sleep(2)
+        r.click(320, 200)                # back to EMail
+        time.sleep(2)
     r.ctrl("q")
     time.sleep(5)
 finally:
     r.stop()
 data = open(INVITE, "rb").read() if os.path.exists(INVITE) else b""
 check("INVITE.ICS is the invitation, byte for byte", data == ICS, "%d bytes, %d sent" % (len(data), len(ICS)))
-log = open(LOG, errors="replace").read() if os.path.exists(LOG) else ""
-check("ECal was named it with VA_START", "start C:\\INVITE.ICS, %d bytes, SUMMARY:Team lunch" % len(ICS) in log,
-      log.strip().replace("\r\n", " | ").replace("\r", ""))
+if real:
+    saved = []
+    for d, _, fs in os.walk(os.path.join(hd, "ECAL")):
+        for n in fs:
+            t = open(os.path.join(d, n), "rb").read()
+            if b"lunch-1@example.com" in t:
+                saved.append((n, b"METHOD:" in t))
+    check("ECal saved the event with the invitation's UID", bool(saved), ", ".join(n for n, _ in saved) or "not found")
+    check("... without the invitation's METHOD", saved and not any(m for _, m in saved))
+else:
+    log = open(LOG, errors="replace").read() if os.path.exists(LOG) else ""
+    check("ECal was named it with VA_START", "start C:\\INVITE.ICS, %d bytes, SUMMARY:Team lunch" % len(ICS) in log,
+          log.strip().replace("\r\n", " | ").replace("\r", ""))
 
 # 2. without ECal: it says so, and writes nothing
 os.remove(os.path.join(hd, "ECAL.ACC"))

@@ -240,6 +240,7 @@ tests/hatari/screenshots.py WORKDIR                # the pictures in docs/, Engl
 tests/hatari/falcon_test.py /tmp/mail-tls          # Falcon mode, TLS and the DSP (or: ... TT)
 tests/hatari/econtact_test.py /tmp/mail-ec         # names and ^B with EContact's latest release
 make build/fakecal.acc && tests/hatari/invite_test.py /tmp/mail-inv   # an invitation to (a stand-in for) ECal
+tests/hatari/invite_test.py /tmp/mail-inv Falcon ECal  # the same with ECal's latest release, its New Event saved
 tests/hatari/help_test.py /tmp/mail-help           # EMAIL.HYP in EHypView's latest release
 AERA_WITH_NVDI=1 tests/hatari/font_test.py /tmp/mail-font   # a GDOS font under NVDI (Falcon, Falcon-4)
 ```
