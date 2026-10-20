@@ -314,12 +314,15 @@ static void draw_divider(GRECT *r)
 #include <stdio.h>
 #include "../src/plat.h"
 /* a test build (tests/hatari/scroll_test.py) says on the emulator's
-   console what each pane drew: "DRAW list y h" */
+   console what each pane drew, and the heap's bytes in use and most
+   (libc.c): "DRAW list y h heap 123456 200000" */
+extern long heap_use, heap_peak;
 static void trace(const char *what, WIN *w, GRECT *r)
 {
-	char t[60];
-	snprintf(t, sizeof(t), "%s %s %d %d", what,
-		 w == &w_folders ? "folders" : w == &w_list ? "list" : "reader", r->y - w->work.y, r->h);
+	char t[80];
+	snprintf(t, sizeof(t), "%s %s %d %d heap %ld %ld", what,
+		 w == &w_folders ? "folders" : w == &w_list ? "list" : "reader", r->y - w->work.y, r->h,
+		 heap_use, heap_peak);
 	pf_debug(t);
 }
 #else
