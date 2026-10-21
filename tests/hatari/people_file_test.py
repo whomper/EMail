@@ -20,6 +20,9 @@ and a G line per group ("Name <email>, ..."), Atari text, CRLF. In file
 mode the reply also picks the group "Team Filed", which gives its people.
 
     people_file_test.py WORKDIR [MACHINE] [file|econtact]
+
+AERA_EC_WRITER=COMMIT: the file written by EContact's own card-cli at
+that commit of its main, with the same people and group.
 """
 import email
 import email.header
@@ -76,13 +79,35 @@ rig.stop_at_exit(srv, smtp)
 book = os.path.join(hd, "ECONTACT")
 os.makedirs(book)
 # EContact 1.40's format: P<TAB>name<TAB>email<TAB>label, G<TAB>group<TAB>Name <email>, ...
-with open(os.path.join(book, "CONTACTS.TXT"), "wb") as f:
-    f.write(b"; EContact's contacts, for EMail and ECal when EContact isn't loaded\r\n"
-            b"P\tAvi Filed\tavi@example.org\twork\r\n"
-            b"P\tDana Filed\tdana@example.com\thome\r\n"
-            b"P\tGrace Filed\tgrace@example.net\thome\r\n"
-            b"P\tYael Filed\tyael@example.org\twork\r\n"
-            b"G\tTeam Filed\tAvi Filed <avi@example.org>, Yael Filed <yael@example.org>\r\n")
+writer = os.environ.get("AERA_EC_WRITER")
+if writer and mode == "file":
+    # written by EContact itself: its card-cli at that commit of its main
+    # (a change both programs are still making: named, as the guidelines ask)
+    wd = os.path.join(work, "ec-writer")
+    shutil.rmtree(wd, ignore_errors=True)
+    subprocess.run(["git", "clone", "-q", "https://github.com/whomper/EContact", wd], check=True)
+    subprocess.run(["git", "-C", wd, "-c", "advice.detachedHead=false", "checkout", "-q", writer], check=True)
+    subprocess.run(["make", "-s", "-C", wd, "build/card-cli"], check=True, stdout=subprocess.DEVNULL)
+    wcli = os.path.join(wd, "build", "card-cli")
+    for args in (["local", "Contacts"],
+                 ["add", "Contacts", "Avi", "Filed", "avi@example.org"],
+                 ["add", "Contacts", "Dana", "Filed", "dana@example.com"],
+                 ["add", "Contacts", "Grace", "Filed", "grace@example.net"],
+                 ["add", "Contacts", "Yael", "Filed", "yael@example.org"],
+                 ["group-new", "Contacts", "Team Filed"],
+                 ["group-add", "Team Filed", "Avi Filed"],
+                 ["group-add", "Team Filed", "Yael Filed"]):
+        subprocess.run([wcli, book] + args, check=True, stdout=subprocess.DEVNULL)
+    print("CONTACTS.TXT by EContact %s:" % writer)
+    print(open(os.path.join(book, "CONTACTS.TXT"), "rb").read().decode("latin-1"))
+else:
+    with open(os.path.join(book, "CONTACTS.TXT"), "wb") as f:
+        f.write(b"; EContact's contacts, for EMail and ECal when EContact isn't loaded\r\n"
+                b"P\tAvi Filed\tavi@example.org\twork\r\n"
+                b"P\tDana Filed\tdana@example.com\thome\r\n"
+                b"P\tGrace Filed\tgrace@example.net\thome\r\n"
+                b"P\tYael Filed\tyael@example.org\twork\r\n"
+                b"G\tTeam Filed\tAvi Filed <avi@example.org>, Yael Filed <yael@example.org>\r\n")
 
 tag = "-"
 if mode == "econtact":
