@@ -93,7 +93,8 @@ took EFTP's downloads from 40 to 75 KB/s.
 - Reply, reply to all, forward (with the original's attachments), flags, move (or drag messages onto a
   folder), delete to Trash, mark a whole folder read, one signature of up to four lines for every account
 - People by name from EContact, the AERA address book: in the list, the message and the To: line,
-  with the address in a tooltip; Ctrl+B picks people and groups in EContact's window
+  with the address in a tooltip; Ctrl+B picks people and groups in EContact's window. Where EContact
+  runs only now and then (short of memory), EMail can read its `CONTACTS.TXT` instead (Settings > Contacts)
 - Attachments: save them with the file selector; attach files when writing
 - Calendar invitations go to ECal, the AERA calendar: double-click one and ECal's New Event dialog
   opens filled in from it
@@ -245,6 +246,7 @@ tests/hatari/ui_tour.py WORKDIR                    # screenshots of the interfac
 tests/hatari/screenshots.py WORKDIR                # the pictures in docs/, English sample mail
 tests/hatari/falcon_test.py /tmp/mail-tls          # Falcon mode, TLS and the DSP (or: ... TT)
 tests/hatari/econtact_test.py /tmp/mail-ec         # names and ^B with EContact's latest release
+tests/hatari/people_file_test.py /tmp/mail-pf      # EContact's CONTACTS.TXT without EContact (or: ... Falcon econtact)
 make build/fakecal.acc && tests/hatari/invite_test.py /tmp/mail-inv   # an invitation to (a stand-in for) ECal
 tests/hatari/invite_test.py /tmp/mail-inv Falcon ECal  # the same with ECal's latest release, its New Event saved
 tests/hatari/help_test.py /tmp/mail-help           # EMAIL.HYP in EHypView's latest release

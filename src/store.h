@@ -98,6 +98,8 @@ typedef struct {
 	short colour;		/* colours, on screens with 16 or more */
 	char signature[256];	/* below new messages, every account's; \n separated, Atari charset */
 	char workdir[200];
+	short peoplefile;	/* EContact not loaded: names from its CONTACTS.TXT (guidelines 4.1) */
+	char peopledir[200];	/* EContact's folder, where CONTACTS.TXT is */
 } OPTIONS;
 
 typedef struct {

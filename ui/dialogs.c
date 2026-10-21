@@ -563,12 +563,14 @@ static char s_zone[40], s_zlabel[42], s_check[4], s_page[5], s_wrap[3];
 #define SIG_ROWS 4
 #define SIG_W 40
 static char s_sig[SIG_ROWS][SIG_W + 1];	/* the signature, a line a row */
-static short s_on[6];			/* keep, log, hebrew, falcon, dsp, colour */
-enum { T_KEEP, T_LOG, T_HEB, T_FALCON, T_DSP, T_COLOUR };
+#define PDIR_W 32
+static char s_pdir[PDIR_W + 1];		/* EContact's folder */
+static short s_on[7];			/* keep, log, hebrew, falcon, dsp, colour, people file */
+enum { T_KEEP, T_LOG, T_HEB, T_FALCON, T_DSP, T_COLOUR, T_PFILE };
 
 #define NTICK 8
 static short tick_box[NTICK], tick_lbl[NTICK], tick_var[NTICK], nticks;
-static short page_of[DMAX], npages, cur_page, page_tab[6];
+static short page_of[DMAX], npages, cur_page, page_tab[7];
 static GRECT page_area;
 
 static TEDINFO *d_ted(const char *text, short just, short color)
@@ -767,6 +769,25 @@ static void zone_pick(void)
 	zone_label();
 }
 
+/* EContact's folder: the folder of a file chosen in it (CONTACTS.TXT) */
+static short pdir_btn = -1;
+
+static void pdir_pick(void)
+{
+	char path[200], name[16] = "CONTACTS.TXT", *e;
+	short button = 0;
+	if (s_pdir[0])
+		path_join(path, sizeof(path), s_pdir, "*.*");
+	else
+		str_copy(path, "C:\\*.*", sizeof(path));
+	if (!fsel_exinput(path, name, &button, "Where is CONTACTS.TXT?") || !button)
+		return;
+	e = strrchr(path, '\\');
+	if (e)
+		*e = 0;
+	str_copy(s_pdir, path, sizeof(s_pdir));
+}
+
 /* the dialog stays open while ticks and pages change */
 static short settings_run(short pages_box)
 {
@@ -801,6 +822,15 @@ static short settings_run(short pages_box)
 		if (k <= npages) {
 			if (k != cur_page)
 				show_page(k, 1);
+			continue;
+		}
+		if (r == pdir_btn) {
+			/* EContact's folder in the file selector, then the
+			   settings again over what it covered */
+			tree[r].ob_state &= ~SELECTED;
+			pdir_pick();
+			ui_redraws();
+			objc_draw(tree, 0, 8, x, y, w, h);
 			continue;
 		}
 		if (r == zone_btn) {
@@ -842,6 +872,8 @@ static void settings_load(void)
 	s_on[T_FALCON] = dlg_falcon;
 	s_on[T_DSP] = opt.dsp;
 	s_on[T_COLOUR] = opt.colour;
+	s_on[T_PFILE] = opt.peoplefile;
+	str_copy(s_pdir, opt.peopledir, sizeof(s_pdir));
 	{
 		const char *p = opt.signature;
 		short k;
@@ -916,6 +948,19 @@ static void part_look(short x, short y)
 	d_add(G_STRING, 0, 0, (long)"quoted text", x + 3, ROW(3), 11, 1);
 }
 
+/* EContact's contacts file, when EContact isn't loaded (the guidelines,
+   4.1; an option for a machine short of memory, Erez, 21 Oct 2026) */
+static void part_contacts(short x, short y)
+{
+	rows_at(y);
+	d_tick(x, ROW(0), "When EContact isn't loaded, read", T_PFILE);
+	d_add(G_STRING, 0, 0, (long)"its contacts file (CONTACTS.TXT)", x + 3, ROW(1), 32, 1);
+	d_add(G_STRING, 0, 0, (long)"EContact's folder:", x, ROW(3), 18, 1);
+	d_field(x, ROW(4), s_pdir, PDIR_W, 'X');
+	pdir_btn = d_button(x + PDIR_W + 2, ROW(4), 5, "...", TOUCHEXIT);	/* to column 39 */
+	d_add(G_STRING, 0, 0, (long)"With EContact loaded, EMail asks it.", x, ROW(6), 36, 1);
+}
+
 static void part_connection(short x, short y)
 {
 	rows_at(y);
@@ -941,21 +986,21 @@ static void part_connection(short x, short y)
 
 static short settings_sidebar(short *ok)
 {
-	static const char *names[] = { "  Mail", "  Writing", "  Signature", "  Look", "  Connection" };
+	static const char *names[] = { "  Mail", "  Writing", "  Signature", "  Look", "  Contacts", "  Connection" };
 	short k, box, from, gap = (short)(gl_hchar / 2);
-	settings_begin(SX + 42, 16);
+	settings_begin(SX + 42, 17);		/* six parts in the list */
 	d_band(SX + 42, " Settings");
 	/* the list: plain words on white, the chosen one in a black bar, a
 	   line between it and the settings */
-	d_add(G_BOX, 0, 0, 0x00001171L, SW, 1, (short)(0 | (1 << 8)), 15);
-	for (k = 0; k < 5; k++) {
+	d_add(G_BOX, 0, 0, 0x00001171L, SW, 1, (short)(0 | (1 << 8)), 16);
+	for (k = 0; k < 6; k++) {
 		npages++;
 		page_tab[npages] = d_add(G_BOXTEXT, TOUCHEXIT, 0, (long)d_ted(names[k], 0, 0x1180),
 					 (short)(0 | (2 << 8)), (short)((2 + k * 2) | ((k * gap) << 8)),
 					 (short)((SW - 1) | (6 << 8)), 1);
 	}
 	box = d_add(G_IBOX, 0, 0, 0, SX - 1, 2, 42, 12);
-	for (k = 1; k <= 5; k++) {
+	for (k = 1; k <= 6; k++) {
 		from = nobj;
 		adding_page = k;
 		d_add(G_STRING, 0, 0, (long)(names[k - 1] + 2), SX, 2, (short)strlen(names[k - 1] + 2), 1);
@@ -968,13 +1013,15 @@ static short settings_sidebar(short *ok)
 			part_signature(SX, 4);
 		else if (k == 4)
 			part_look(SX, 4);
+		else if (k == 5)
+			part_contacts(SX, 4);
 		else
 			part_connection(SX, 4);
 		page_mark(from);
 	}
 	adding_page = 0;
-	d_button(SX + 18, 14, 10, "Cancel", EXIT);
-	*ok = d_button(SX + 30, 14, 10, "OK", EXIT | DEFAULT);
+	d_button(SX + 18, 15, 10, "Cancel", EXIT);
+	*ok = d_button(SX + 30, 15, 10, "OK", EXIT | DEFAULT);
 	d_end();
 	show_page(1, 0);
 	return box;
@@ -1004,6 +1051,8 @@ int dlg_settings(void)
 	dlg_falcon = s_on[T_FALCON];
 	opt.dsp = s_on[T_DSP];
 	opt.colour = s_on[T_COLOUR];
+	opt.peoplefile = s_on[T_PFILE];
+	str_copy(opt.peopledir, s_pdir, sizeof(opt.peopledir));
 	sig_store();
 	return 1;
 }

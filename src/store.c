@@ -43,6 +43,8 @@ static void defaults(void)
 	opt.offline = 0;
 	opt.dsp = 1;
 	opt.colour = 1;
+	opt.peoplefile = 0;
+	opt.peopledir[0] = 0;
 	opt.wrap = 72;
 	opt.font_id = 1;
 	opt.font_pt = 0;	/* the system font at the screen's size */
@@ -431,6 +433,8 @@ static void set_opt(const char *k, const char *v)
 		opt.falcon = tls_available && falcon_inf;
 	}
 	else if (!strcmp(k, "dsp")) opt.dsp = n != 0;
+	else if (!strcmp(k, "peoplefile")) opt.peoplefile = n != 0;
+	else if (!strcmp(k, "peopledir")) str_copy(opt.peopledir, v, sizeof(opt.peopledir));
 	else if (!strcmp(k, "colour") || !strcmp(k, "color")) opt.colour = n != 0;
 	else if (!strcmp(k, "hebfont")) opt.hebfont = n >= 0 && n <= 2 ? n : 0;
 }
@@ -521,6 +525,18 @@ static void put_str(SBUF *b, const char *note, const char *key, const char *val)
 	sb_adds(b, "\r\n\r\n");
 }
 
+/* a path, as it is: no escapes, so it reads as typed (C:\ECONTACT) */
+static void put_path(SBUF *b, const char *note, const char *key, const char *val)
+{
+	sb_adds(b, "; ");
+	sb_adds(b, note);
+	sb_adds(b, "\r\n");
+	sb_adds(b, key);
+	sb_adds(b, "=");
+	sb_adds(b, val);
+	sb_adds(b, "\r\n\r\n");
+}
+
 static void put_fmt(SBUF *b, const char *note, const char *key, const char *fmt, ...)
 {
 	char val[80];
@@ -587,6 +603,9 @@ int store_save_settings(void)
 		"DSP", "%d", opt.dsp);
 	put_fmt(&b, "1 = colours (selection, unread counts, flags, quotes) on screens with 16 or more",
 		"COLOUR", "%d", opt.colour);
+	put_fmt(&b, "1 = when EContact isn't loaded, names come from its contacts file (CONTACTS.TXT)",
+		"PEOPLEFILE", "%d", opt.peoplefile);
+	put_path(&b, "EContact's folder, where its contacts file is (C:\\ECONTACT)", "PEOPLEDIR", opt.peopledir);
 	for (i = 0; i < naccts; i++) {
 		ACCOUNT *a = accts[i];
 		sb_adds(&b, "; one [ACCOUNT] part per account, up to 8; Options > Accounts edits them\r\n"

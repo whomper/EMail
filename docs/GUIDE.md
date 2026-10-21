@@ -295,9 +295,10 @@ your text...
 - **Ctrl+B (Address book)** opens EContact's window to choose people or a
   group; they go on the To: line (or the Cc: or Bcc: line the cursor is
   on). A name begun on the line is what EContact searches for, and is
-  replaced by the people chosen. When EContact isn't loaded, Ctrl+B offers
-  the addresses you wrote to before (ADDRESS.TXT). With no message open,
-  it starts a new one.
+  replaced by the people chosen. When EContact isn't loaded, Ctrl+B opens
+  EContact's file if you chose it in Settings > Contacts (see EContact
+  below), else it offers the addresses you wrote to before (ADDRESS.TXT).
+  With no message open, it starts a new one.
 - Ctrl+T (Message > Attach file) adds an `Attach:` line; you can also
   type one. The file selector picks one file at a time: to attach
   several at once, drop them on EMail from the desktop (see below).
@@ -321,6 +322,20 @@ To: and Cc: lines of a message (a name's tooltip is its address) and when
 writing. Nothing is copied between their folders. Without EContact,
 EMail shows the addresses as they are (the list keeps the name the
 message gives).
+
+**EContact's file, when EContact isn't loaded.** On a machine short of
+memory, where EContact runs as a program now and then rather than as
+an accessory, EMail can read the contacts file EContact keeps in its
+folder, `CONTACTS.TXT`. Turn it on in Options > Settings > Contacts:
+"When EContact isn't loaded, read its contacts file", and give
+EContact's folder (the **...** button finds it with the file
+selector). It is off at first, and kept as PEOPLEFILE= and PEOPLEDIR=
+in EMAIL.INF. Then, whenever EContact isn't running, the list and the
+messages show the file's names, and Ctrl+B opens a small Contacts
+window on it: type to find, click to mark people, double-click to take
+one, Return takes the marked ones (or the one the cursor is on), Esc
+cancels. When EContact is loaded, EMail asks it as always and doesn't
+read the file. The names are as new as EContact's last run.
 
 **ECal**, the AERA calendar, takes the invitations that come by mail
 (an `.ics` file, or a calendar part sent with the text, as most
@@ -505,8 +520,8 @@ monochrome screens look as they always did.
 sidebar: **Mail** (checking every few minutes, how many messages to load
 at a time, keeping read messages on disk), **Writing** (where lines
 wrap, starting with the Hebrew keyboard), **Signature**, **Look**
-(colours) and **Connection** (the time zone, Falcon mode, the DSP and
-the protocol log).
+(colours), **Contacts** (EContact's file, below) and **Connection** (the
+time zone, Falcon mode, the DSP and the protocol log).
 
 **The time zone** (Settings > Connection) is chosen by name from a
 list (Asia/Jerusalem, Europe/London, ...) as in ECal; summer time follows

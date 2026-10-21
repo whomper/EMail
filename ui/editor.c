@@ -1158,14 +1158,18 @@ void editor_insert_address(void)
 		av_send("ECONTACT|ECONTST", "");	/* its window is open already: up with it */
 		return;
 	}
+	/* where the names go, before asking: with EContact's file (Settings
+	   > Contacts) the people dialog answers before people_pick returns */
+	pk_line = line;
+	pk_from = from;
+	pk_to = to;
+	pk_ed = ed_count;
 	if (people_pick(partial)) {
-		pk_line = line;
-		pk_from = from;
-		pk_to = to;
-		pk_ed = ed_count;
-		status("Choose in EContact...");
+		if (people_picking())
+			status("Choose in EContact...");
 		return;
 	}
+	pk_line = -1;
 	addr = dlg_pick_address();
 	if (!addr)
 		return;

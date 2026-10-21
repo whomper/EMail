@@ -16,6 +16,7 @@
 #include "secret.h"
 #include "busy.h"
 #include "tls.h"
+#include "people_file.h"
 #include "../src/plat.h"
 #include "util.h"
 #include "crash.h"
@@ -358,6 +359,20 @@ static void names_came(void)
 static void picked(const PERSON *list, int n)
 {
 	editor_picked(list, n);
+}
+
+/* EContact's CONTACTS.TXT when it isn't loaded, if the user chose it
+   (Settings > Contacts; the guidelines, 4.1). The people dialog on the
+   file hands its messages here: kept for the main loop, as a dialog's */
+static void file_message(short *m)
+{
+	if (m)
+		ui_modal_message(m);
+}
+
+static void people_setup(void)
+{
+	people_file(opt.peoplefile && opt.peopledir[0] ? opt.peopledir : 0, file_message);
 }
 
 /* a modal loop's messages (a dialog's, the font list's): PEOPLE is read
@@ -1163,6 +1178,7 @@ static void command(short cmd)
 			if (dlg_falcon != opt.falcon)
 				falcon_mode_set(dlg_falcon);
 			falcon_dsp_init();
+			people_setup();
 			set_logging();
 			store_save_settings();
 			if (w_editor.h <= 0)
@@ -1437,6 +1453,7 @@ int main(void)
 	help_init();			/* memory the help viewer may read */
 	av_init("EMAIL|EMAILST");	/* the desktop's AV server, if there is one */
 	people_init(64, 0, names_came, picked);	/* names from EContact */
+	people_setup();
 	crash_cleanup = crash_quit;
 	crash_report = conn_log_append;	/* the report in the protocol log too */
 	if (store_plain_passwords && !store_lost_passwords)

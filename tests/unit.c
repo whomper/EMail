@@ -344,7 +344,8 @@ static void t_inf(void)
 	mkdir(dir, 0755);
 	snprintf(path, sizeof(path), "%s/EMAIL.INF", dir);
 	{
-		static const char old[] = "[options]\r\ntz=180\r\nsignature=Dana\\nTel Aviv\r\n[account]\r\nname=Home\r\n"
+		static const char old[] = "[options]\r\ntz=180\r\nsignature=Dana\\nTel Aviv\r\n"
+			"peoplefile=1\r\npeopledir=C:\\ECONTACT\r\n[account]\r\nname=Home\r\n"
 			"email=a@me.com\r\nuser=a\r\npass=x ;y\r\n";
 		pf_save(path, old, (long)strlen(old));
 	}
@@ -358,6 +359,8 @@ static void t_inf(void)
 	CHECK(inf && strstr(inf, "; your time zone") && strstr(inf, "\r\nTIMEZONE=") && !strstr(inf, "\r\nTZ="),
 	      "note, TIMEZONE=, empty line");
 	CHECK(inf && strstr(inf, "\r\nPASS={E}") && !strstr(inf, "x ;y"), "PASS written encrypted");
+	CHECK(inf && strstr(inf, "\r\nPEOPLEFILE=1\r\n") && strstr(inf, "\r\nPEOPLEDIR=C:\\ECONTACT\r\n"),
+	      "PEOPLEFILE=, and PEOPLEDIR= as it is (one backslash)");
 	CHECK(inf && strstr(inf, "\r\nSIGNATURE=Dana\\nTel Aviv\r\n") &&
 	      strstr(inf, "\r\nSIGNATURE=") < strstr(inf, "\r\n[ACCOUNT]\r\n"), "SIGNATURE written, in [OPTIONS]");
 	/* every setting line: a note above, an empty line below */
@@ -373,6 +376,8 @@ static void t_inf(void)
 	a = accts[0];
 	CHECK(!strcmp(a->pass, "x ;y") && !strcmp(opt.signature, "Dana\nTel Aviv") && zone_offset_now() == 180,
 	      "read back from the new EMAIL.INF");
+	CHECK(opt.peoplefile == 1 && !strcmp(opt.peopledir, "C:\\ECONTACT"), "EContact's file read back: %d %s",
+	      opt.peoplefile, opt.peopledir);
 	CHECK(!store_lost_passwords, "EMAIL.KEY opens them");
 	/* another key: the password is gone, and EMail says so */
 	{
