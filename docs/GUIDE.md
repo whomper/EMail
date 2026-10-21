@@ -24,10 +24,7 @@ reads and writes Hebrew.
   program, EMail's checks and downloads among them.
 - For providers that need encryption (nearly all), one of:
   - a Raspberry Pi or other Linux computer on your network as a gateway
-    (any Atari), set up from AERA-Gateway
-    (github.com/whomper/AERA-Gateway): its `./update-pi.sh` and
-    `sudo gateway/aera-gateway install mail` with your provider's
-    servers, or
+    (any Atari), see [The Raspberry Pi gateway](#the-raspberry-pi-gateway), or
   - **Falcon mode**: EMail does the encryption itself (a Falcon, or a TT,
     with 4 MB of memory or more), see [Falcon mode](#falcon-mode)
 
@@ -85,6 +82,41 @@ first time you open it (the status line says so; it happens once).
 Coming from a version before 1.37, type your signature once more, in Options >
 Settings > Signature. On the Pi, `./update-pi.sh` in the AERA-Gateway
 folder updates the gateway.
+
+## The Raspberry Pi gateway
+
+Most providers want an encrypted connection, which an ST is too slow
+to make. A Raspberry Pi (or another Linux computer) on your home network
+makes it for EMail: EMail talks plainly to the Pi, and the Pi talks
+TLS to your provider. Its software is AERA-Gateway
+(github.com/whomper/AERA-Gateway). On the Pi, from a fresh install:
+
+```
+sudo apt install -y git                  (Raspberry Pi OS Lite only)
+git clone https://github.com/whomper/AERA-Gateway
+cd AERA-Gateway
+./update-pi.sh
+sudo gateway/aera-gateway install mail IMAP_SERVER SMTP_SERVER[:587] [POP3_SERVER] --allow ATARI_IP
+```
+
+Give your provider's servers, the POP3 one only if you use POP3, and
+your Atari's IP address, for example:
+
+```
+sudo gateway/aera-gateway install mail imap.gmail.com smtp.gmail.com pop.gmail.com --allow 192.168.1.20
+```
+
+iCloud is `imap.mail.me.com smtp.mail.me.com:587`; AERA-Gateway's
+README has the others. `--allow` lets only your Atari in; without it,
+any computer on your home network may use the gateway. The installer
+prints the Pi's address and the ports to give EMail.
+
+- To update the gateway: `cd ~/AERA-Gateway && ./update-pi.sh`
+- To check it: `gateway/aera-gateway status`
+
+In EMail, in **Options > Accounts**, the server is the Pi's address
+(PI_IP), with port 143 for IMAP (110 for POP3) and 587 for sending
+(SMTP); the user and password are your provider's (see below).
 
 ## Setting up an account
 

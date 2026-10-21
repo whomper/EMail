@@ -44,19 +44,23 @@ one is there on its own, and all of them together in `EMAIL-x.y.zip`.
    its settings and your mail next to itself, so a folder of its own (`C:\EMAIL\`, say) keeps them
    together; nothing has to be in a particular place.
 2. Set up the gateway on a Raspberry Pi from [AERA-Gateway](https://github.com/whomper/AERA-Gateway),
-   which brings it to its latest release, with your provider's servers:
+   which brings it to its latest release, with your provider's servers and your Atari's address:
 
    ```
+   sudo apt install -y git                  (Raspberry Pi OS Lite only)
    git clone https://github.com/whomper/AERA-Gateway
    cd AERA-Gateway
    ./update-pi.sh
-   sudo gateway/aera-gateway install mail imap.gmail.com smtp.gmail.com
+   sudo gateway/aera-gateway install mail IMAP_SERVER SMTP_SERVER[:587] [POP3_SERVER] --allow ATARI_IP
    ```
 
-   (iCloud: `imap.mail.me.com smtp.mail.me.com:587`; AERA-Gateway's README has the others).
-   `./update-pi.sh` there keeps it up to date.
-3. Start EMail and fill in your account: the Pi's IP address (`aera-gateway` prints it), ports 143 (IMAP)
-   and 587 (SMTP), and your login (Gmail, iCloud, Yahoo and Fastmail need an app password).
+   For example `install mail imap.gmail.com smtp.gmail.com pop.gmail.com --allow 192.168.1.20`; iCloud is
+   `imap.mail.me.com smtp.mail.me.com:587` (AERA-Gateway's README has the others). `--allow` lets only
+   your Atari in; without it, any computer on your home network may use the gateway.
+   To update: `cd ~/AERA-Gateway && ./update-pi.sh`. To check: `gateway/aera-gateway status`.
+3. Start EMail and fill in your account in **Options > Accounts**: the Pi's IP address (`PI_IP`;
+   `aera-gateway` prints it) as the server, port 143 for IMAP (110 for POP3) and 587 for SMTP, and your
+   login (Gmail, iCloud, Yahoo and Fastmail need an app password).
 4. Press **Help** in EMail for the [user guide](docs/GUIDE.md); it describes everything else.
 
 On a Falcon or TT with 4 MB you can skip the Pi: copy `CACERT.PEM` and `ROOTS.DAT` next to `EMAIL.PRG`
