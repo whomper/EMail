@@ -14,8 +14,10 @@ there whose names end in "Filed" ("Grace Filed"):
 - econtact: EContact's latest release loaded as well. Its window picks,
   the reply goes to "Grace Baker", and no name of the file is used.
 
-Until EContact writes the file itself, the rig writes it: a note line,
-then address<TAB>name, Atari text, CRLF, sorted by name.
+Until EContact writes the file itself, the rig writes it in EContact
+1.40's format: a note line, a P line per address (name, email, label)
+and a G line per group ("Name <email>, ..."), Atari text, CRLF. In file
+mode the reply also picks the group "Team Filed", which gives its people.
 
     people_file_test.py WORKDIR [MACHINE] [file|econtact]
 """
@@ -73,11 +75,14 @@ rig.stop_at_exit(srv, smtp)
 # EContact's folder, with the file as EContact writes it
 book = os.path.join(hd, "ECONTACT")
 os.makedirs(book)
-FILED = [("avi@example.org", "Avi Filed"), ("dana@example.com", "Dana Filed"), ("grace@example.net", "Grace Filed")]
+# EContact 1.40's format: P<TAB>name<TAB>email<TAB>label, G<TAB>group<TAB>Name <email>, ...
 with open(os.path.join(book, "CONTACTS.TXT"), "wb") as f:
-    f.write(b"; EContact's contacts, for EMail and ECal when EContact isn't loaded\r\n")
-    for addr, name in FILED:
-        f.write(("%s\t%s\r\n" % (addr, name)).encode("ascii"))
+    f.write(b"; EContact's contacts, for EMail and ECal when EContact isn't loaded\r\n"
+            b"P\tAvi Filed\tavi@example.org\twork\r\n"
+            b"P\tDana Filed\tdana@example.com\thome\r\n"
+            b"P\tGrace Filed\tgrace@example.net\thome\r\n"
+            b"P\tYael Filed\tyael@example.org\twork\r\n"
+            b"G\tTeam Filed\tAvi Filed <avi@example.org>, Yael Filed <yael@example.org>\r\n")
 
 tag = "-"
 if mode == "econtact":
@@ -149,6 +154,14 @@ try:
     r.key(K["RETURN"])                   # she is chosen
     r.settle(4, 30)
     r.shot("c4-picked")
+    if mode == "file":
+        r.type("Team")                   # and a group from the file (EMail left ", "): its people
+        r.ctrl("b")
+        r.settle(8, 60)
+        r.shot("c4b-group")
+        r.key(K["RETURN"])
+        r.settle(4, 30)
+        r.shot("c4c-picked")
     r.key(rig.SCAN["d"], shift=True, ctrl=True)   # Shift+^D: send now
     time.sleep(35)
     r.shot("c5-sent")
@@ -168,6 +181,8 @@ try:
     check("the reply went to Dana", "dana@example.com" in to)
     if mode == "file":
         check("and to Grace, chosen in the people dialog on CONTACTS.TXT", "Grace Filed <grace@example.net>" in to)
+        check("and to the group Team's people, Avi and Yael",
+              "Avi Filed <avi@example.org>" in to and "Yael Filed <yael@example.org>" in to and "Team" not in to)
     else:
         check("and to Grace, chosen in EContact %s" % tag, "Grace Baker <grace@example.net>" in to)
         check("no name from CONTACTS.TXT while EContact is loaded", "Filed" not in to)
