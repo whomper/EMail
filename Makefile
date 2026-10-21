@@ -155,6 +155,15 @@ $(OBJDIR)/trace/EMAILST.PRG: FORCE
 	$(MAKE) OBJDIR=$(OBJDIR)/trace TRACECF=-DDRAW_TRACE $(OBJDIR)/trace/st/mail.elf
 	PRGFLAGS=7 python3 common/tools/elf2tos.py $(OBJDIR)/trace/st/mail.elf $@
 
+# EMail crashing on purpose with F1 to F5 (-DCRASH_TEST), for
+# common/tests/crash/app_crash.py (never released)
+$(OBJDIR)/crashtest/EMAIL.PRG: FORCE
+	$(MAKE) OBJDIR=$(OBJDIR)/crashtest TRACECF=-DCRASH_TEST $(OBJDIR)/crashtest/mail.elf
+	PRGFLAGS=7 python3 common/tools/elf2tos.py $(OBJDIR)/crashtest/mail.elf $@
+$(OBJDIR)/crashtest/EMAILST.PRG: FORCE
+	$(MAKE) OBJDIR=$(OBJDIR)/crashtest TRACECF=-DCRASH_TEST $(OBJDIR)/crashtest/st/mail.elf
+	PRGFLAGS=7 python3 common/tools/elf2tos.py $(OBJDIR)/crashtest/st/mail.elf $@
+
 # a stand-in for EContact's answering side, for tests/hatari/people_test.py
 # (never released)
 FAKEC   := crt0 gem libc tos av av_people people_ask

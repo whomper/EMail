@@ -257,6 +257,8 @@ tests/hatari/help_test.py /tmp/mail-help           # EMAIL.HYP in EHypView's lat
 AERA_WITH_NVDI=1 tests/hatari/font_test.py /tmp/mail-font   # a GDOS font under NVDI (Falcon, Falcon-4)
 AERA_EDITION=st tests/hatari/net_test.py /tmp/mail-st ST-1  # any rig with the ST edition, EMAILST.PRG
 make build/trace/EMAIL.PRG && tests/hatari/scroll_test.py /tmp/mail-scroll   # what the panes draw while scrolling and choosing
+make build/crashtest/EMAIL.PRG && common/tests/crash/app_crash.py /tmp/mail-crash ETOS.IMG build/crashtest/EMAIL.PRG EMail
+                                                   # F1, F2 and F5 crash on purpose: CRASH.LOG, the alert, the reset
 ```
 
 In `net_test.py` EMail logs in to Dovecot, mirrors the inbox, opens a
