@@ -68,7 +68,7 @@ STATARI := $(filter-out dsprsa,$(ATARI))
 STUI    := $(filter-out dsp,$(UI))
 STOBJS  := $(OBJDIR)/crt0.o $(OBJDIR)/sting_s.o $(OBJDIR)/nf.o $(OBJDIR)/crash_s.o \
            $(addprefix $(STDIR)/,$(addsuffix .o,$(STCORE) $(STATARI) $(STUI)))
-STCF    := $(CFLAGS) -DMAIL_ST -DTLS_FULL_EDITION=\"EMAIL.PRG\"
+STCF    := $(CFLAGS) -DMAIL_ST -DTLS_FULL_EDITION=\"EMAIL.PRG\" -DNO_ICON256
 
 # what goes onto the Atari: binary/ (built, never committed)
 all: binary/EMAIL.PRG binary/EMAILST.PRG binary/ROOTS.DAT
