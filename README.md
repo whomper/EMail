@@ -1,6 +1,6 @@
 # EMail
 
-<img src="docs/icon16.png" width="96" align="right" alt="EMail icon: an Atari SM124-style monitor showing an envelope">
+<img src="docs/icon.png" width="96" align="right" alt="EMail icon: a letter coming out of an open blue envelope">
 
 An e-mail program for the Atari ST, STE, TT and Falcon, written in C for GEM.
 
@@ -182,7 +182,7 @@ make test                     # unit tests on this computer, the fuzz inputs aga
 make itest                    # against a local Dovecot and a test SMTP server
 make help HCP=/path/to/hcp    # binary/EMAIL.HYP and EMAIL.REF from docs/GUIDE.md
 make dist HCP=/path/to/hcp    # dist/: each release file, and EMAIL-x.y.zip, as on the Releases page
-make icons                    # icons/: the desktop icon, drawn by tools/icon (committed)
+make icons                    # icons/, ui/icon*.h, docs/icon*.png: the icon, from common/icons/EMAIL.txt (committed)
 ```
 
 The ST-Guide help file `binary/EMAIL.HYP` is made from `docs/GUIDE.md` by `tools/mkhelp.py` and the HCP
@@ -226,9 +226,9 @@ common/   code shared with the other AERA programs, from AERA-Atari: the TOS run
 gateway/  the Raspberry Pi gateways (emailgate.py is EMail's) and aera-gateway, their installer:
           a copy of AERA-Gateway's; change it there, then run tools/sync-gateway.sh
 tests/    unit, fuzz and integration tests, the Hatari rigs (tests/hatari)
-tools/    the icon generator, mkhelp.py (the help file), sync-common.sh, sync-gateway.sh, bump.py,
+tools/    add_to_emuicon.py (the icon in EmuTOS's desktop), mkhelp.py (the help file), sync-common.sh, sync-gateway.sh, bump.py,
           the TLS measurements (tlsbench)
-icons/    the desktop icon (RSC and ICN files), from tools/icon
+icons/    the desktop icon (RSC and ICN files), made by make icons from common/icons/EMAIL.txt
 docs/     the user guide (GUIDE.md and front.json, its first page: the source of EMAIL.HYP) and the pictures
 binary/   what make builds for the Atari (not committed: the releases have it)
 ```

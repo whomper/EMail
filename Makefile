@@ -96,10 +96,12 @@ $(OBJDIR)/mail.elf: $(OBJS) $(OBJDIR)/build.o $(OBJDIR)/libbearssl.a common/atar
 $(STDIR)/mail.elf: $(STOBJS) $(OBJDIR)/build.o common/atari/link.ld
 	$(CC) $(LDFLAGS) -o $@ $(STOBJS) $(OBJDIR)/build.o -lgcc
 
-# EMail's icon for the desktop: icons/, drawn by tools/icon and
-# committed; a release carries them
+# EMail's icon (the AERA guidelines, 5.5): drawn in common/icons/EMAIL.txt,
+# made into icons/ (the desktop's RSC and ICN files), ui/icon.h and
+# icon16.h (the About box, the iconified window) and docs/icon*.png;
+# committed, and a release carries icons/
 icons:
-	python3 tools/icon/make_rsc.py
+	python3 common/tools/appicon.py EMAIL --rsc icons/EMAIL.RSC --icn icons/EMAIL.ICN --mask icons/EMAILMK.ICN --headers ui --docs docs
 
 $(OBJDIR)/bssl/%.o: $(BSSL)/src/%.c
 	@mkdir -p $(dir $@)

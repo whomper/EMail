@@ -596,9 +596,11 @@ Refresh folder list reads it again after you changed it elsewhere.
 
 ## The desktop icon
 
-The release has EMail's icon for the desktop (in the zip, in `icons/`): `EMAIL.RSC` holds a black and
-white and a 16-colour version to copy into `DESKICON.RSC` /
-`DESKCICN.RSC` with a resource editor, and `EMAIL.ICN` / `EMAILMK.ICN` are
+EMail's icon is a letter coming out of an open blue envelope. The
+release has it for the desktop (in the zip, in `icons/`): `EMAIL.RSC`
+holds a black and white icon for TOS 1 and 2 and a colour one (256
+colours, 16 and black and white) for TOS 4 and EmuTOS, to copy into
+`DESKICON.RSC` / `DESKCICN.RSC` with a resource editor, and `EMAIL.ICN` / `EMAILMK.ICN` are
 the image and mask for icon editors. For EmuTOS,
 `tools/icon/add_to_emuicon.py`, in EMail's source on GitHub, adds it to
 `EMUICON.RSC`.
