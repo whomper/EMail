@@ -12,6 +12,7 @@
 #include "iconify.h"
 #include "icon.h"
 #include "icon16.h"
+#include "icon256.h"
 #include "../src/version.h"
 #include "../src/plat.h"
 
@@ -26,7 +27,7 @@ void dlg_about(void)
 #define EDITION 0
 #endif
 	ABOUT a = { "EMail", mail_version, "E-mail for the Atari ST, TT and Falcon", { conn, where, EDITION }, { 0, 0, 0 },
-		    icon_bits, icon16_px, icon16_rgb };
+		    icon_bits, icon16_px, icon16_rgb, icon256_px, icon256_rgb };
 	for (i = 0; i < naccts; i++)
 		if (accts[i]->im)
 			online = 1;
