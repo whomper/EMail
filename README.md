@@ -44,7 +44,15 @@ one is there on its own, and all of them together in `EMAIL-x.y.zip`.
    its settings and your mail next to itself, so a folder of its own (`C:\EMAIL\`, say) keeps them
    together; nothing has to be in a particular place.
 2. Set up the gateway on a Raspberry Pi from [AERA-Gateway](https://github.com/whomper/AERA-Gateway),
-   which brings it to its latest release, with your provider's servers and your Atari's address:
+   which brings it to its latest release, with your provider's servers and your Atari's address. On a
+   fresh Pi, one line sets up every AERA gateway (the other AERA programs' too):
+
+   ```
+   sudo apt install -y git && git clone https://github.com/whomper/AERA-Gateway ~/AERA-Gateway &&
+     ~/AERA-Gateway/update-pi.sh --allow ATARI_IP --mail IMAP_SERVER SMTP_SERVER[:587] [POP3_SERVER]
+   ```
+
+   Or step by step, the mail gateway alone:
 
    ```
    sudo apt install -y git                  (Raspberry Pi OS Lite only)
@@ -57,6 +65,7 @@ one is there on its own, and all of them together in `EMAIL-x.y.zip`.
    For example `install mail imap.gmail.com smtp.gmail.com pop.gmail.com --allow 192.168.1.20`; iCloud is
    `imap.mail.me.com smtp.mail.me.com:587` (AERA-Gateway's README has the others). `--allow` lets only
    your Atari in; without it, any computer on your home network may use the gateway.
+   After `update-pi.sh` has run once, `sudo aera-gateway` works too, from any folder.
    To update: `cd ~/AERA-Gateway && ./update-pi.sh`. To check: `gateway/aera-gateway status`.
 3. Start EMail and fill in your account in **Options > Accounts**: the Pi's IP address (`PI_IP`;
    `aera-gateway` prints it) as the server, port 143 for IMAP (110 for POP3) and 587 for SMTP, and your
@@ -70,7 +79,7 @@ and switch on **Options > Falcon mode**. EMail fills in the servers for the big 
 as they are. On the Pi, `./update-pi.sh` in `AERA-Gateway` updates the gateway.
 
 **Needs:** TOS 1.04 or newer (TOS 4 on the Falcon), EmuTOS, MagiC or MiNT; 640×200 (ST medium) or
-larger; 1 MB of memory (EMail itself takes about 424 KB, the ST edition `EMAILST.PRG` about 303 KB; more
+larger; 1 MB of memory (EMail itself takes about 440 KB, the ST edition `EMAILST.PRG` about 319 KB; more
 memory holds bigger folders), 2 MB or more with
 EContact's accessory (on a 1 MB ST, use EContact as a program, `ECONTACT.PRG`); network: STinG (or STiK), MiNTnet or
 MagiC-Net; for providers that need encryption (nearly all), the Pi gateway or Falcon mode (a Falcon or
@@ -111,6 +120,9 @@ took EFTP's downloads from 40 to 75 KB/s.
 - Your time zone by name (Asia/Jerusalem, Europe/London...), with summer time worked out by itself and
   found from the machine when it says
 - Passwords encrypted in `EMAIL.INF`, hidden behind an eye button in the dialogs
+- Dialog fields that hold more than they show: a long name, address, signature line or folder scrolls
+  in its field
+- A crash in EMail is caught: an alert, `CRASH.LOG` with what happened, and the Atari keeps running
 - `EMAIL.INF` in capitals, each setting with a note above it
 
 ![Settings: a sidebar of parts, here Connection with the time zone by name](docs/settings.png)

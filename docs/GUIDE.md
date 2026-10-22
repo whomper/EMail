@@ -10,8 +10,8 @@ reads and writes Hebrew.
 - An Atari with TOS 1.04 or newer (TOS 4 on the Falcon), EmuTOS, MagiC or
   MiNT, and a screen of at least 640×200 (ST medium); 640×400 (ST high)
   or the Falcon's 640×480 show three windows side by side
-- 1 MB of memory or more: EMail itself takes about 424 KB, the ST
-  edition (below) about 303 KB, and more memory holds bigger folders. With EContact's accessory loaded, 2 MB or
+- 1 MB of memory or more: EMail itself takes about 440 KB, the ST
+  edition (below) about 319 KB, and more memory holds bigger folders. With EContact's accessory loaded, 2 MB or
   more: on a 1 MB ST the two don't fit together, so there use EContact as
   a program (`ECONTACT.PRG`), between EMail's runs
 - A TCP/IP stack:
@@ -73,8 +73,9 @@ shows that list at any time.
 
 ## Updating
 
-Copy the new release's files over the old ones: `EMAIL.PRG`, `EMAIL.HYP`
-and `EMAIL.REF`, and for Falcon mode `CACERT.PEM` and `ROOTS.DAT`.
+Copy the new release's files over the old ones: `EMAIL.PRG` (or
+`EMAILST.PRG`), `EMAIL.HYP` and `EMAIL.REF`, and for Falcon mode
+`CACERT.PEM` and `ROOTS.DAT`.
 `EMAIL.INF`, `EMAIL.KEY` and your mail stay as they are. Keep EMAIL.KEY
 with EMAIL.INF: without it EMail asks for the passwords again. Coming
 from a version before 1.37, type your signature once more, in Options >
@@ -87,7 +88,15 @@ Most providers want an encrypted connection, which an ST is too slow
 to make. A Raspberry Pi (or another Linux computer) on your home network
 makes it for EMail: EMail talks plainly to the Pi, and the Pi talks
 TLS to your provider. Its software is AERA-Gateway
-(github.com/whomper/AERA-Gateway). On the Pi, from a fresh install:
+(github.com/whomper/AERA-Gateway). On a fresh Pi, one line sets up
+every AERA gateway, the mail one with your provider's servers:
+
+```
+sudo apt install -y git && git clone https://github.com/whomper/AERA-Gateway ~/AERA-Gateway &&
+  ~/AERA-Gateway/update-pi.sh --allow ATARI_IP --mail IMAP_SERVER SMTP_SERVER[:587] [POP3_SERVER]
+```
+
+Or step by step, the mail gateway alone:
 
 ```
 sudo apt install -y git                  (Raspberry Pi OS Lite only)
@@ -107,7 +116,8 @@ sudo gateway/aera-gateway install mail imap.gmail.com smtp.gmail.com pop.gmail.c
 iCloud is `imap.mail.me.com smtp.mail.me.com:587`; AERA-Gateway's
 README has the others. `--allow` lets only your Atari in; without it,
 any computer on your home network may use the gateway. The installer
-prints the Pi's address and the ports to give EMail.
+prints the Pi's address and the ports to give EMail. After
+`update-pi.sh` has run once, `sudo aera-gateway` works from any folder.
 
 - To update the gateway: `cd ~/AERA-Gateway && ./update-pi.sh`
 - To check it: `gateway/aera-gateway status`
@@ -552,7 +562,7 @@ brown by depth. With 256 colours it sets its own soft shades (and puts
 the palette back when it quits). Settings > Look switches them off;
 monochrome screens look as they always did.
 
-**Settings** (Options > Settings, Ctrl+,) has five parts in its
+**Settings** (Options > Settings, Ctrl+,) has six parts in its
 sidebar: **Mail** (checking every few minutes, how many messages to load
 at a time, keeping read messages on disk), **Writing** (where lines
 wrap, starting with the Hebrew keyboard), **Signature**, **Look**
@@ -618,7 +628,7 @@ the image and mask for icon editors. For EmuTOS,
   It is written in blocks, and at once at every step (connecting,
   logging in, an error), so after a crash or a reset it holds what led
   up to it.
-- **A crash**: if EMail itself goes wrong (what would be 2 to 8 bombs),
+- **A crash**: if EMail itself goes wrong (what would be 2 to 8 or 11 bombs),
   it says so, writes what happened to `CRASH.LOG` and quits, leaving the
   Atari running. A crash in the system or a driver still gives the
   bombs; TOS keeps a record of them, and EMail adds it to `CRASH.LOG`
@@ -628,7 +638,8 @@ the image and mask for icon editors. For EmuTOS,
 
 ## Limits
 
-- Encryption on the Atari itself (Falcon mode) needs a 68030 and 4 MB;
+- Encryption on the Atari itself (Falcon mode) needs a 68020 or better
+  (a Falcon or TT) and 4 MB;
   other machines use the gateway. TLS 1.2 only (every provider has it).
 - No OAuth sign-in (Outlook.com, Microsoft 365).
 - Messages are plain text; HTML mail is shown as text and attachments are

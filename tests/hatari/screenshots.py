@@ -130,10 +130,10 @@ try:
     time.sleep(0.5)
     r.click(348, 40)                     # Settings...
     time.sleep(3)
-    r.click(150, 281)                    # Connection
+    r.click(150, 353)                    # Connection, the sixth part
     time.sleep(2)
     r.shot("s2-settings")
-    r.click(395, 353)                    # Cancel
+    r.key(K["ESC"])                      # Cancel
     time.sleep(2)
     ok = True
 finally:
