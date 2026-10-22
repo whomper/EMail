@@ -451,6 +451,12 @@ does (or the button that does nothing, such as Later): nothing is
 deleted, moved, sent or saved, and what was typed is thrown away, even
 with the cursor in a text field.
 
+**Long text in a field.** A field takes as much as its setting holds,
+not only what it shows: a long address, folder or signature line goes
+in, and the field scrolls with the cursor. Left and Right move the
+cursor (Shift: to the start or the end), ClrHome goes to the start,
+Backspace and Delete take out a character.
+
 **Stopping.** While the busy bee shows (checking mail, sending, reading
 a folder), Esc or Undo stops what EMail is waiting for from the server,
 at once rather than after the minute it would wait: the alert then says

@@ -804,10 +804,10 @@ static void cmd_accounts(void)
 
 void cmd_new_folder(ACCOUNT *a)
 {
-	char name[48] = "";
+	char name[sizeof(((FINFO *)0)->disp)] = "";
 	if (!a || a->pop)
 		return;
-	if (!dlg_ask("New folder", "Name:", name, 40))
+	if (!dlg_ask("New folder", "Name:", name, sizeof(name) - 1))
 		return;
 	{
 		char server[160];
@@ -826,12 +826,12 @@ void cmd_new_folder(ACCOUNT *a)
 
 void cmd_rename_folder(ACCOUNT *a, FINFO *fi)
 {
-	char name[48], server[160], to[160];
+	char name[sizeof(((FINFO *)0)->disp)], server[160], to[160];
 	int was_cur;
 	if (!a || !fi || fi->local || fi->role)
 		return;
 	str_copy(name, fi->disp, sizeof(name));
-	if (!dlg_ask("Rename folder", "New name:", name, 40) || !strcmp(name, fi->disp))
+	if (!dlg_ask("Rename folder", "New name:", name, sizeof(name) - 1) || !strcmp(name, fi->disp))
 		return;
 	was_cur = fi == cur_finfo;
 	str_copy(server, cur_finfo ? cur_finfo->server : "", sizeof(server));

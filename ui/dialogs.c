@@ -10,6 +10,7 @@
 #include <stdarg.h>
 #include "ui.h"
 #include "dialog.h"
+#include "field.h"
 #include "bidi.h"
 #include "util.h"
 #include "charset.h"
@@ -21,7 +22,7 @@
 
 static OBJECT tree[DMAX];
 static void make_eyes(void);
-static short npw;
+static short nlf, npw;
 static TEDINFO ted[TMAX];
 static char tmpl[TMAX][64], valid[TMAX][64];
 static short nobj, nted, last_child;
@@ -40,7 +41,8 @@ void d_begin(short w, short h)
 		make_eyes();
 		eyes_made = 1;
 	}
-	npw = 0;
+	lf_forget(tree);
+	nlf = npw = 0;
 	memset(tree, 0, sizeof(tree));
 	nobj = 1;
 	nted = 0;
@@ -127,24 +129,18 @@ void d_end(void)
 		rsrc_obfix(tree, i);
 }
 
-/* ---------------- password fields ----------------
- * GEM's text fields can't hide what they show, so a password field
- * shows a row of '*' while the real text is kept aside; the eye button
- * next to it shows it in clear. form_loop() below is form_do() written
- * out with form_keybd/form_button/objc_edit, so it can type into a
- * password field itself. */
+/* ---------------- long fields and passwords ----------------
+ * A field holds as much as its setting does and shows a window of it
+ * that scrolls with the cursor (common/ui/field.c; the AERA guidelines,
+ * 5.4): GEM's own fields hold only what they show. A password shows
+ * stars; the eye button next to it shows it in clear. form_loop() below
+ * is form_do() written out with form_keybd/form_button/objc_edit, so the
+ * long fields take their own keys. */
 
+#define LFMAX 12
 #define PWMAX 2
 
-typedef struct {
-	short obj, eye;		/* the text field and its eye button */
-	char *real;		/* the password */
-	short max;
-	char shown[48];		/* what the field displays */
-	short clear;		/* 1: shown in clear */
-} PWFIELD;
-
-static PWFIELD pwf[PWMAX];
+static LFIELD lfs[LFMAX];
 
 /* the eye: 16 pixels wide, 16 rows (8 on ST medium), open and crossed */
 static const char *const eye_art[16] = {
@@ -211,6 +207,8 @@ static void make_ticks(void)
 	tick_on_blk.bi_color = tick_off_blk.bi_color = 1;
 }
 static BITBLK eye_blk[PWMAX];
+static short eye_obj[PWMAX];	/* its button */
+static LFIELD *eye_lf[PWMAX];	/* and its field */
 
 static void make_eyes(void)
 {
@@ -226,47 +224,32 @@ static void make_eyes(void)
 	}
 }
 
-static void pw_update_text(PWFIELD *p)
+/* a field showing len characters of text, which holds cap (and cap+1
+   bytes); mask '*': a password, with its eye button after it */
+static short d_long(short x, short y, char *text, short len, short cap, char mask)
 {
-	short n = (short)strlen(p->real), i;
-	if (n > p->max)
-		n = p->max;
-	for (i = 0; i < n; i++)
-		p->shown[i] = p->clear ? p->real[i] : '*';
-	p->shown[n] = 0;
-	eye_blk[p - pwf].bi_pdata = p->clear ? eye_shut : eye_open;
+	LFIELD *f = &lfs[nlf++];
+	short obj = d_edit(x, y, f->view, len, 'X');
+	lf_init(f, tree, obj, text, cap, mask);
+	if (mask) {
+		BITBLK *b = &eye_blk[npw];
+		b->bi_pdata = eye_open;
+		b->bi_wb = 2;
+		b->bi_hl = gl_hchar >= 16 ? 16 : 8;
+		b->bi_x = b->bi_y = 0;
+		b->bi_color = 1;
+		eye_lf[npw] = f;
+		eye_obj[npw++] = d_add(G_IMAGE, TOUCHEXIT, 0, (long)b, x + len + 1, y, 2, 1);
+	}
+	return obj;
 }
 
-/* a password field of len characters on real (which holds len+1) */
-static short d_pass(short x, short y, char *real, short len)
-{
-	PWFIELD *p = &pwf[npw];
-	BITBLK *b = &eye_blk[npw];
-	short f;
-	if (len > 46)
-		len = 46;
-	p->real = real;
-	p->max = len;
-	p->clear = 0;
-	real[len] = 0;
-	pw_update_text(p);
-	f = d_edit(x, y, p->shown, len, 'X');
-	p->obj = f;
-	b->bi_wb = 2;
-	b->bi_hl = gl_hchar >= 16 ? 16 : 8;
-	b->bi_x = b->bi_y = 0;
-	b->bi_color = 1;
-	p->eye = d_add(G_IMAGE, TOUCHEXIT, 0, (long)b, x + len + 1, y, 2, 1);
-	npw++;
-	return f;
-}
-
-static PWFIELD *pw_of(short obj)
+static LFIELD *lf_at(short obj)
 {
 	short i;
-	for (i = 0; i < npw; i++)
-		if (pwf[i].obj == obj)
-			return &pwf[i];
+	for (i = 0; i < nlf; i++)
+		if (lfs[i].obj == obj && obj > 0)
+			return &lfs[i];
 	return 0;
 }
 
@@ -277,30 +260,6 @@ static void draw_obj(short obj)
 	objc_draw(tree, obj, 0, x - 2, y - 2, tree[obj].ob_width + 4, tree[obj].ob_height + 4);
 }
 
-/* type into a password field; 1 if the key was used */
-static int pw_key(PWFIELD *p, short key, short *idx)
-{
-	short scan = KEY_SCAN(key), ascii = KEY_ASCII(key), n = (short)strlen(p->real);
-	if (scan == 0x0e) {			/* Backspace */
-		if (n)
-			p->real[n - 1] = 0;
-	} else if (scan == 0x01 || scan == 0x53) {	/* Delete (Esc: where nothing cancels): clear */
-		p->real[0] = 0;
-	} else if (scan == 0x4b || scan == 0x4d) {	/* the cursor stays at the end */
-		return 1;
-	} else if (ascii >= 32 && n < p->max) {
-		p->real[n] = (char)ascii;
-		p->real[n + 1] = 0;
-	} else {
-		return ascii >= 32;		/* full */
-	}
-	objc_edit(tree, p->obj, 0, idx, ED_END);
-	pw_update_text(p);
-	draw_obj(p->obj);
-	objc_edit(tree, p->obj, 0, idx, ED_INIT);
-	return 1;
-}
-
 static short first_editable(void)
 {
 	short i;
@@ -308,16 +267,6 @@ static short first_editable(void)
 		if (tree[i].ob_flags & EDITABLE)
 			return i;
 	return 0;
-}
-
-/* ^V in a password field: the clipboard's first line typed in (nothing is
-   ever copied out of one) */
-static void pw_paste(PWFIELD *p, short *idx)
-{
-	char buf[64], *c;
-	clip_get(buf, sizeof(buf));
-	for (c = clip_line(buf); *c; c++)
-		pw_key(p, (unsigned char)*c, idx);
 }
 
 /* what Esc presses (the guidelines, 3.2): Cancel, else the only button
@@ -348,49 +297,45 @@ static short form_loop(short start)
 		if (next && next != edit) {
 			edit = next;
 			next = 0;
-			objc_edit(tree, edit, 0, &idx, ED_INIT);
+			if (lf_at(edit))
+				lf_enter(lf_at(edit), &idx);
+			else
+				objc_edit(tree, edit, 0, &idx, ED_INIT);
 		}
 		/* messages too: EContact's answers can't wait (the guidelines, 4.1) */
 		evnt_multi_(MU_KEYBD | MU_BUTTON | MU_MESAG | MU_TIMER, 2, 1, 1, 250, m, &e);
 		if (e.which & MU_MESAG)
 			ui_modal_message(m);
 		if (e.which & MU_KEYBD) {
-			PWFIELD *p = pw_of(edit);
+			LFIELD *lf = lf_at(edit);
 			short scan = KEY_SCAN(e.kreturn);
-			short nav = scan == 0x1c || scan == 0x72 || scan == 0x0f || scan == 0x48 || scan == 0x50;
 			if ((scan == 0x01 || scan == 0x61) && esc_button()) {
 				/* Esc or Undo: Cancel, as if clicked, even in a text
 				   field (the AERA guidelines, 3.5) */
 				next = esc_button();
 				cont = 0;
-			} else if (edit && clip_key(e.kreturn)) {
-				if (!p)
-					clip_edit(tree, edit, &idx, e.kreturn);
-				else if (clip_key(e.kreturn) == CLIP_PASTE)
-					pw_paste(p, &idx);
-			} else if (!(p && !nav && pw_key(p, e.kreturn, &idx))) {
+			} else if (lf && lf_key(lf, e.kreturn, KEY_ASCII(e.kreturn), e.kstate, &idx)) {
+				/* the long field took it: a letter, an edit, ^C ^X ^V */
+			} else if (edit && !lf && clip_key(e.kreturn)) {
+				clip_edit(tree, edit, &idx, e.kreturn);
+			} else {
 				short kr;
 				cont = form_keybd(tree, edit, next, e.kreturn, &next, &kr);
-				if (kr)
+				if (kr && !lf)	/* a long field's text isn't objc_edit's */
 					objc_edit(tree, edit, kr, &idx, ED_CHAR);
 			}
 		}
 		if (e.which & MU_BUTTON) {
-			short obj = objc_find(tree, 0, 8, e.mx, e.my), i;
-			PWFIELD *eye = 0;
+			short obj = objc_find(tree, 0, 8, e.mx, e.my), i, k = -1;
 			for (i = 0; i < npw; i++)
-				if (pwf[i].eye == obj && obj > 0)
-					eye = &pwf[i];
-			if (eye) {
+				if (eye_obj[i] == obj && obj > 0)
+					k = i;
+			if (k >= 0) {
 				/* show or hide the password; the dialog stays */
-				if (edit)
-					objc_edit(tree, edit, 0, &idx, ED_END);
-				eye->clear = !eye->clear;
-				pw_update_text(eye);
-				draw_obj(eye->obj);
-				draw_obj(eye->eye);
-				if (edit)
-					objc_edit(tree, edit, 0, &idx, ED_INIT);
+				LFIELD *f = eye_lf[k];
+				eye_blk[k].bi_pdata = f->mask ? eye_shut : eye_open;
+				lf_mask(f, f->mask ? 0 : '*', &idx, edit == f->obj);
+				draw_obj(eye_obj[k]);
 				evnt_timer_(150);
 			} else if (obj < 0) {
 				next = 0;
@@ -418,7 +363,7 @@ static short d_do(short edit)
 	wind_update(2);
 	wind_update(END_UPDATE);
 	tree[r].ob_state &= ~SELECTED;
-	npw = 0;
+	nlf = npw = 0;
 	return r;
 }
 
@@ -431,8 +376,9 @@ static int selected(short i)
 
 int dlg_account(ACCOUNT *a)
 {
-	static char name[32], full[32], email[44], host[40], port[7], user[44], pass[32],
-		    shost[40], sport[7], suser[44], spass[32];
+	/* as long as the account's own (store.h); the fields show less */
+	static char name[32], full[64], email[96], host[64], port[7], user[96], pass[64],
+		    shost[64], sport[7], suser[96], spass[64];
 	short f_name, f_full, f_email, f_imap, f_pop, f_host, f_port, f_user, f_pass, f_leave,
 	      f_shost, f_sport, f_suser, f_spass, b_ok, b_del, r;
 
@@ -458,34 +404,34 @@ int dlg_account(ACCOUNT *a)
 	d_text(16, 1, opt.falcon ? "Falcon mode: the provider's servers, login"
 				 : "the Pi gateway's servers and login");
 	d_text(2, 3, "Account name:");
-	f_name = d_edit(17, 3, name, 30, 'X');
+	f_name = d_long(17, 3, name, 30, sizeof(name) - 1, 0);
 	d_text(2, 4, "Your name:");
-	f_full = d_edit(17, 4, full, 30, 'X');
+	f_full = d_long(17, 4, full, 30, sizeof(full) - 1, 0);
 	d_text(2, 5, "E-mail:");
-	f_email = d_edit(17, 5, email, 42, 'X');
+	f_email = d_long(17, 5, email, 42, sizeof(email) - 1, 0);
 
 	d_text(2, 7, "Incoming mail:");
 	f_imap = d_add(G_BUTTON, SELECTABLE | RBUTTON, a->pop ? 0 : SELECTED, (long)"IMAP", 17, 7, 8, 1);
 	f_pop = d_add(G_BUTTON, SELECTABLE | RBUTTON, a->pop ? SELECTED : 0, (long)"POP3", 27, 7, 8, 1);
 	d_text(2, 8, "Server:");
-	f_host = d_edit(17, 8, host, 30, 'X');
+	f_host = d_long(17, 8, host, 30, sizeof(host) - 1, 0);
 	d_text(49, 8, "Port:");
 	f_port = d_edit(55, 8, port, 5, '9');
 	d_text(2, 9, "User:");
-	f_user = d_edit(17, 9, user, 42, 'X');
+	f_user = d_long(17, 9, user, 42, sizeof(user) - 1, 0);
 	d_text(2, 10, "Password:");
-	f_pass = d_pass(17, 10, pass, 30);
+	f_pass = d_long(17, 10, pass, 30, sizeof(pass) - 1, '*');
 	f_leave = d_check(17, 11, "POP3: leave mail on the server", a->leave);
 
 	d_text(2, 13, "Outgoing (SMTP)");
 	d_text(2, 14, "Server:");
-	f_shost = d_edit(17, 14, shost, 30, 'X');
+	f_shost = d_long(17, 14, shost, 30, sizeof(shost) - 1, 0);
 	d_text(49, 14, "Port:");
 	f_sport = d_edit(55, 14, sport, 5, '9');
 	d_text(2, 15, "User:");
-	f_suser = d_edit(17, 15, suser, 42, 'X');
+	f_suser = d_long(17, 15, suser, 42, sizeof(suser) - 1, 0);
 	d_text(2, 16, "Password:");
-	f_spass = d_pass(17, 16, spass, 30);
+	f_spass = d_long(17, 16, spass, 30, sizeof(spass) - 1, '*');
 	d_text(17, 17, "(empty: as incoming, \"-\": no login)");
 
 	b_del = d_button(2, 19, 10, "Delete", EXIT);
@@ -561,10 +507,11 @@ int dlg_account(ACCOUNT *a)
 
 static char s_zone[40], s_zlabel[42], s_check[4], s_page[5], s_wrap[3];
 #define SIG_ROWS 4
-#define SIG_W 40
-static char s_sig[SIG_ROWS][SIG_W + 1];	/* the signature, a line a row */
+#define SIG_W 40			/* a row shows */
+#define SIG_CAP 78			/* and holds: a line of mail */
+static char s_sig[SIG_ROWS][SIG_CAP + 1];	/* the signature, a line a row */
 #define PDIR_W 32
-static char s_pdir[PDIR_W + 1];		/* EContact's folder */
+static char s_pdir[sizeof(opt.peopledir)];	/* EContact's folder */
 static short s_on[7];			/* keep, log, hebrew, falcon, dsp, colour, people file */
 enum { T_KEEP, T_LOG, T_HEB, T_FALCON, T_DSP, T_COLOUR, T_PFILE };
 
@@ -614,15 +561,20 @@ static void tick_draw(short k)
 	objc_draw(tree, 0, 8, x, y, o->ob_width, o->ob_height);
 }
 
-/* a number field in a thin frame */
-static short d_field(short x, short y, char *buf, short len, char kind)
+/* field i in a thin frame */
+static short d_framed(short i)
 {
-	short i = d_edit(x, y, buf, len, kind);
 	TEDINFO *t = (TEDINFO *)tree[i].ob_spec;
 	tree[i].ob_type = G_FBOXTEXT;
 	t->te_thickness = -1;
 	t->te_color = 0x1180;
 	return i;
+}
+
+/* a number field in a thin frame */
+static short d_field(short x, short y, char *buf, short len, char kind)
+{
+	return d_framed(d_edit(x, y, buf, len, kind));
 }
 
 /* rows of a part: y in characters plus a few pixels per framed field
@@ -714,7 +666,7 @@ static short pick_from;		/* the row a picker starts on */
 typedef struct {
 	OBJECT tree[DMAX];
 	TEDINFO ted[TMAX];
-	short page[DMAX], n[4];
+	short page[DMAX], n[5];
 } KEEP;
 static GRECT pick_area;		/* where the last picker was */
 
@@ -753,6 +705,7 @@ static void zone_pick(void)
 	z->keep.n[1] = nted;
 	z->keep.n[2] = last_child;
 	z->keep.n[3] = npw;
+	z->keep.n[4] = nlf;
 	pick_from = sel;
 	i = pick_w("Your time zone", z->items, n, 38);
 	pick_from = 0;
@@ -763,6 +716,7 @@ static void zone_pick(void)
 	nted = z->keep.n[1];
 	last_child = z->keep.n[2];
 	npw = z->keep.n[3];
+	nlf = z->keep.n[4];
 	free(z);
 	if (i >= 0)
 		str_copy(s_zone, tz_index(i)->name, sizeof(s_zone));
@@ -770,7 +724,7 @@ static void zone_pick(void)
 }
 
 /* EContact's folder: the folder of a file chosen in it (CONTACTS.TXT) */
-static short pdir_btn = -1;
+static short pdir_btn = -1, pdir_field;
 
 static void pdir_pick(void)
 {
@@ -786,6 +740,8 @@ static void pdir_pick(void)
 	if (e)
 		*e = 0;
 	str_copy(s_pdir, path, sizeof(s_pdir));
+	if (lf_at(pdir_field))
+		lf_end(lf_at(pdir_field));	/* the field shows the new one */
 }
 
 /* the dialog stays open while ticks and pages change */
@@ -880,8 +836,8 @@ static void settings_load(void)
 		for (k = 0; k < SIG_ROWS; k++) {
 			const char *nl = strchr(p, '\n');
 			long n = nl ? nl - p : (long)strlen(p);
-			if (n > SIG_W)
-				n = SIG_W;
+			if (n > SIG_CAP)
+				n = SIG_CAP;
 			memcpy(s_sig[k], p, n);
 			s_sig[k][n] = 0;
 			p = nl ? nl + 1 : p + strlen(p);
@@ -898,9 +854,10 @@ static void sig_store(void)
 		if (s_sig[k][0])
 			last = k;
 	for (k = 0; k <= last; k++) {
-		if (k)
-			strcat(opt.signature, "\n");
-		strcat(opt.signature, s_sig[k]);
+		size_t n = strlen(opt.signature);
+		if (k && n + 1 < sizeof(opt.signature))
+			opt.signature[n++] = '\n';
+		str_copy(opt.signature + n, s_sig[k], sizeof(opt.signature) - n);
 	}
 }
 
@@ -934,7 +891,7 @@ static void part_signature(short x, short y)
 	rows_at(y);
 	d_add(G_BOX, 0, 0, 0x00FF1100L, x, ROW(0), SIG_W, SIG_ROWS);
 	for (k = 0; k < SIG_ROWS; k++)
-		d_edit(x, (short)((y + k) | (2 << 8)), s_sig[k], SIG_W, 'X');
+		d_long(x, (short)((y + k) | (2 << 8)), s_sig[k], SIG_W, SIG_CAP, 0);
 	d_add(G_STRING, 0, 0, (long)"Added to new messages, replies and", x, (short)(y + SIG_ROWS + 1), 34, 1);
 	d_add(G_STRING, 0, 0, (long)"forwards from every account.", x, (short)(y + SIG_ROWS + 2), 28, 1);
 }
@@ -956,7 +913,7 @@ static void part_contacts(short x, short y)
 	d_tick(x, ROW(0), "When EContact isn't loaded, read", T_PFILE);
 	d_add(G_STRING, 0, 0, (long)"its contacts file (CONTACTS.TXT)", x + 3, ROW(1), 32, 1);
 	d_add(G_STRING, 0, 0, (long)"EContact's folder:", x, ROW(3), 18, 1);
-	d_field(x, ROW(4), s_pdir, PDIR_W, 'X');
+	pdir_field = d_framed(d_long(x, ROW(4), s_pdir, PDIR_W, sizeof(s_pdir) - 1, 0));
 	pdir_btn = d_button(x + PDIR_W + 2, ROW(4), 5, "...", TOUCHEXIT);	/* to column 39 */
 	d_add(G_STRING, 0, 0, (long)"With EContact loaded, EMail asks it.", x, ROW(6), 36, 1);
 }
@@ -1059,23 +1016,25 @@ int dlg_settings(void)
 
 /* ---------------- a line of text ---------------- */
 
-int dlg_ask(const char *title, const char *label, char *buf, short len)
+int dlg_ask(const char *title, const char *label, char *buf, short cap)
 {
-	static char field[48];
-	short f, b_ok;
+	static char field[200];
+	short f, b_ok, len = cap;
+	if (cap > (short)sizeof(field) - 1)
+		cap = (short)sizeof(field) - 1;
 	if (len > 46)
-		len = 46;
-	str_copy(field, buf, sizeof(field));
+		len = 46;		/* it shows that much, and holds cap */
+	str_copy(field, buf, (size_t)cap + 1);
 	d_begin(len + 6 > 40 ? len + 6 : 40, 8);
 	d_add(G_STRING, 0, 0, (long)title, 2, 1, (short)strlen(title), 1);
 	d_text(2, 3, label);
-	f = d_edit(2, 4, field, len, 'X');
+	f = d_long(2, 4, field, len, cap, 0);
 	d_button((len + 6 > 40 ? len + 6 : 40) - 24, 6, 10, "Cancel", EXIT);
 	b_ok = d_button((len + 6 > 40 ? len + 6 : 40) - 12, 6, 10, "OK", EXIT | DEFAULT);
 	d_end();
 	if (d_do(f) != b_ok || !field[0])
 		return 0;
-	str_copy(buf, field, len + 1);
+	str_copy(buf, field, (size_t)cap + 1);
 	return 1;
 }
 

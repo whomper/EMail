@@ -266,7 +266,8 @@ Hebrew message and sends a Hebrew reply; the test checks the reply and its copy 
 `disk_test.py` counts each job's file opens and lookups from Hatari's GEMDOS trace and fails above its
 budget (the AERA guidelines, 6.5), and cuts a folder's file short to see the message fetched again.
 `select_test.py`, `rename_test.py`, `drag_test.py` (messages dragged onto a folder), `esc_test.py`
-(Esc and Undo cancel every dialog and alert) and `colour_tour.py` run the same way. `font_test.py` chooses the
+(Esc and Undo cancel every dialog and alert), `field_test.py` (more typed into a field than it shows, and
+all of it kept: the AERA guidelines, 5.4) and `colour_tour.py` run the same way. `font_test.py` chooses the
 first GDOS font in Options > Font, checks the windows redraw in it and that it is saved, then starts EMail
 again in it and reads a Hebrew message from disk; under NVDI it needs Erez's NVDI (`AERA_WITH_NVDI=1`,
 `common/tools/machines.py`), and without a GDOS it checks the restart in the system font. The tests that need another

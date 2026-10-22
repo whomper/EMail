@@ -158,7 +158,7 @@ char *dlg_pick_address(void);
 /* dialogs */
 int  dlg_account(ACCOUNT *a);		/* 1 = OK, -1 = delete it */
 int  dlg_settings(void);
-int  dlg_ask(const char *title, const char *label, char *buf, short len);
+int  dlg_ask(const char *title, const char *label, char *buf, short cap);	/* buf holds cap + 1 */
 FINFO *dlg_pick_folder(ACCOUNT *a, const char *title);
 ACCOUNT *dlg_pick_account(const char *title);
 void dlg_about(void);
