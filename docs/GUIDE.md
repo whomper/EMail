@@ -77,9 +77,7 @@ Copy the new release's files over the old ones: `EMAIL.PRG`, `EMAIL.HYP`
 and `EMAIL.REF`, and for Falcon mode `CACERT.PEM` and `ROOTS.DAT`.
 `EMAIL.INF`, `EMAIL.KEY` and your mail stay as they are. Keep EMAIL.KEY
 with EMAIL.INF: without it EMail asks for the passwords again. Coming
-from 1.41 or before, each folder moves its messages into one file the
-first time you open it (the status line says so; it happens once).
-Coming from a version before 1.37, type your signature once more, in Options >
+from a version before 1.37, type your signature once more, in Options >
 Settings > Signature. On the Pi, `./update-pi.sh` in the AERA-Gateway
 folder updates the gateway.
 

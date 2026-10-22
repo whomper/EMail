@@ -48,7 +48,7 @@ BSSLCF  := -m68030 -O2 -fomit-frame-pointer -ffreestanding -fno-builtin -fno-pic
 BSSLOBJ  = $(patsubst $(BSSL)/src/%.c,$(OBJDIR)/bssl/%.o,$(BSSLSRC))
 HBSSLOBJ = $(patsubst $(BSSL)/src/%.c,$(OBJDIR)/hbssl/%.o,$(BSSLSRC))
 
-CORE    := util charset mime conn tls imap pop3 smtp store migrate_eml compose mail futil bidi secret ctime tz
+CORE    := util charset mime conn tls imap pop3 smtp store compose mail futil bidi secret ctime tz
 ATARI   := libc tos plat_tos net_tos sting gem dsprsa crash bigbuf
 UI      := main draw win folders list reader editor dialogs popup font fontsel about dsp theme help av alert mbar aboutbox iconify clip clipedit dd busy people_ask dialog av_people people_file
 
@@ -262,7 +262,6 @@ test: $(OBJDIR)/unit $(addprefix $(OBJDIR)/replay_,$(FUZZERS))
 
 itest: $(OBJDIR)/mail-cli
 	tests/integration.sh
-	tests/migrate_test.sh	# temporary: goes with src/migrate_eml.c
 
 # the ST-Guide help file from the user guide (HCP from github.com/th-otto/hypview)
 HCP ?= hcp

@@ -11,7 +11,6 @@
 #include <ctype.h>
 #include "plat.h"
 #include "store.h"
-#include "migrate_eml.h"
 #include "secret.h"
 #include "tz.h"
 #include "charset.h"
@@ -1077,10 +1076,6 @@ FOLDER *fold_open(ACCOUNT *a, FINFO *fi)
 	if (version < 3)
 		upgrade_headers(f);
 	f->pend_base = pack_end_known(f);
-	for (i = 0; i < f->n && !(f->h[i].flags & MF_CACHED && f->h[i].off < 0); i++)
-		;
-	if (i < f->n)
-		migrate_eml(f);	/* .EML files from before the pack */
 	fold_count(f);
 	return f;
 }
