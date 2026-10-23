@@ -621,7 +621,10 @@ release has it for the desktop (in the zip, in `icons/`): `EMAIL.RSC`
 holds a black and white icon for TOS 1 and 2 and a colour one (256
 colours, 16 and black and white) for TOS 4 and EmuTOS, to copy into
 `DESKICON.RSC` / `DESKCICN.RSC` with a resource editor, and `EMAIL.ICN` / `EMAILMK.ICN` are
-the image and mask for icon editors. For EmuTOS,
+the image and mask for icon editors. Take `EMAIL.RSC` under TOS, EmuTOS,
+or NVDI with TOS's palette loaded (COLORVDI); under NVDI with its own
+palette take `EMAILNV.RSC`, the same icon with its 256-colour image in
+NVDI's colours. For EmuTOS,
 `tools/icon/add_to_emuicon.py`, in EMail's source on GitHub, adds it to
 `EMUICON.RSC`.
 

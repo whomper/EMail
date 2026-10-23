@@ -38,7 +38,8 @@ one is there on its own, and all of them together in `EMAIL-x.y.zip`.
 | `EMAILST.PRG` | the ST edition: the same program without Falcon mode, about 120 KB smaller in memory, for an ST with 1 MB (use one of the two) |
 | `CACERT.PEM`, `ROOTS.DAT` | the root certificates for Falcon mode (Mozilla's list, and the same decoded ahead of time) |
 | `EMAIL.HYP`, `EMAIL.REF` | the user guide for EHypView or ST-Guide, opened by the Help key |
-| `EMAIL.RSC`, `EMAIL.ICN`, `EMAILMK.ICN` | the desktop icon, on their own and in the zip's `icons/` folder (see [The desktop icon](docs/GUIDE.md#the-desktop-icon)) |
+| `EMAIL.RSC`, `EMAIL.ICN`, `EMAILMK.ICN` | the desktop icon, on their own and in the zip's `icons/` folder (see [The desktop icon](docs/GUIDE.md#the-desktop-icon)): `EMAIL.RSC` under TOS, EmuTOS, or NVDI with TOS's palette loaded (COLORVDI) |
+| `EMAILNV.RSC` | the same desktop icon for NVDI with its own palette, where the 256-colour image is drawn in NVDI's colours |
 | `EMAIL-x.y.zip` | all of the above |
 
 1. Copy `EMAIL.PRG` (on an ST, `EMAILST.PRG`) to any folder on any drive, with `EMAIL.HYP` and

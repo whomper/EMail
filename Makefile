@@ -101,7 +101,7 @@ $(STDIR)/mail.elf: $(STOBJS) $(OBJDIR)/build.o common/atari/link.ld
 # icon16.h (the About box, the iconified window) and docs/icon*.png;
 # committed, and a release carries icons/
 icons:
-	python3 common/tools/appicon.py EMAIL --rsc icons/EMAIL.RSC --icn icons/EMAIL.ICN --mask icons/EMAILMK.ICN --headers ui --docs docs
+	python3 common/tools/appicon.py EMAIL --rsc icons/EMAIL.RSC --rscnv icons/EMAILNV.RSC --icn icons/EMAIL.ICN --mask icons/EMAILMK.ICN --headers ui --docs docs
 
 $(OBJDIR)/bssl/%.o: $(BSSL)/src/%.c
 	@mkdir -p $(dir $@)
@@ -286,7 +286,7 @@ binary/EMAIL.HYP: docs/GUIDE.md tools/mkhelp.py VERSION docs/front.json docs/hel
 # a release's files: each one in dist/, and all of them in
 # dist/EMAIL-x.y.zip (the icons in icons/), for the release workflow
 DIST    := binary/EMAIL.PRG binary/EMAILST.PRG binary/CACERT.PEM binary/ROOTS.DAT binary/EMAIL.HYP binary/EMAIL.REF
-ICONS   := icons/EMAIL.RSC icons/EMAIL.ICN icons/EMAILMK.ICN
+ICONS   := icons/EMAIL.RSC icons/EMAILNV.RSC icons/EMAIL.ICN icons/EMAILMK.ICN
 dist: all help
 	rm -rf dist
 	mkdir -p dist/zip/icons
