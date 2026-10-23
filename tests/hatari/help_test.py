@@ -48,6 +48,10 @@ def look(machine):
     r = rig.Rig(w, machine, auto="C:\\EHYPVIEW.PRG")
     try:
         time.sleep(25)
+        if "EHV page" not in open(os.path.join(w, "hatari.log"), errors="replace").read():
+            # EHypView 1.22 and later start on their list of hypertexts, EMail's chosen: open it
+            r.key(K["RETURN"])
+            time.sleep(10)
         r.shot("%s-1" % name)
         for i in range(2, 5):
             r.key(K["DOWN"], shift=True)     # a page down
