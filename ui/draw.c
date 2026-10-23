@@ -195,11 +195,49 @@ static void runs_at(short x, short y, const char *s, short n)
 	}
 }
 
+/* n characters already in screen order, from x: the font's Hebrew
+   places, the flags' effects and more (fx: 8 underlines) */
+static void visual_at(short x, short y, const char *out, short n, short flags, short fx)
+{
+	char m[BIDI_MAX];
+	short i, effects = ((flags & TX_BOLD) ? 1 : (flags & TX_LIGHT) ? 2 : 0) | fx;
+	if (heb_mode != HM_MAP && has_heb(out, n)) {
+		vswr_mode(vdi_h, 2);
+		vst_color(vdi_h, (flags & TX_INVERSE) ? 0 : text_pen);
+		vst_effects(vdi_h, effects);
+		runs_at(x, y, out, n);
+		if (effects)
+			vst_effects(vdi_h, 0);
+		return;
+	}
+	if (opt.hebfont != HEB_ATARI && has_heb(out, n)) {
+		memcpy(m, out, n);
+		out = m;
+		heb_font_map(m, n, opt.hebfont);
+	}
+	vswr_mode(vdi_h, 2);
+	vst_color(vdi_h, (flags & TX_INVERSE) ? 0 : text_pen);
+	vst_effects(vdi_h, effects);
+	for (i = 0; i < n; i += 120) {
+		short k = n - i > 120 ? 120 : (short)(n - i);
+		cells_at(x + i * cw, y, out + i, k);
+	}
+	if (effects)
+		vst_effects(vdi_h, 0);
+}
+
 void text_at(short x, short y, const char *s, long n, short cols, short flags)
 {
-	char vis[BIDI_MAX];
-	const char *out = s;
-	short i;
+	text_marked_at(x, y, s, n, cols, flags, 0);
+}
+
+void text_marked_at(short x, short y, const char *s, long n, short cols, short flags, const char *mark)
+{
+	char vis[BIDI_MAX], vm[BIDI_MAX];
+	short pos[BIDI_MAX];
+	unsigned char odd[BIDI_MAX];
+	const char *out = s, *om = mark;
+	short i, j;
 	if (cols <= 0)
 		return;
 	if (n > cols)
@@ -210,35 +248,56 @@ void text_at(short x, short y, const char *s, long n, short cols, short flags)
 		return;
 	if (bidi_has_rtl(s, (short)n)) {
 		short rtl = (flags & TX_LTR) ? 0 : bidi_is_rtl(s, (short)n);
-		bidi_visual(s, (short)n, rtl, vis);
+		if (mark) {
+			/* the marks go where their characters are drawn */
+			bidi_visual_map(s, (short)n, rtl, vis, pos, odd);
+			for (i = 0; i < n; i++)
+				vm[pos[i]] = mark[i];
+			om = vm;
+		} else {
+			bidi_visual(s, (short)n, rtl, vis);
+		}
 		out = vis;
 		if (rtl && (flags & TX_RIGHT))
 			x += (cols - (short)n) * cw;
 	}
-	if (heb_mode != HM_MAP && has_heb(out, n)) {
-		vswr_mode(vdi_h, 2);
-		vst_color(vdi_h, (flags & TX_INVERSE) ? 0 : text_pen);
-		vst_effects(vdi_h, (flags & TX_BOLD) ? 1 : (flags & TX_LIGHT) ? 2 : 0);
-		runs_at(x, y, out, (short)n);
-		if (flags & (TX_BOLD | TX_LIGHT))
-			vst_effects(vdi_h, 0);
+	if (!om) {
+		visual_at(x, y, out, (short)n, flags, 0);
 		return;
 	}
-	if (opt.hebfont != HEB_ATARI && has_heb(out, n)) {
-		if (out != vis)
-			memcpy(vis, out, n);
-		out = vis;
-		heb_font_map(vis, n, opt.hebfont);
+	/* runs marked and not: a link in the accent colour, underlined */
+	for (i = 0; i < n; i = j) {
+		short keep = text_pen;
+		for (j = i; j < n && !om[j] == !om[i]; j++)
+			;
+		if (om[i] && !(flags & TX_INVERSE))
+			text_pen = pen[P_ACCENT];
+		visual_at(x + i * cw, y, out + i, j - i, flags, om[i] ? 8 : 0);
+		text_pen = keep;
 	}
-	vswr_mode(vdi_h, 2);
-	vst_color(vdi_h, (flags & TX_INVERSE) ? 0 : text_pen);
-	vst_effects(vdi_h, (flags & TX_BOLD) ? 1 : (flags & TX_LIGHT) ? 2 : 0);
-	for (i = 0; i < n; i += 120) {
-		short k = n - i > 120 ? 120 : (short)(n - i);
-		cells_at(x + i * cw, y, out + i, k);
-	}
-	if (flags & (TX_BOLD | TX_LIGHT))
-		vst_effects(vdi_h, 0);
+}
+
+short text_index(const char *s, long n, short cols, short flags, short col)
+{
+	char vis[BIDI_MAX];
+	short pos[BIDI_MAX], i, rtl;
+	unsigned char odd[BIDI_MAX];
+	if (n > cols)
+		n = cols;
+	if (n > BIDI_MAX)
+		n = BIDI_MAX;
+	if (n <= 0 || col < 0)
+		return -1;
+	if (!bidi_has_rtl(s, (short)n))
+		return col < n ? col : -1;
+	rtl = (flags & TX_LTR) ? 0 : bidi_is_rtl(s, (short)n);
+	bidi_visual_map(s, (short)n, rtl, vis, pos, odd);
+	if (rtl && (flags & TX_RIGHT))
+		col -= cols - (short)n;
+	for (i = 0; i < n; i++)
+		if (pos[i] == col)
+			return i;
+	return -1;
 }
 
 long wrap_text(const char *s, long n, short width, long *breaks, long max)

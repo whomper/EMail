@@ -4,7 +4,8 @@
  * reader.c - the message window: headers, attachments (click one to
  * save it; double-click an invitation to add it to ECal) and the text,
  * word-wrapped to the window. Hebrew paragraphs are laid out right to
- * left; quoted lines are drawn light.
+ * left; quoted lines are drawn light. Links (an HTML message's, and the
+ * addresses written in the text) are drawn as links: a click opens one.
  */
 #include <string.h>
 #include <stdio.h>
@@ -15,6 +16,8 @@
 #include "util.h"
 #include "../src/plat.h"
 #include "av.h"
+#include "bidi.h"
+#include "clip.h"
 
 MSG *cur_msg;
 char *cur_raw;
@@ -28,6 +31,7 @@ typedef struct {
 	long n;
 	short kind, attach, label, rtl;
 	short quote;		/* body: the quote depth of the line it is part of */
+	long link;		/* body: the first of links[] that doesn't end before it */
 } LINE;
 
 static char *head;		/* header lines, \n separated */
@@ -35,6 +39,8 @@ static char *body;		/* text with tabs expanded */
 static long bodylen;
 static LINE *lines;
 static long nlines;
+static MLINK *links;		/* on body, in its order */
+static long nlinks;
 
 static void free_layout(void)
 {
@@ -62,6 +68,10 @@ static void forget(void)
 	head = 0;
 	free(body);
 	body = 0;
+	while (nlinks > 0)
+		free(links[--nlinks].url);
+	free(links);
+	links = 0;
 	cur_uid = 0;
 	w_reader.top = 0;
 }
@@ -85,6 +95,7 @@ static void add_line(const char *s, long n, short kind, short attach, short labe
 	l->label = label;
 	l->rtl = kind == L_BODY ? line_rtl(s, n) : 0;
 	l->quote = 0;
+	l->link = 0;
 }
 
 /* how deep a line is quoted: the '>' at its start, spaces between them */
@@ -135,6 +146,7 @@ static void layout(void)
 	nb = wrap_text(body, bodylen, width, br, max - nlines - 2);
 	{
 		short depth = 0;
+		long lk = 0;
 		for (i = 0; i < nb; i++) {
 			long s = br[i], end = i + 1 < nb ? br[i + 1] : bodylen;
 			/* a line of the text starts here, or this is the rest of
@@ -145,6 +157,9 @@ static void layout(void)
 				end--;
 			add_line(body + s, end - s, L_BODY, 0, 0);
 			lines[nlines - 1].quote = depth;
+			while (lk < nlinks && links[lk].at + links[lk].n <= s)
+				lk++;
+			lines[nlines - 1].link = lk;
 		}
 	}
 	free(br);
@@ -158,12 +173,23 @@ static void resized(WIN *w)
 	layout();
 }
 
-static char *expand_tabs(const char *s, long n, long *outlen)
+/* the text with its tabs as spaces; the links on it (lk, in its order)
+   moved with it into to[] */
+static char *expand_tabs(const char *s, long n, long *outlen, const MLINK *lk, short nl, MLINK *to)
 {
 	SBUF b;
 	long i, col = 0;
+	short a = 0, e = 0;
 	sb_init(&b);
-	for (i = 0; i < n; i++) {
+	for (i = 0; i <= n; i++) {
+		for (; a < nl && lk[a].at <= i; a++) {
+			to[a].at = b.len;
+			to[a].n = 0;
+		}
+		for (; e < a && lk[e].at + lk[e].n <= i; e++)
+			to[e].n = b.len - to[e].at;
+		if (i == n)
+			break;
 		if (s[i] == '\t') {
 			do
 				sb_addc(&b, ' ');
@@ -178,6 +204,93 @@ static char *expand_tabs(const char *s, long n, long *outlen)
 }
 
 int reader_missing;
+
+static int cmp_link(const void *a, const void *b)
+{
+	long d = ((const MLINK *)a)->at - ((const MLINK *)b)->at;
+	return d < 0 ? -1 : d > 0;
+}
+
+/* body and its links: the HTML's, then the addresses written in the
+   text that aren't on one of them, in the text's order */
+static void make_body(void)
+{
+	short nh = cur_msg->nlinks, k;
+	long at, n, from = 0, cap = nh + 64;
+	MLINK *to = malloc(cap * sizeof(MLINK));
+	nlinks = 0;
+	body = expand_tabs(cur_msg->text, cur_msg->textlen, &bodylen, cur_msg->links, to ? nh : 0, to);
+	if (!to || !body) {
+		free(to);
+		return;
+	}
+	for (k = 0; k < nh; k++)
+		if (to[k].n > 0 && (to[k].url = strdup(cur_msg->links[k].url)) != 0)
+			to[nlinks++] = to[k];
+	nh = (short)nlinks;
+	while (link_next(body, bodylen, from, &at, &n) && nlinks < MIME_MAXLINKS * 2) {
+		short on = 0;
+		from = at + n;
+		for (k = 0; k < nh && !on; k++)
+			on = at < to[k].at + to[k].n && to[k].at < at + n;
+		if (on)
+			continue;
+		if (nlinks == cap) {
+			MLINK *more = realloc(to, (cap + 64) * sizeof(MLINK));
+			if (!more)
+				break;
+			to = more;
+			cap += 64;
+		}
+		if ((to[nlinks].url = link_url(body + at, n)) == 0)
+			break;
+		to[nlinks].at = at;
+		to[nlinks++].n = n;
+	}
+	if (nlinks > nh)
+		qsort(to, nlinks, sizeof(MLINK), cmp_link);
+	links = to;
+}
+
+/* the link under the mouse: its place in links[], or -1 */
+static long link_at(short mx, short my)
+{
+	short cols = w_reader.work.w / cw - 1, x0 = w_reader.work.x + cw / 2, idx;
+	long i, at, k;
+	LINE *l;
+	if (!cur_msg || !body || mx < x0 || my < w_reader.work.y)
+		return -1;
+	i = w_reader.top + (my - w_reader.work.y) / ch;
+	if (i < 0 || i >= nlines || lines[i].kind != L_BODY)
+		return -1;
+	l = &lines[i];
+	if ((idx = text_index(l->s, l->n, cols, TX_RIGHT, (mx - x0) / cw)) < 0)
+		return -1;
+	at = (l->s - body) + idx;
+	for (k = l->link; k < nlinks && links[k].at <= at; k++)
+		if (at < links[k].at + links[k].n)
+			return k;
+	return -1;
+}
+
+/* which of a body line's characters are on a link: 0 when none is */
+static int line_marks(const LINE *l, char *mark)
+{
+	long s = l->s - body, n = l->n < BIDI_MAX ? l->n : BIDI_MAX, k, c;
+	int any = 0;
+	for (k = l->link; k < nlinks && links[k].at < s + n; k++) {
+		long a = links[k].at > s ? links[k].at : s, e = links[k].at + links[k].n;
+		if (e > s + n)
+			e = s + n;
+		if (!any && a < e) {
+			memset(mark, 0, n);
+			any = 1;
+		}
+		for (c = a; c < e; c++)
+			mark[c - s] = 1;
+	}
+	return any;
+}
 
 void reader_selection(long n)
 {
@@ -343,7 +456,8 @@ void reader_names_came(void)
 	win_redraw(&w_reader, 0);
 }
 
-/* the tooltip over a name in the header lines: its address */
+/* the tooltip over a name in the header lines: its address; over a
+   link: where it goes */
 int reader_tip(short mx, short my, char *out, int size)
 {
 	long i;
@@ -352,6 +466,10 @@ int reader_tip(short mx, short my, char *out, int size)
 	if (!cur_msg || !head || w_reader.work.w <= 0 || mx < w_reader.work.x || my < w_reader.work.y ||
 	    mx >= w_reader.work.x + w_reader.work.w || my >= w_reader.work.y + w_reader.work.h)
 		return 0;
+	if ((i = link_at(mx, my)) >= 0) {	/* a link: where it goes */
+		str_copy(out, links[i].url, size);
+		return 1;
+	}
 	i = w_reader.top + (my - w_reader.work.y) / ch;
 	if (i < 0 || i >= nlines || lines[i].kind != L_HEAD)
 		return 0;
@@ -408,7 +526,7 @@ void reader_show(HDR *h)
 show:
 	head_date = h->date;
 	make_head();
-	body = expand_tabs(cur_msg->text, cur_msg->textlen, &bodylen);
+	make_body();
 	{
 		char t[100];
 		snprintf(t, sizeof(t), "%.90s", cur_msg->subject[0] ? cur_msg->subject : "(no subject)");
@@ -422,6 +540,8 @@ show:
 			win_info(&w_reader, "double-click the invitation for ECal");
 		else if (cur_msg->nparts)
 			win_info(&w_reader, "click an attachment to save it");
+		else if (nlinks)
+			win_info(&w_reader, "click a link to open it");
 		else
 			win_info(&w_reader, "");
 	}
@@ -505,15 +625,21 @@ static void draw(WIN *w, GRECT *clip)
 		case L_RULE:
 			hline(w->work.x, w->work.x + w->work.w - 1, y + ch / 2);
 			break;
-		default:
+		default: {
+			char mark[BIDI_MAX];
+			int marked = line_marks(l, mark);
 			if (colour && l->quote) {
 				/* quoted text by depth: blue, green, brown, as in
 				   Thunderbird; a wrapped line's rest as its start */
 				short d = l->quote;
-				text_pen_at(pen[d == 1 ? P_Q1 : d == 2 ? P_Q2 : P_Q3], x0, y, l->s, l->n, cols, TX_RIGHT);
+				text_pen = pen[d == 1 ? P_Q1 : d == 2 ? P_Q2 : P_Q3];
+				text_marked_at(x0, y, l->s, l->n, cols, TX_RIGHT, marked ? mark : 0);
+				text_pen = 1;
 			} else {
-				text_at(x0, y, l->s, l->n, cols, TX_RIGHT | (l->quote ? TX_LIGHT : 0));
+				text_marked_at(x0, y, l->s, l->n, cols, TX_RIGHT | (l->quote ? TX_LIGHT : 0),
+					       marked ? mark : 0);
 			}
+		}
 		}
 	}
 }
@@ -635,9 +761,13 @@ void reader_to_ecal(short i)
 
 static void click(WIN *w, short mx, short my, short clicks, short kstate)
 {
-	long i = w->top + (my - w->work.y) / ch;
-	(void)mx;
+	long i = w->top + (my - w->work.y) / ch, k = link_at(mx, my);
 	(void)kstate;
+	if (k >= 0) {
+		if (clicks == 1)		/* a double click's second opens it no more */
+			open_link(links[k].url);
+		return;
+	}
 	if (i < 0 || i >= nlines || lines[i].kind != L_ATTACH)
 		return;
 	if (!mime_is_calendar(&cur_msg->parts[lines[i].attach]))
@@ -652,7 +782,17 @@ void message_menu(short mx, short my, int with_open);
 
 static void rclick(WIN *w, short mx, short my)
 {
-	long i = w->top + (my - w->work.y) / ch;
+	long i = w->top + (my - w->work.y) / ch, k = link_at(mx, my);
+	if (k >= 0) {
+		static const char *const lab[] = { "Open link", "Copy link" };
+		short r = popup(mx, my, lab, 2);
+		if (r == 0)
+			open_link(links[k].url);
+		else if (r == 1)
+			main_status(clip_put(links[k].url, (long)strlen(links[k].url)) ? "Copied to the clipboard." :
+											"Couldn't write the clipboard.");
+		return;
+	}
 	if (i >= 0 && i < nlines && lines[i].kind == L_ATTACH) {
 		static const char *const lab[] = { "Save attachment...", "Add to ECal" };
 		short a = lines[i].attach, inv = mime_is_calendar(&cur_msg->parts[a]);

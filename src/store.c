@@ -44,6 +44,7 @@ static void defaults(void)
 	opt.colour = 1;
 	opt.peoplefile = 0;
 	opt.peopledir[0] = 0;
+	opt.browser[0] = 0;
 	opt.wrap = 72;
 	opt.font_id = 1;
 	opt.font_pt = 0;	/* the system font at the screen's size */
@@ -434,6 +435,7 @@ static void set_opt(const char *k, const char *v)
 	else if (!strcmp(k, "dsp")) opt.dsp = n != 0;
 	else if (!strcmp(k, "peoplefile")) opt.peoplefile = n != 0;
 	else if (!strcmp(k, "peopledir")) str_copy(opt.peopledir, v, sizeof(opt.peopledir));
+	else if (!strcmp(k, "browser")) str_copy(opt.browser, v, sizeof(opt.browser));
 	else if (!strcmp(k, "colour") || !strcmp(k, "color")) opt.colour = n != 0;
 	else if (!strcmp(k, "hebfont")) opt.hebfont = n >= 0 && n <= 2 ? n : 0;
 }
@@ -600,11 +602,13 @@ int store_save_settings(void)
 		"FALCON", "%d", tls_available ? opt.falcon : falcon_inf);
 	put_fmt(&b, "Falcon mode: 1 = the DSP checks the servers' signatures, 0 = the 68030 does",
 		"DSP", "%d", opt.dsp);
-	put_fmt(&b, "1 = colours (selection, unread counts, flags, quotes) on screens with 16 or more",
+	put_fmt(&b, "1 = colours (selection, unread counts, flags, quotes, links) with 16 or more; with 4 links in blue",
 		"COLOUR", "%d", opt.colour);
 	put_fmt(&b, "1 = when EContact isn't loaded, names come from its contacts file (CONTACTS.TXT)",
 		"PEOPLEFILE", "%d", opt.peoplefile);
 	put_path(&b, "EContact's folder, where its contacts file is (C:\\ECONTACT)", "PEOPLEDIR", opt.peopledir);
+	put_path(&b, "EWeb, started on a link when no web browser runs (C:\\EWEB\\EWEB.PRG; empty: asked once)",
+		 "BROWSER", opt.browser);
 	for (i = 0; i < naccts; i++) {
 		ACCOUNT *a = accts[i];
 		sb_adds(&b, "; one [ACCOUNT] part per account, up to 8; Options > Accounts edits them\r\n"

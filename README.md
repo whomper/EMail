@@ -18,6 +18,8 @@ An e-mail program for the Atari ST, STE, TT and Falcon, written in C for GEM.
 - **Many messages at once:** select several and mark them read or unread, flag, move or delete them
   together.
 - **Folders:** create, rename and delete; an alphabetical folder picker for moving messages.
+- **Links that open:** web addresses and an HTML message's links are underlined; a click opens one in
+  EWeb (or CAB or HighWire), a `mailto:` one as a new message.
 - **Modern but Atari:** one window with draggable panes, right-click menus, colour on 16- and 256-colour
   screens, a Settings dialog with a sidebar, progress on the status line, the guide on the Help key.
 - **Any Atari:** TOS 1.04 to 4.x, EmuTOS, MagiC and MiNT, with STinG or MiNTnet, from a 68000 ST in
@@ -79,7 +81,7 @@ and switch on **Options > Falcon mode**. EMail fills in the servers for the big 
 as they are. On the Pi, `./update-pi.sh` in `AERA-Gateway` updates the gateway.
 
 **Needs:** TOS 1.04 or newer (TOS 4 on the Falcon), EmuTOS, MagiC or MiNT; 640×200 (ST medium) or
-larger; 1 MB of memory (EMail itself takes about 440 KB, the ST edition `EMAILST.PRG` about 319 KB; more
+larger; 1 MB of memory (EMail itself takes about 450 KB, the ST edition `EMAILST.PRG` about 326 KB; more
 memory holds bigger folders), 2 MB or more with
 EContact's accessory (on a 1 MB ST, use EContact as a program, `ECONTACT.PRG`); network: STinG (or STiK), MiNTnet or
 MagiC-Net; for providers that need encryption (nearly all), the Pi gateway or Falcon mode (a Falcon or
@@ -288,7 +290,10 @@ again in it and reads a Hebrew message from disk; under NVDI it needs Erez's NVD
 AERA program take its latest release, as you would have it (`common/tools/getrelease.py`; add `vX.Y`
 for another one): `econtact_test.py` with EContact, `help_test.py` with EHypView. `people_test.py`
 checks the same conversation with a stand-in for EContact (`build/fakecontact.acc`), and `invite_test.py` an
-invitation handed to a stand-in for ECal (`build/fakecal.acc`), and the alert when ECal isn't there. Hatari has no network card,
+invitation handed to a stand-in for ECal (`build/fakecal.acc`), and the alert when ECal isn't there.
+`link_test.py` clicks the links in a plain and an HTML message: they go to a stand-in for a running
+browser (`build/fakeweb.acc`), and without one EMail quits and EWeb's latest release starts on the link,
+a long one through `LINK.HTM`. Hatari has no network card,
 so `FAKESTNG.PRG` (the AERA apps' shared one, in `common/tools/fakesting`) stands in for STinG and
 carries EMail's connections over the emulated serial port to `serial_bridge.py` next to it. It's for
 the emulator only; never install it on a real Atari.

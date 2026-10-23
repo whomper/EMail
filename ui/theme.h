@@ -5,7 +5,8 @@
  * counts, flags, quoted text), as modern mail programs use them. With 256
  * colours EMail sets its own soft shades in palette entries the desktop
  * doesn't use (and puts them back at the end); with 16 it takes the
- * standard ones; on monochrome and 4-colour screens nothing changes.
+ * standard ones; with 4 (ST medium) only links and unread counts are
+ * blue (theme.c turns VDI's red blue); on monochrome nothing changes.
  */
 #ifndef THEME_H
 #define THEME_H

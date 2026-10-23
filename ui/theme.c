@@ -3,6 +3,7 @@
 /*
  * theme.c - EMail's colours (see theme.h).
  */
+#include <string.h>
 #include "ui.h"
 #include "theme.h"
 
@@ -32,6 +33,13 @@ static const short stock[NPEN] = { 1, 9, 9, 8, 1, 12, 12, 2, 12, 11, 14 };
 static short saved[NPEN][3];
 static int set_rgb;
 
+/* with four colours (ST medium: white, black, red, green): VDI's red made
+   blue while EMail runs, for links and unread counts, as is customary */
+#define PEN4_BLUE 2
+static const short blue4[3] = { 0, 0, 930 };
+static short saved4[3];
+static int set4;
+
 void theme_init(void)
 {
 	short i;
@@ -39,6 +47,14 @@ void theme_init(void)
 	colour = opt.colour && planes >= 4;
 	for (i = 0; i < NPEN; i++)
 		pen[i] = i == P_PANEL ? 0 : 1;	/* black and white */
+	if (opt.colour && planes == 2) {
+		short rgb[3];
+		vq_color(vdi_h, PEN4_BLUE, saved4);
+		memcpy(rgb, blue4, sizeof(rgb));
+		vs_color(vdi_h, PEN4_BLUE, rgb);
+		pen[P_ACCENT] = PEN4_BLUE;
+		set4 = 1;
+	}
 	if (!colour)
 		return;
 	if (planes >= 8) {
@@ -61,6 +77,10 @@ void theme_init(void)
 void theme_exit(void)
 {
 	short i;
+	if (set4) {
+		vs_color(vdi_h, PEN4_BLUE, saved4);
+		set4 = 0;
+	}
 	if (!set_rgb)
 		return;
 	for (i = 0; i < NPEN; i++)

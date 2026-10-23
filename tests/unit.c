@@ -171,6 +171,92 @@ static void t_mime(void)
 	}
 }
 
+/* the address link_next finds first in s, or "" */
+static const char *first_link(const char *s)
+{
+	static char out[200];
+	long at, n;
+	out[0] = 0;
+	if (link_next(s, (long)strlen(s), 0, &at, &n) && n < (long)sizeof(out)) {
+		memcpy(out, s + at, n);
+		out[n] = 0;
+	}
+	return out;
+}
+
+static void t_links(void)
+{
+	static const struct { const char *text, *link; } cases[] = {
+		{ "See https://atari.org/news.", "https://atari.org/news" },
+		{ "(at http://example.com/a_(b))!", "http://example.com/a_(b)" },
+		{ "go to www.frogfind.com, then", "www.frogfind.com" },
+		{ "<http://example.com/x?a=1&b=2>", "http://example.com/x?a=1&b=2" },
+		{ "\"HTTP://EXAMPLE.COM\"", "HTTP://EXAMPLE.COM" },
+		{ "write to mailto:dana@example.com?subject=Hi;", "mailto:dana@example.com?subject=Hi" },
+		{ "**https://bold.example/**", "https://bold.example/" },
+		{ "not xhttp://a.b or a.www.b or http:// or www.", "" },
+		{ "\xD6 http://example.com/\xD6", "http://example.com/" },
+		{ "\xD7\xD6\xC3-www.atari.org \xD6", "www.atari.org" },
+	};
+	short k;
+	char *u;
+	for (k = 0; k < (short)(sizeof(cases) / sizeof(cases[0])); k++)
+		CHECK(!strcmp(first_link(cases[k].text), cases[k].link), "link in [%s]: [%s]", cases[k].text,
+		      first_link(cases[k].text));
+	{
+		const char *t = "one http://a.example two www.b.example";
+		long at, n, from = 0, found = 0;
+		while (link_next(t, (long)strlen(t), from, &at, &n)) {
+			found++;
+			from = at + n;
+		}
+		CHECK(found == 2, "two links, got %ld", found);
+	}
+	u = link_url("www.atari.org", 13);
+	CHECK(!strcmp(u, "http://www.atari.org"), "www gets http:// [%s]", u);
+	free(u);
+	CHECK(link_wanted("https://x") && link_wanted("mailto:a@b") && !link_wanted("javascript:x()") &&
+	      !link_wanted("#top") && !link_wanted("http://"), "link_wanted");
+	{
+		const char *h = "<p>Read <a class=x href=\"https://example.com/a?x=1&amp;y=2\">the <b>news</b></a>"
+				" or <A HREF='mailto:dana@example.com'> Dana </A>, not <a href=\"#top\">top</a>"
+				" or <a href=\"javascript:go()\">this</a>.</p><pre>a\r\nb</pre><a href=\"http://x.example\">x";
+		MLINK *lk = 0;
+		short nl = 0;
+		long n;
+		char *t = html_to_text_links(h, strlen(h), &n, &lk, &nl);
+		CHECK(!strcmp(t, "Read the news or Dana , not top or this.\n\na\nbx"), "html links text [%s]", t);
+		CHECK(nl == 3, "three links kept, got %d", nl);
+		if (nl == 3) {
+			CHECK(!strncmp(t + lk[0].at, "the news", lk[0].n) && lk[0].n == 8 &&
+			      !strcmp(lk[0].url, "https://example.com/a?x=1&y=2"), "first link [%.*s] %s",
+			      (int)lk[0].n, t + lk[0].at, lk[0].url);
+			CHECK(!strncmp(t + lk[1].at, "Dana", lk[1].n) && lk[1].n == 4 &&
+			      !strcmp(lk[1].url, "mailto:dana@example.com"), "second link [%.*s] %s",
+			      (int)lk[1].n, t + lk[1].at, lk[1].url);
+			CHECK(lk[2].n == 1 && t[lk[2].at] == 'x', "an unclosed <a> ends with the text");
+		}
+		for (n = 0; n < nl; n++)
+			free(lk[n].url);
+		free(lk);
+		free(t);
+	}
+	{
+		const char *raw = "Subject: links\r\nContent-Type: multipart/mixed; boundary=b\r\n\r\n"
+				  "--b\r\nContent-Type: text/html\r\n\r\n<p>Hi <a href=\"http://one.example\">one</a></p>\r\n"
+				  "--b\r\nContent-Type: text/html\r\n\r\n<p>And <a href=\"http://two.example\">two</a></p>\r\n"
+				  "--b--\r\n";
+		MSG *m = mime_parse(raw, strlen(raw));
+		CHECK(m && m->nlinks == 2, "links of two parts: %d", m ? m->nlinks : -1);
+		if (m && m->nlinks == 2) {
+			CHECK(!strncmp(m->text + m->links[0].at, "one", 3) && !strncmp(m->text + m->links[1].at, "two", 3),
+			      "links where their parts' text is [%s]", m->text);
+			CHECK(!strcmp(m->links[1].url, "http://two.example"), "second part's link %s", m->links[1].url);
+		}
+		mime_free(m);
+	}
+}
+
 static void t_compose(void)
 {
 	ACCOUNT a;
@@ -413,6 +499,7 @@ int main(void)
 	t_inf();
 	t_charset();
 	t_mime();
+	t_links();
 	t_compose();
 	t_bidi();
 	t_tls();

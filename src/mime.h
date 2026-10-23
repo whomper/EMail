@@ -8,6 +8,8 @@
 #ifndef MIME_H
 #define MIME_H
 
+#include "links.h"
+
 #define MIME_MAXPARTS 32
 
 enum { ENC_7BIT, ENC_BASE64, ENC_QP };
@@ -27,6 +29,8 @@ typedef struct {
 	char *text;		/* body to show, lines separated by \n */
 	long textlen;
 	short html;		/* the text came from HTML */
+	short nlinks;		/* the HTML's <a href>s, on text[at..at+n) */
+	MLINK *links;
 	short nparts;
 	MIMEPART parts[MIME_MAXPARTS];
 } MSG;
@@ -47,6 +51,9 @@ long  mime_header_len(const char *raw, long len);
 
 /* Atari text of an HTML document */
 char *html_to_text(const char *html, long n, long *outlen);
+/* the same, with its <a href>s (the ones links.h opens, at most
+   MIME_MAXLINKS) on the text: *links malloc'ed, each url too */
+char *html_to_text_links(const char *html, long n, long *outlen, MLINK **links, short *nlinks);
 
 /* "Name <a@b>" -> a@b and Name parts (Atari text), into caller buffers */
 void  addr_split(const char *addr, char *name, int nsize, char *email, int esize);

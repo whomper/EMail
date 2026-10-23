@@ -100,6 +100,7 @@ typedef struct {
 	char workdir[200];
 	short peoplefile;	/* EContact not loaded: names from its CONTACTS.TXT (guidelines 4.1) */
 	char peopledir[200];	/* EContact's folder, where CONTACTS.TXT is */
+	char browser[200];	/* EWeb's program, started on a link when no browser runs */
 } OPTIONS;
 
 typedef struct {

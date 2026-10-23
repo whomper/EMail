@@ -10,8 +10,8 @@ reads and writes Hebrew.
 - An Atari with TOS 1.04 or newer (TOS 4 on the Falcon), EmuTOS, MagiC or
   MiNT, and a screen of at least 640×200 (ST medium); 640×400 (ST high)
   or the Falcon's 640×480 show three windows side by side
-- 1 MB of memory or more: EMail itself takes about 440 KB, the ST
-  edition (below) about 319 KB, and more memory holds bigger folders. With EContact's accessory loaded, 2 MB or
+- 1 MB of memory or more: EMail itself takes about 450 KB, the ST
+  edition (below) about 326 KB, and more memory holds bigger folders. With EContact's accessory loaded, 2 MB or
   more: on a 1 MB ST the two don't fit together, so there use EContact as
   a program (`ECONTACT.PRG`), between EMail's runs
 - A TCP/IP stack:
@@ -232,7 +232,11 @@ like a modern mail program:
   shows as `» Invitation:` and its title: double-click it to add it to
   ECal (see From other programs). HTML-only mail is shown
   as text. Quoted lines are coloured by how deep they are quoted (light
-  grey in black and white).
+  grey in black and white). **Links** are underlined (and blue, in
+  colour): the addresses written in a message (`http://`, `https://`,
+  `www.`, `mailto:`) and an HTML message's links. Click one to open it:
+  a web address in your browser (see From other programs), a `mailto:`
+  link as a new message. Rest the mouse on a link to see where it goes.
 
 **Drag the dividers** between the panes to size them; the pointer turns
 into a hand over a divider. Drag the box in the bottom right corner to
@@ -264,6 +268,7 @@ folder with thousands of messages opens as quickly as a small one.
 | a folder      | Open, Check for new mail, Mark all as read, Download missing messages, New folder, Rename folder, Delete folder |
 | an account    | Check mail, New message, Edit account, Refresh folder list             |
 | an attachment | Save attachment; an invitation: Add to ECal, Save attachment           |
+| a link        | Open link, Copy link                                                   |
 | the editor    | Send now, Put in Outbox, Attach file, Address book, Hebrew keyboard, Cut line, Copy line, Paste |
 
 Pick with a click, press-drag-release, or the arrow keys and Return;
@@ -385,6 +390,18 @@ or right-click it and choose Add to ECal: EMail writes it as
 dialog opens filled in from it, for you to confirm. ECal must be running
 (the accessory, or alongside under MiNT or MagiC); when it isn't, EMail
 says so, and you can save the invitation instead.
+
+**EWeb**, the AERA web browser, opens the links you click in a message.
+When a browser is running beside EMail (EWeb, or CAB or HighWire; under
+MiNT or MagiC), EMail hands it the link. When none is, as on plain TOS,
+where one program runs at a time, EMail asks: **Open in EWeb** closes
+EMail and starts EWeb on the link (quitting EWeb takes you back to the
+desktop); under MiNT or MagiC, EWeb starts beside EMail instead. **Copy
+link** puts the address on the clipboard. EMail finds `EWEB.PRG` (on an
+ST `EWEBST.PRG`) next to itself; elsewhere it asks you once, with the
+file selector, and keeps it as BROWSER= in EMAIL.INF. A link longer
+than a command line can carry goes to EWeb as `LINK.HTM` in EMail's
+folder, a page that sends it on.
 
 **mail** in EContact opens a new message to the
 person or group you chose. Any program, or a desktop such as Thing,
@@ -558,9 +575,12 @@ works as usual and reaches the server at the next connection. Check mail
 meaning only, as modern mail programs do: the selection in blue, the
 focused pane's title bar dark, unread counts in blue, the flag mark in
 red, dates and header labels in grey, and quoted text in blue, green and
-brown by depth. With 256 colours it sets its own soft shades (and puts
-the palette back when it quits). Settings > Look switches them off;
-monochrome screens look as they always did.
+brown by depth, links in blue. With 256 colours it sets its own soft
+shades (and puts the palette back when it quits). With four (ST medium
+resolution) only links and unread counts are blue: EMail makes the red
+blue while it runs, and red again when it quits. Settings > Look
+switches them off; monochrome screens look as they always did (links
+are underlined).
 
 **Settings** (Options > Settings, Ctrl+,) has six parts in its
 sidebar: **Mail** (checking every few minutes, how many messages to load

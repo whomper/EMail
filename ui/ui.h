@@ -104,6 +104,11 @@ void clip_off(void);
 void *st_ram(long n);		/* a bitmap's room in ST RAM, for the blitter (n <= 512) */
 /* draw up to cols characters of Atari text at x,y (logical order in) */
 void text_at(short x, short y, const char *s, long n, short cols, short flags);
+/* the same, the characters with mark[i] set (logical order) drawn as a
+   link: in the accent colour, underlined */
+void text_marked_at(short x, short y, const char *s, long n, short cols, short flags, const char *mark);
+/* which of s[0..n)'s characters text_at drew in column col: -1 none */
+short text_index(const char *s, long n, short cols, short flags, short col);
 void hline(short x1, short x2, short y);
 void frame(GRECT *r, short color);
 void line_col(short x1, short y1, short x2, short y2, short color);
@@ -141,6 +146,7 @@ extern long cur_rawlen;
 extern unsigned long cur_uid;
 void reader_save_attachment(short i);
 void reader_to_ecal(short i);		/* an invitation to ECal (INVITE.ICS, VA_START) */
+void open_link(const char *url);	/* a link in a message: mailto: here, the web to a browser */
 
 void editor_open(ACCOUNT *a, char *text, const char *in_reply_to, const char *references);
 int  editor_dirty(void);

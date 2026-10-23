@@ -902,7 +902,8 @@ static void part_look(short x, short y)
 	d_tick(x, ROW(0), "Use colours", T_COLOUR);
 	d_add(G_STRING, 0, 0, (long)"on screens with 16 colours or more:", x + 3, ROW(1), 35, 1);
 	d_add(G_STRING, 0, 0, (long)"selection, unread counts, flags,", x + 3, ROW(2), 32, 1);
-	d_add(G_STRING, 0, 0, (long)"quoted text", x + 3, ROW(3), 11, 1);
+	d_add(G_STRING, 0, 0, (long)"quoted text, links; with four", x + 3, ROW(3), 29, 1);
+	d_add(G_STRING, 0, 0, (long)"colours, links in blue", x + 3, ROW(4), 22, 1);
 }
 
 /* EContact's contacts file, when EContact isn't loaded (the guidelines,

@@ -32,7 +32,6 @@ short vdi_h, cw, ch, scr_w, scr_h, desk_x, desk_y, desk_w, desk_h, planes;
 short gl_wchar, gl_hchar;
 short ap_id;
 short hebrew_kbd;
-static short quit;
 static unsigned long last_check;
 
 void folders_init(void);
@@ -326,6 +325,147 @@ static ACCOUNT *account_for_new(void)
 	if (cur_acct)
 		return cur_acct;
 	return dlg_pick_account("Write from which account?");
+}
+
+/* ---------------- links (reader.c) ---------------- */
+
+static short quit;
+
+/* a link too long for a command line or VA_START: LINK.HTM in EMail's
+   folder, a page that sends the browser on to it (a meta refresh) */
+static const char *link_page(const char *url)
+{
+	static char path[220];
+	SBUF b;
+	const char *p;
+	int ok;
+	path_join(path, sizeof(path), opt.workdir, "LINK.HTM");
+	sb_init(&b);
+	sb_adds(&b, "<html><head><meta http-equiv=\"refresh\" content=\"0;url=");
+	for (p = url; *p; p++) {
+		if (*p == '&')
+			sb_adds(&b, "&amp;");
+		else if (*p == '"')
+			sb_adds(&b, "&quot;");
+		else
+			sb_addc(&b, *p);
+	}
+	sb_adds(&b, "\"></head><body></body></html>\r\n");
+	ok = b.s && pf_save(path, b.s, b.len) >= 0;
+	sb_free(&b);
+	return ok ? path : 0;
+}
+
+/* EWeb's program: the one EMail was told, else beside EMail, else
+   asked for once (and kept in EMAIL.INF) */
+static int find_browser(char *out, int size)
+{
+#ifdef MAIL_ST
+	static const char *const names[2] = { "EWEBST.PRG", "EWEB.PRG" };
+#else
+	static const char *const names[2] = { "EWEB.PRG", "EWEBST.PRG" };
+#endif
+	char path[200], name[16];
+	short button = 0, k;
+	char *e;
+	if (opt.browser[0] && pf_exists(opt.browser)) {
+		str_copy(out, opt.browser, size);
+		return 1;
+	}
+	for (k = 0; k < 2; k++) {
+		path_join(out, size, opt.workdir, names[k]);
+		if (pf_exists(out))
+			return 1;
+	}
+	str_copy(path, opt.workdir[0] ? opt.workdir : "C:", sizeof(path) - 4);
+	strcat(path, "\\*.PRG");
+	strcpy(name, names[0]);
+	if (!fsel_exinput(path, name, &button, "Where is EWeb (EWEB.PRG)?") || !button || !name[0])
+		return 0;
+	if ((e = strrchr(path, '\\')) != 0)
+		e[1] = 0;
+	str_copy(out, path, size);
+	strncat(out, name, size - strlen(out) - 1);
+	if (!pf_exists(out))
+		return 0;
+	str_copy(opt.browser, out, sizeof(opt.browser));
+	store_save_settings();
+	return 1;
+}
+
+/* EWeb started on url: beside EMail where the AES runs both (MagiC,
+   MultiTOS, XaAES); on plain TOS in its place, once EMail has quit */
+static void start_browser(const char *url)
+{
+	int multi = get_cookie(0x4D616758L) != 0 ||				/* MagX */
+		    (get_cookie(0x4D694E54L) != 0 && aes_version() >= 0x0400);	/* MiNT */
+	char prg[200], tail[128], dir[200], *e;
+	const char *arg = url;
+	short r, len;
+	r = alert(1, multi ? "[2][No web browser is running.|Start EWeb on this link?][Open in EWeb|Copy link|Cancel]"
+			   : "[2][No web browser is running.|EMail can close and start|EWeb on this link.]"
+			     "[Open in EWeb|Copy link|Cancel]");
+	if (r == 2) {
+		main_status(clip_put(url, (long)strlen(url)) ? "The link is on the clipboard." :
+							       "Couldn't write the clipboard.");
+		return;
+	}
+	if (r != 1 || !find_browser(prg, sizeof(prg)))
+		return;
+	if (!multi && editor_dirty() &&
+	    alert(2, "[2][You are still writing a message.|Quit anyway?][Quit|Cancel]") != 1)
+		return;
+	/* a command line holds 125 characters: a longer link goes by a page */
+	if (strlen(url) > 120 && !(arg = link_page(url))) {
+		alert(1, "[1][Can't write LINK.HTM|in EMail's folder.][ OK ]");
+		return;
+	}
+	len = (short)strlen(arg);
+	tail[0] = (char)len;
+	memcpy(tail + 1, arg, len + 1);
+	/* EWeb keeps its files in the folder it starts in: that one */
+	str_copy(dir, prg, sizeof(dir));
+	if ((e = strrchr(dir, '\\')) != 0)
+		e[1] = 0;
+	if (dir[0] && dir[1] == ':') {
+		Dsetdrv((dir[0] & ~0x20) - 'A');
+		Dsetpath(dir + 2);
+	}
+	if (!shel_write(1, 1, 0, prg, tail)) {
+		alert(1, "[1][Couldn't start|%s.][ OK ]", prg);
+		return;
+	}
+	if (multi) {
+		main_status("EWeb is starting on the link.");
+	} else {
+		main_status("Quitting: EWeb starts on the link.");
+		quit = 1;
+	}
+}
+
+/* a link in a message: mailto: starts a new message; a web address goes
+   to the browser running (EWeb, CAB, HighWire), else EWeb is offered */
+void open_link(const char *url)
+{
+	const char *arg = url;
+	if (!strncasecmp(url, "mailto:", 7)) {
+		ACCOUNT *a;
+		if (!naccts) {
+			alert(1, "[1][Set up your mail account first:|Options > Accounts.][ OK ]");
+			return;
+		}
+		if ((a = account_for_new()) != 0)
+			editor_open(a, compose_mailto(a, url + 7), 0, 0);
+		return;
+	}
+	/* VA_START carries 1 KB */
+	if (strlen(url) > 1000 && !(arg = link_page(url)))
+		arg = url;
+	if (av_send("EWEB|EWEBST|CAB|HIGHWIRE", arg)) {
+		main_status("The link is open in the web browser.");
+		return;
+	}
+	start_browser(url);
 }
 
 /* VA_START (common/ui/av.c), from EContact's mail button, the desktop or

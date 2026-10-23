@@ -286,11 +286,93 @@ static int tag_is(const char *t, long tl, const char *name)
 	return tl >= n && !strncasecmp(t, name, n) && (tl == n || !isalnum((u8)t[n]));
 }
 
+/* an <a>'s href (the tag's text t[0..tl) after "<"), when it is an
+   address the reader opens; &amp; in it is "&". malloc'ed, or NULL */
+static char *href(const char *t, long tl)
+{
+	long i, e, k = 0;
+	char *u;
+	for (i = 1; i + 4 <= tl; i++)
+		if ((t[i - 1] == ' ' || t[i - 1] == '\t' || t[i - 1] == '\n' || t[i - 1] == '\r') &&
+		    !strncasecmp(t + i, "href", 4))
+			break;
+	if (i + 4 > tl)
+		return 0;
+	for (i += 4; i < tl && (t[i] == ' ' || t[i] == '\t' || t[i] == '\n' || t[i] == '\r'); i++)
+		;
+	if (i >= tl || t[i] != '=')
+		return 0;
+	for (i++; i < tl && (t[i] == ' ' || t[i] == '\t' || t[i] == '\n' || t[i] == '\r'); i++)
+		;
+	if (i < tl && (t[i] == '"' || t[i] == '\'')) {
+		char q = t[i++];
+		for (e = i; e < tl && t[e] != q; e++)
+			;
+	} else {
+		for (e = i; e < tl && t[e] != ' ' && t[e] != '\t' && t[e] != '\n' && t[e] != '\r'; e++)
+			;
+	}
+	while (i < e && (u8)t[i] <= ' ')
+		i++;
+	while (e > i && (u8)t[e - 1] <= ' ')
+		e--;
+	if (!(u = malloc(e - i + 1)))
+		return 0;
+	while (i < e) {
+		if (t[i] == '&' && e - i >= 5 && !strncasecmp(t + i, "&amp;", 5)) {
+			u[k++] = '&';
+			i += 5;
+		} else if (t[i] == '&' && e - i >= 5 && !strncmp(t + i, "&#38;", 5)) {
+			u[k++] = '&';
+			i += 5;
+		} else if ((u8)t[i] > ' ') {
+			u[k++] = t[i++];
+		} else {
+			i++;
+		}
+	}
+	u[k] = 0;
+	if (!link_wanted(u)) {
+		free(u);
+		return 0;
+	}
+	return u;
+}
+
+/* the link of an <a> ends at the text's end b->len: kept when there is
+   text on it, its blanks left out */
+static void link_end(SBUF *b, MLINK **lk, short *nlk, long at, char *url)
+{
+	long e = b->len;
+	MLINK *more = 0;
+	while (at < e && (b->s[at] == ' ' || b->s[at] == '\n'))
+		at++;
+	while (e > at && (b->s[e - 1] == ' ' || b->s[e - 1] == '\n'))
+		e--;
+	if (e <= at || *nlk >= MIME_MAXLINKS ||
+	    (!(*nlk & 15) && !(more = realloc(*lk, (*nlk + 16) * sizeof(MLINK))))) {
+		free(url);
+		return;
+	}
+	if (!(*nlk & 15))
+		*lk = more;
+	(*lk)[*nlk].at = at;
+	(*lk)[*nlk].n = e - at;
+	(*lk)[*nlk].url = url;
+	(*nlk)++;
+}
+
 char *html_to_text(const char *h, long n, long *outlen)
 {
+	return html_to_text_links(h, n, outlen, 0, 0);
+}
+
+char *html_to_text_links(const char *h, long n, long *outlen, MLINK **lk, short *nlk)
+{
 	SBUF b;
-	long i = 0;
+	long i = 0, link_at = 0;
 	short skip = 0, pre = 0, space = 0, nl = 2;
+	char *link = 0;		/* the <a href> open, from link_at */
 	sb_init(&b);
 
 	while (i < n) {
@@ -326,6 +408,13 @@ char *html_to_text(const char *h, long n, long *outlen)
 			}
 			if (skip)
 				continue;
+			if (tag_is(t, tl, "a")) {
+				if (lk && link)
+					link_end(&b, lk, nlk, link_at, link);
+				link = lk && !close ? href(t, tl) : 0;
+				link_at = b.len;
+				continue;
+			}
 			if (tag_is(t, tl, "pre")) {
 				pre = !close;
 				continue;
@@ -417,6 +506,10 @@ char *html_to_text(const char *h, long n, long *outlen)
 			i++;
 			continue;
 		}
+		if (c == '\r') {		/* <pre>'s: the text's lines end '\n' */
+			i++;
+			continue;
+		}
 		if (space && nl == 0)
 			sb_addc(&b, ' ');
 		space = 0;
@@ -424,6 +517,8 @@ char *html_to_text(const char *h, long n, long *outlen)
 		nl = c == '\n' ? nl + 1 : 0;
 		i++;
 	}
+	if (link)
+		link_end(&b, lk, nlk, link_at, link);
 	/* trim trailing blank lines */
 	while (b.len && (b.s[b.len - 1] == '\n' || b.s[b.len - 1] == ' '))
 		b.s[--b.len] = 0;
@@ -453,7 +548,7 @@ static char *decode_body(const char *body, long n, short enc, long *outlen)
 
 static void add_text(WALK *w, const char *body, long n, short enc, const char *charset, int html)
 {
-	long dl, al, tl;
+	long dl, al, tl, base;
 	char *dec = decode_body(body, n, enc, &dl), *at, *txt, *s, *d;
 	if (!dec)
 		return;
@@ -462,9 +557,27 @@ static void add_text(WALK *w, const char *body, long n, short enc, const char *c
 	if (!at)
 		return;
 	if (html) {
-		txt = html_to_text(at, al, &tl);
+		MLINK *lk = 0;
+		short nlk = 0, k;
+		txt = html_to_text_links(at, al, &tl, &lk, &nlk);
 		free(at);
 		w->m->html = 1;
+		/* its links, where the text goes (it has no CRs to drop) */
+		base = w->text.len + (w->text.len && tl ? 2 : 0);
+		for (k = 0; k < nlk; k++) {
+			MLINK *more = 0;
+			if (!txt || w->m->nlinks >= MIME_MAXLINKS ||
+			    (!(w->m->nlinks & 15) &&
+			     !(more = realloc(w->m->links, (w->m->nlinks + 16) * sizeof(MLINK))))) {
+				free(lk[k].url);
+				continue;
+			}
+			if (more)
+				w->m->links = more;
+			w->m->links[w->m->nlinks] = lk[k];
+			w->m->links[w->m->nlinks++].at += base;
+		}
+		free(lk);
 	} else {
 		txt = at;
 		tl = al;
@@ -744,6 +857,9 @@ void mime_free(MSG *m)
 	free(m->in_reply_to);
 	free(m->list_post);
 	free(m->text);
+	for (i = 0; i < m->nlinks; i++)
+		free(m->links[i].url);
+	free(m->links);
 	for (i = 0; i < m->nparts; i++) {
 		free(m->parts[i].name);
 		free(m->parts[i].type);

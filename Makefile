@@ -48,7 +48,7 @@ BSSLCF  := -m68030 -O2 -fomit-frame-pointer -ffreestanding -fno-builtin -fno-pic
 BSSLOBJ  = $(patsubst $(BSSL)/src/%.c,$(OBJDIR)/bssl/%.o,$(BSSLSRC))
 HBSSLOBJ = $(patsubst $(BSSL)/src/%.c,$(OBJDIR)/hbssl/%.o,$(BSSLSRC))
 
-CORE    := util charset mime conn tls imap pop3 smtp store compose mail futil bidi secret ctime tz
+CORE    := util charset mime links conn tls imap pop3 smtp store compose mail futil bidi secret ctime tz
 ATARI   := libc tos plat_tos net_tos sting gem dsprsa crash bigbuf
 UI      := main draw win folders list reader editor dialogs popup font fontsel about dsp theme help av alert mbar aboutbox iconify clip clipedit dd busy people_ask dialog field av_people people_file
 
@@ -183,6 +183,14 @@ $(OBJDIR)/fakecal.acc: tests/atari/fakecal.c $(addprefix $(OBJDIR)/,$(addsuffix 
 	$(CC) $(LDFLAGS) -o $(OBJDIR)/fakecal.elf $(OBJDIR)/fakecal.o \
 		$(addprefix $(OBJDIR)/,$(addsuffix .o,$(FAKECAL))) $(OBJDIR)/nf.o -lgcc
 	python3 common/tools/elf2tos.py $(OBJDIR)/fakecal.elf $@
+
+# a stand-in for a web browser (EWeb's VA_START), for tests/hatari/link_test.py
+# (never released)
+$(OBJDIR)/fakeweb.acc: tests/atari/fakeweb.c $(addprefix $(OBJDIR)/,$(addsuffix .o,$(FAKECAL))) $(OBJDIR)/nf.o
+	$(CC) $(CFLAGS) -c -o $(OBJDIR)/fakeweb.o $<
+	$(CC) $(LDFLAGS) -o $(OBJDIR)/fakeweb.elf $(OBJDIR)/fakeweb.o \
+		$(addprefix $(OBJDIR)/,$(addsuffix .o,$(FAKECAL))) $(OBJDIR)/nf.o -lgcc
+	python3 common/tools/elf2tos.py $(OBJDIR)/fakeweb.elf $@
 
 $(OBJDIR) $(STDIR) binary:
 	mkdir -p $@
