@@ -473,6 +473,11 @@ out=$(run clearcache)
 out=$(run show 1 INBOX "$U4")
 expect "body downloaded again after clearing the cache" "שלום דנה," "$out"
 
+# EMAILCHK.ACC's look (src/newmail.c): what EMail would show as new,
+# changing nothing. POP3: the messages not downloaded yet
+out=$(run newmail 2)
+expect "checker: POP3, the messages EMail hasn't downloaded" "^newmail: 2 fresh=1" "$out"
+expect "checker: POP3, told once" "^again: 2 fresh=0" "$out"
 out=$(run check 2)
 expect "POP3 downloads the inbox" "new: 2" "$out"
 out=$(run check 2)
@@ -485,6 +490,33 @@ expect "POP3 message readable" "שלום דנה," "$out"
 out=$(run delete 2 Inbox "$P1")
 out=$(run list 2 Trash)
 expect "POP3 delete goes to the local Trash" "תשובה" "$out"
+out=$(run newmail 2)
+expect "checker: POP3, nothing new after EMail downloaded it" "^newmail: 0 fresh=0" "$out"
+
+# IMAP: the unread messages that came after EMail's last look at the
+# Inbox (its INDEX.DAT), and nothing is marked read or changed
+run sync 1 INBOX >/dev/null
+out=$(run newmail 1)
+expect "checker: IMAP, nothing new after EMail synced" "^newmail: 0 fresh=0" "$out"
+python3 - $IMAP <<'PY2'
+import imaplib, sys
+m = imaplib.IMAP4("127.0.0.1", int(sys.argv[1]))
+m.login("dana", "secret")
+m.append("INBOX", "()", None, b"From: avi@example.com\r\nSubject: Checker 1\r\n\r\none\r\n")
+m.append("INBOX", "(\\Seen)", None, b"From: avi@example.com\r\nSubject: Read elsewhere\r\n\r\nread\r\n")
+m.append("INBOX", "()", None, b"From: avi@example.com\r\nSubject: Checker 2\r\n\r\ntwo\r\n")
+m.logout()
+PY2
+idx=$(md5sum "$W"/EMAIL/ACCT1/*/INDEX.DAT | md5sum)
+out=$(run newmail 1)
+expect "checker: IMAP, two unread came (one read elsewhere doesn't count)" "^newmail: 2 fresh=1" "$out"
+expect "checker: IMAP, told once" "^again: 2 fresh=0" "$out"
+[ "$idx" = "$(md5sum "$W"/EMAIL/ACCT1/*/INDEX.DAT | md5sum)" ] && { PASS=$((PASS+1)); echo "ok   checker: EMail's files left as they were"; } \
+  || { FAIL=$((FAIL+1)); echo "FAIL checker changed EMail's indexes"; }
+out=$(run check 1)
+expect "checker: EMail still finds them new" "new: 2" "$out"
+out=$(run newmail 1)
+expect "checker: IMAP, nothing new once EMail has them" "^newmail: 0 fresh=0" "$out"
 
 # Send now: straight from memory. An IMAP account writes nothing to the
 # disk (the copy goes to the server's Sent); SEED.DAT is Falcon mode's

@@ -66,6 +66,12 @@ C:\EMAIL\EMAIL\SEED.DAT  randomness kept for a Direct connection's encryption
 
 Start it. The first time, EMail asks for your account.
 
+`EMAILCHK.ACC`, EMail check, is a desk accessory that tells you when new
+mail has come while EMail isn't running. It goes in the root of the
+boot drive (`C:\EMAILCHK.ACC`), with its settings beside it
+(`C:\EMAILCHK.INF`); leave it out if you don't want it. See [New mail
+while EMail isn't running](#new-mail-while-email-isnt-running).
+
 This guide is also in `EMAIL.HYP`, a hypertext: with EHypView, ST-Guide
 or HypView running (as an accessory, or as a program under MultiTOS or
 MagiC), the Help key or **Help > EMail help** opens it, from next to
@@ -427,6 +433,51 @@ jinnee or Gemini, can do the same with the AV protocol's VA_START:
 Under MultiTOS, MagiC or XaAES you can also drag files onto EMail's
 windows to attach them, or drag text from another program: it goes into
 the message being written at the cursor, or starts a new message.
+
+## New mail while EMail isn't running
+
+**EMail check** (`EMAILCHK.ACC`, in the release beside `EMAIL.PRG`) is
+a small desk accessory that looks for new mail while EMail isn't
+running. Copy it to the root of the boot drive (`C:\`), with the other
+accessories, and restart the Atari. It takes about 200 KB, and about
+430 KB on a TT or Falcon that checks over a Direct connection (`TLS.OVL`
+is loaded into its memory then); it measures what it needs and takes
+that at the next start (MEMKB= in `EMAILCHK.INF`).
+
+It reads EMail's own settings, so there is nothing to set up twice: the
+accounts and passwords in `EMAIL.INF`, the Direct connection or the
+gateway, and the time between checks, "Check for new mail every ...
+minutes" in Options > Settings > Mail (CHECK= in `EMAIL.INF`; when it is
+0, the accessory doesn't check on its own either). It changes nothing of
+EMail's, here or on the server: nothing is downloaded or marked read.
+
+The first time, open it from the Desk menu (**EMail check**): it asks
+where EMail is, and you choose `EMAIL.PRG` in the file selector. It
+keeps the folder in `C:\EMAILCHK.INF` (on the boot drive). From then on
+it checks a minute after the Atari starts, and then as often as EMail
+would, only while you aren't moving the mouse or typing (a Direct
+connection's handshake holds the Atari for a second or more).
+
+New mail is what EMail would show as new when you start it: the unread
+messages that came into the Inbox of each account since EMail last
+looked (for POP3, the ones EMail hasn't downloaded yet). When some has
+come, it tells you:
+
+> 2 new messages in the Inbox. Start EMail to read them.
+
+With more than one account it says how many in each. You are told again
+when more mail comes, not about the same messages. While EMail runs,
+the accessory leaves the checking to it, and counts the time from when
+EMail quits.
+
+**Open EMail.** Under MagiC or MiNT, or with a desktop that speaks the
+AV protocol (Thing, TeraDesk, Gemini, jinnee), the box asks "Open
+EMail?", and **Open** starts it. TOS's own desktop, and EmuTOS's, can't
+be asked by an accessory to start a program, so there it only tells
+you; start EMail from the desktop as always.
+
+From the Desk menu it says when it last looked and what it found, with
+**Check now** and **About**.
 
 ## Copy and paste
 

@@ -57,7 +57,7 @@ HDRS    := $(wildcard src/*.h atari/*.h atari/include/*.h ui/*.h \
            common/src/*.h common/atari/*.h common/atari/include/*.h common/ui/*.h common/dsp/*.h)
 
 # what goes onto the Atari: binary/ (built, never committed)
-all: binary/EMAIL.PRG binary/TLS.OVL binary/ROOTS.DAT
+all: binary/EMAIL.PRG binary/EMAILCHK.ACC binary/TLS.OVL binary/ROOTS.DAT
 
 binary/EMAIL.PRG: $(OBJDIR)/mail.elf common/tools/elf2tos.py | binary
 	PRGFLAGS=7 python3 common/tools/elf2tos.py $< $@
@@ -113,6 +113,25 @@ $(OBJDIR)/crash_s.o: common/atari/crash.S | $(OBJDIR)
 $(OBJDIR)/nf.o: common/atari/nf.S | $(OBJDIR)
 	$(CC) -m68000 -c -o $@ $<
 
+# EMAILCHK.ACC, "EMail check" (ui/emailchk.c): the accessory that looks
+# for new mail while EMail isn't running. EMail's mail core without the
+# windows, with its own few drawing calls for the shared About box and
+# alerts. Its own objects (build/chk), each function in a section of its
+# own, so the linker leaves out what the accessory never calls; a stack
+# of 24 KB (EMail's most was 15 KB, a TLS handshake on the 68030)
+CHKDIR  := build/chk
+CHKOBJ  := sting_s nf util charset mime links conn imap pop3 store newmail futil bidi secret ctime tz \
+           ovl libc tos plat_tos net_tos sting gem tls_ovl bigbuf \
+           emailchk dsp_ovl av alert dialog aboutbox accmem bgwork twin busy field clip clipedit crash crash_s
+binary/EMAILCHK.ACC: FORCE | binary
+	$(MAKE) OBJDIR=$(CHKDIR) TRACECF="-ffunction-sections -fdata-sections" $(CHKDIR)/emailchk.elf
+	PRGFLAGS=7 python3 common/tools/elf2tos.py $(CHKDIR)/emailchk.elf $@
+$(OBJDIR)/emailchk.elf: $(OBJDIR)/crt0chk.o $(addprefix $(OBJDIR)/,$(addsuffix .o,$(CHKOBJ))) $(OBJDIR)/build.o common/atari/link.ld
+	$(CC) $(LDFLAGS) -Wl,--gc-sections -o $@ $(OBJDIR)/crt0chk.o $(addprefix $(OBJDIR)/,$(addsuffix .o,$(CHKOBJ))) \
+		$(OBJDIR)/build.o -lgcc
+$(OBJDIR)/crt0chk.o: common/atari/crt0.S | $(OBJDIR)
+	$(CC) -m68000 -DSTACK_SIZE=24576 -c -o $@ $<
+
 # EMail saying on the emulator's console what each pane draws ("DRAW
 # list y h", "COPY list ..."), for tests/hatari/scroll_test.py (never
 # released): its own objects, so binary/ is left as it is
@@ -160,7 +179,7 @@ HOSTCC     ?= cc
 HOSTCFLAGS := -O1 -g -Wall -Wextra -Wno-unused-parameter -Wno-sign-compare \
               -Wno-format-truncation -Isrc -Icommon/src -fsanitize=address,undefined
 # each core file is the app's own (src/) or shared (common/src/)
-HOSTSRC    := $(foreach m,$(CORE) tls,$(firstword $(wildcard src/$(m).c common/src/$(m).c))) \
+HOSTSRC    := $(foreach m,$(CORE) newmail tls,$(firstword $(wildcard src/$(m).c common/src/$(m).c))) \
               tests/host/plat_posix.c tests/host/version.c
 HOSTLIB    := $(OBJDIR)/libbearssl-host.a
 
@@ -245,7 +264,7 @@ binary/EMAIL.HYP: docs/GUIDE.md tools/mkhelp.py VERSION docs/front.json docs/hel
 
 # a release's files: each one in dist/, and all of them in
 # dist/EMAIL-x.y.zip (the icons in icons/), for the release workflow
-DIST    := binary/EMAIL.PRG binary/TLS.OVL binary/CACERT.PEM binary/ROOTS.DAT binary/EMAIL.HYP binary/EMAIL.REF
+DIST    := binary/EMAIL.PRG binary/EMAILCHK.ACC binary/TLS.OVL binary/CACERT.PEM binary/ROOTS.DAT binary/EMAIL.HYP binary/EMAIL.REF
 ICONS   := icons/EMAIL.RSC icons/EMAILNV.RSC icons/EMAIL.ICN icons/EMAILMK.ICN
 dist: all help
 	rm -rf dist

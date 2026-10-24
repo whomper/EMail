@@ -69,7 +69,8 @@ These come from AERA-Atari's repo template and are the same in every app's CLAUD
   builds the help file with the version; no rigs, itest or real-TOS run.
   A change to the docs alone needs no release of its own: it goes out
   with the next one.
-- **A release** carries `EMAIL.PRG` (one program for every Atari), `TLS.OVL` (common's, copied as it
+- **A release** carries `EMAIL.PRG` (one program for every Atari), `EMAILCHK.ACC` (EMail check, the
+  new-mail accessory: `ui/emailchk.c`, `src/newmail.c`), `TLS.OVL` (common's, copied as it
   is, never built here: guidelines 7.4), `EMAIL.HYP` and `.REF` (hcp from `common/tools/build-hcp.sh`),
   `CACERT.PEM`, `ROOTS.DAT` and the icon. The icons are committed in `icons/` (`make icons`).
 - The help file's front page (guidelines 4.3) is `docs/front.json`, laid out by
@@ -82,7 +83,8 @@ These come from AERA-Atari's repo template and are the same in every app's CLAUD
   `make` with no warnings. When the GEM side changes,
   `tests/hatari/net_test.py`, `tests/hatari/stop_test.py` and
   `tests/hatari/disk_test.py` (each job's opens within its budget,
-  guidelines 6.5) in Hatari with EmuTOS. With EContact: `econtact_test.py` (its latest release);
+  guidelines 6.5) in Hatari with EmuTOS; `emailchk_test.py` when the
+  accessory or `src/newmail.c` changes. With EContact: `econtact_test.py` (its latest release);
   the help file: `help_test.py` (EHypView's latest release).
 - `gateway/` is a read-only copy of
   [AERA-Gateway](https://github.com/whomper/AERA-Gateway)'s (emailgate,

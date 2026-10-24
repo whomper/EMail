@@ -28,6 +28,7 @@
 #include <string.h>
 #include "plat.h"
 #include "store.h"
+#include "newmail.h"
 #include "mail.h"
 #include "mime.h"
 #include "compose.h"
@@ -95,7 +96,24 @@ int main(int argc, char **argv)
 		folders_load(a);
 	}
 
-	if (!strcmp(cmd, "check") && a) {
+	if (!strcmp(cmd, "newmail") && a) {
+		/* EMAILCHK.ACC's look: what EMail would show as new, twice,
+		   as the accessory checks again (the second says if it is news) */
+		NEWMAIL nm;
+		char err[200];
+		memset(&nm, 0, sizeof(nm));
+		if (!newmail_count(a, &nm, err, sizeof(err))) {
+			fprintf(stderr, "error: newmail: %s\n", err);
+			return 1;
+		}
+		printf("newmail: %ld fresh=%d\n", nm.count, newmail_fresh(&nm));
+		newmail_told(&nm);
+		if (!newmail_count(a, &nm, err, sizeof(err))) {
+			fprintf(stderr, "error: newmail: %s\n", err);
+			return 1;
+		}
+		printf("again: %ld fresh=%d\n", nm.count, newmail_fresh(&nm));
+	} else if (!strcmp(cmd, "check") && a) {
 		long n = 0;
 		if (!mail_check(a, &n))
 			return fail("check");

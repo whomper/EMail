@@ -18,6 +18,8 @@ An e-mail program for the Atari ST, STE, TT and Falcon, written in C for GEM.
 - **Many messages at once:** select several and mark them read or unread, flag, move or delete them
   together.
 - **Folders:** create, rename and delete; an alphabetical folder picker for moving messages.
+- **New mail while EMail isn't running:** EMail check (`EMAILCHK.ACC`), a small desk accessory, looks
+  in each account's Inbox as often as EMail would and says how many new messages have come.
 - **Links that open:** web addresses and an HTML message's links are underlined; a click opens one in
   EWeb (or CAB or HighWire), a `mailto:` one as a new message.
 - **Modern but Atari:** one window with draggable panes, right-click menus, colour on 16- and 256-colour
@@ -40,6 +42,7 @@ one is there on its own, and all of them together in `EMAIL-x.y.zip`.
 | `EMAIL.HYP`, `EMAIL.REF` | the user guide for EHypView or ST-Guide, opened by the Help key |
 | `EMAIL.RSC`, `EMAIL.ICN`, `EMAILMK.ICN` | the desktop icon, on their own and in the zip's `icons/` folder (see [The desktop icon](docs/GUIDE.md#the-desktop-icon)): `EMAIL.RSC` under TOS, EmuTOS, or NVDI with TOS's palette loaded (COLORVDI) |
 | `EMAILNV.RSC` | the same desktop icon for NVDI with its own palette, where the 256-colour image is drawn in NVDI's colours |
+| `EMAILCHK.ACC` | EMail check: the desk accessory that looks for new mail while EMail isn't running (optional, see [New mail while EMail isn't running](docs/GUIDE.md#new-mail-while-email-isnt-running)) |
 | `EMAIL-x.y.zip` | all of the above |
 
 1. Copy `EMAIL.PRG` to any folder on any drive, with `EMAIL.HYP` and
@@ -73,7 +76,10 @@ one is there on its own, and all of them together in `EMAIL-x.y.zip`.
 3. Start EMail and fill in your account in **Options > Accounts**: the Pi's IP address (`PI_IP`;
    `aera-gateway` prints it) as the server, port 143 for IMAP (110 for POP3) and 587 for SMTP, and your
    login (Gmail, iCloud, Yahoo and Fastmail need an app password).
-4. Press **Help** in EMail for the [user guide](docs/GUIDE.md); it describes everything else.
+4. Optionally, copy `EMAILCHK.ACC` to the root of the boot drive (`C:\`) and restart: open **EMail
+   check** from the Desk menu once and show it `EMAIL.PRG`. From then on it tells you when new mail has
+   come while EMail isn't running (under MagiC, MiNT or an AV desktop such as Thing, it offers to open EMail).
+5. Press **Help** in EMail for the [user guide](docs/GUIDE.md); it describes everything else.
 
 On a Falcon or TT with 4 MB you can skip the Pi: copy `TLS.OVL`, `CACERT.PEM` and `ROOTS.DAT` next to
 `EMAIL.PRG` and switch on **Options > Direct connection**. EMail fills in the servers for the big providers.
@@ -182,7 +188,7 @@ emulation; details in [tools/tlsbench](tools/tlsbench/README.md).
 
 ```sh
 sudo apt install gcc-m68k-linux-gnu python3   # Debian/Ubuntu; no MiNTLib needed
-make                          # binary/EMAIL.PRG, TLS.OVL (common's, as it is), CACERT.PEM and ROOTS.DAT
+make                          # binary/EMAIL.PRG, EMAILCHK.ACC, TLS.OVL (common's, as it is), CACERT.PEM and ROOTS.DAT
 make test                     # unit tests on this computer, the fuzz inputs again, the gateway's tests
 make itest                    # against a local Dovecot and a test SMTP server
 make help HCP=/path/to/hcp    # binary/EMAIL.HYP and EMAIL.REF from docs/GUIDE.md
@@ -221,7 +227,7 @@ dsp_rsa_prog`). Like everything in `common/`, change it in AERA-Atari (below).
 src/      the mail core: IMAP, POP3, SMTP, MIME, the local store, composing, mail operations
           (also built for this computer in the tests)
 ui/       the GEM program: windows, drawing, the folder and message lists, the reader, the editor,
-          dialogs, fonts
+          dialogs, fonts; emailchk.c is EMAILCHK.ACC, with src/newmail.c (what is new in an Inbox)
 atari/    EMail's own part of the TOS runtime: files, folders and time (plat_tos.c)
 common/   code shared with the other AERA programs, from AERA-Atari: the TOS runtime (start-up,
           system calls, a small C library, AES/VDI, TCP over STinG/STiK or MiNTnet with a DNS
@@ -274,6 +280,7 @@ tests/hatari/people_file_test.py /tmp/mail-pf      # EContact's CONTACTS.TXT wit
 make build/fakecal.acc && tests/hatari/invite_test.py /tmp/mail-inv   # an invitation to (a stand-in for) ECal
 tests/hatari/invite_test.py /tmp/mail-inv Falcon ECal  # the same with ECal's latest release, its New Event saved
 tests/hatari/help_test.py /tmp/mail-help           # EMAIL.HYP in EHypView's latest release
+tests/hatari/emailchk_test.py /tmp/mail-chk        # EMAILCHK.ACC: new mail told at the desktop, none while EMail runs
 AERA_WITH_NVDI=1 tests/hatari/font_test.py /tmp/mail-font   # a GDOS font under NVDI (Falcon, Falcon-4)
 tests/hatari/net_test.py /tmp/mail-st ST-1         # the same EMAIL.PRG on a 1 MB ST, through the gateway
 make build/trace/EMAIL.PRG && tests/hatari/scroll_test.py /tmp/mail-scroll   # what the panes draw while scrolling and choosing
