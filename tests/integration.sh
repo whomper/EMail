@@ -180,7 +180,7 @@ expect "windows-1255 subject decoded" "מכתב" "$out"
 expect "attachment marker on the multipart message" "@" "$out"
 U1=$(uid_of "$out" "שלום")
 out=$(run show 1 INBOX "$U1")
-expect "plain text part shown (not HTML)" "שלום 1990" "$out"
+expect "the HTML part shown (as text)" "שלום 1990" "$out"
 expect "attachment with RFC 2231 Hebrew name" "Attachment: ת.png" "$out"
 out=$(run list 1 INBOX)
 expect "reading marks the message seen" "^$U1	 " "$out"
