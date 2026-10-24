@@ -618,8 +618,12 @@ static void show_page(short p, int draw)
 			tree[i].ob_flags &= ~EDITABLE;
 		}
 	}
-	for (i = 1; i <= npages; i++)
-		tree[page_tab[i]].ob_state = i == p ? SELECTED : 0;
+	/* the chosen page in a black bar, white words (5.6: not SELECTED,
+	   which the 3D look draws as pressed in) */
+	for (i = 1; i <= npages; i++) {
+		tree[page_tab[i]].ob_state = 0;
+		((TEDINFO *)tree[page_tab[i]].ob_spec)->te_color = i == p ? 0x1071 : 0x1180;
+	}
 	if (draw) {
 		short x, y, k;
 		for (k = 1; k <= npages; k++) {

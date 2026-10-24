@@ -23,7 +23,9 @@ The console lines ("EMAILCHK checked ...") say what each check found.
 
 With "direct" after the machine, the account is a Direct connection
 (FALCON=1, IMAPS with the test certificate the root it trusts): the
-accessory loads TLS.OVL into its own memory and does TLS itself.
+accessory loads TLS.OVL into its own memory and does TLS itself. That
+memory is taken only in TT RAM (Falcon, TT; not Falcon-4, where such an
+account is left unchecked and the check says why).
 
     emailchk_test.py WORKDIR [MACHINE] [direct]
 """

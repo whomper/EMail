@@ -89,7 +89,7 @@ as they are. Coming from 1.55 or before on an ST, delete `EMAILST.PRG`: `EMAIL.P
 
 **Needs:** TOS 1.04 or newer (TOS 4 on the Falcon), EmuTOS, MagiC or MiNT; 640×200 (ST medium) or
 larger; 1 MB of memory (EMail itself takes about 332 KB, and about 140 KB more on a TT or Falcon while
-`TLS.OVL` is loaded for a Direct connection; more memory holds bigger folders), 2 MB or more with
+`TLS.OVL` is loaded for a Direct connection; more memory holds bigger folders; the accessory EMail check about 180 KB more), 2 MB or more with
 EContact's accessory (on a 1 MB ST, use EContact as a program, `ECONTACT.PRG`); network: STinG (or STiK), MiNTnet or
 MagiC-Net; for providers that need encryption (nearly all), the Pi gateway or a Direct connection (a
 Falcon or TT, a 68020 or better, with 4 MB or more).

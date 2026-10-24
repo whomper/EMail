@@ -439,10 +439,19 @@ the message being written at the cursor, or starts a new message.
 **EMail check** (`EMAILCHK.ACC`, in the release beside `EMAIL.PRG`) is
 a small desk accessory that looks for new mail while EMail isn't
 running. Copy it to the root of the boot drive (`C:\`), with the other
-accessories, and restart the Atari. It takes about 200 KB, and about
-430 KB on a TT or Falcon that checks over a Direct connection (`TLS.OVL`
-is loaded into its memory then); it measures what it needs and takes
-that at the next start (MEMKB= in `EMAILCHK.INF`).
+accessories, and restart the Atari. It takes about 180 KB: itself and
+64 KB for its work (more with many accounts: it measures what it needs
+and takes that at the next start, MEMKB= in `EMAILCHK.INF`; if it ever
+runs out, it says so and takes more at the next start).
+
+Checking over a **Direct connection** needs about 230 KB more, for
+`TLS.OVL` and the root certificates. The accessory takes that only in
+TT RAM (a TT, or a Falcon with fast RAM on an accelerator), where there
+is plenty. With ST RAM only, it would come out of the memory your
+programs need (on a 4 MB Falcon with NVDI and the other accessories,
+EMail itself wouldn't fit), so there it leaves Direct connection
+accounts unchecked and says why from the Desk menu, unless you give it
+the memory: `HEAPKB=300` in `C:\EMAILCHK.INF`.
 
 It reads EMail's own settings, so there is nothing to set up twice: the
 accounts and passwords in `EMAIL.INF`, the Direct connection or the

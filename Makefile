@@ -118,7 +118,7 @@ $(OBJDIR)/nf.o: common/atari/nf.S | $(OBJDIR)
 # windows, with its own few drawing calls for the shared About box and
 # alerts. Its own objects (build/chk), each function in a section of its
 # own, so the linker leaves out what the accessory never calls; a stack
-# of 24 KB (EMail's most was 15 KB, a TLS handshake on the 68030)
+# of 16 KB (its most, a Direct check with RSA on the DSP: 8.4 KB)
 CHKDIR  := build/chk
 CHKOBJ  := sting_s nf util charset mime links conn imap pop3 store newmail futil bidi secret ctime tz \
            ovl libc tos plat_tos net_tos sting gem tls_ovl bigbuf \
@@ -130,7 +130,7 @@ $(OBJDIR)/emailchk.elf: $(OBJDIR)/crt0chk.o $(addprefix $(OBJDIR)/,$(addsuffix .
 	$(CC) $(LDFLAGS) -Wl,--gc-sections -o $@ $(OBJDIR)/crt0chk.o $(addprefix $(OBJDIR)/,$(addsuffix .o,$(CHKOBJ))) \
 		$(OBJDIR)/build.o -lgcc
 $(OBJDIR)/crt0chk.o: common/atari/crt0.S | $(OBJDIR)
-	$(CC) -m68000 -DSTACK_SIZE=24576 -c -o $@ $<
+	$(CC) -m68000 -DSTACK_SIZE=16384 -c -o $@ $<
 
 # EMail saying on the emulator's console what each pane draws ("DRAW
 # list y h", "COPY list ..."), for tests/hatari/scroll_test.py (never

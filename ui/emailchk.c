@@ -60,6 +60,32 @@ static short checked;			/* checked since the machine started */
 static short prg_ran;			/* EMAIL.PRG was seen running */
 static short reread = 1;		/* EMAIL.INF to be looked at before the next check */
 
+#define FIRST_HEAP	(64L * 1024)
+#define DIRECT_ROOM	(232L * 1024)
+
+/* the stack crt0 gives us lies just above _is_acc: painted at the start,
+   the paint left tells how deep it has been (the console line, for the
+   rigs: STACK_SIZE in the Makefile is set from it) */
+#define PAINT 0x5A5A5A5AUL
+static unsigned long *stack_low, stack_top;
+
+static void stack_paint(void)
+{
+	unsigned long here, *p;
+	stack_top = (unsigned long)&here;	/* (main's frame above it: a few bytes) */
+	stack_low = (unsigned long *)(((unsigned long)&_is_acc + 2 + 3) & ~3UL);
+	for (p = stack_low; (unsigned long)p < (unsigned long)&here - 1024; p++)
+		*p = PAINT;
+}
+
+static long stack_used(void)
+{
+	unsigned long *p = stack_low;
+	while (*p == PAINT)
+		p++;
+	return (long)(stack_top - (unsigned long)p);
+}
+
 /* ---------------- the few drawing calls the shared About box and
    dialogs take (gemui.h): the system font, no Hebrew mapping ---------------- */
 
@@ -251,18 +277,47 @@ static void inf_write(void)
 	sb_free(&b);
 }
 
+static short mem_told;		/* it ran out of memory this boot: MEMKB= written for the next */
+
 /* the memory to take at the next boot (MEMKB=): the most it used, with
    room for a connection (accmem.c) */
 static void mem_note(void)
 {
 	long kb;
-	if (!is_acc || !acc_heap_bytes)
+	if (!is_acc || !acc_heap_bytes || mem_told)
 		return;
-	kb = acc_mem_kb(48L * 1024, 16L * 1024);
+	kb = acc_mem_kb(32L * 1024, 16L * 1024);
 	if (!acc_mem_moved(kb, atol(memkb_v)))
 		return;
 	snprintf(memkb_v, sizeof(memkb_v), "%ld", kb);
 	inf_write();
+}
+
+/* its memory ran out (accounts EMAIL.INF has that didn't fit, or a check
+   that failed for it): said, and four times as much at the next start,
+   which then measures it down (the guidelines, 2.1) */
+static void mem_short(void)
+{
+	if (!is_acc || mem_told)
+		return;
+	mem_told = 1;
+	snprintf(memkb_v, sizeof(memkb_v), "%ld", acc_mem_full_kb());
+	inf_write();
+	alert(1, "[3][EMail check ran out of memory.|It takes more when the|Atari starts again.][ OK ]");
+}
+
+/* the [account] lines in EMAIL.INF */
+static short inf_accounts(const char *path)
+{
+	char *buf = pf_load(path, 0), *p;
+	short n = 0;
+	if (!buf)
+		return 0;
+	for (p = buf; (p = strstr(p, "\n[")) != 0; p++)
+		n += !strncasecmp(p + 1, "[account]", 9);
+	n += !strncasecmp(buf, "[account]", 9);
+	free(buf);
+	return n;
 }
 
 /* ---------------- EMail's settings ---------------- */
@@ -288,6 +343,8 @@ static int settings(void)
 		inf_stamp = stamp;
 		inf_size = size;
 		newmail_load(folder);
+		if (is_acc && naccts < MAXACCT && naccts < inf_accounts(path))
+			mem_short();	/* an account that didn't fit */
 		memset(nm, 0, sizeof(nm));
 		dlg_3d_on = opt.dialogs3d;	/* EMail's 3D setting for its alerts too (5.6) */
 		path_join(tls_ovl_path, sizeof(tls_ovl_path), folder, "TLS.OVL");
@@ -427,19 +484,43 @@ static void found_text(char *out, int size, long total)
 	}
 }
 
+/* a Direct connection's room in the accessory's memory: TLS.OVL loaded,
+   or room for it. Short of it in TT RAM, the next boot takes more
+   (MEMKB=); in ST RAM only HEAPKB= does (acc_memory) */
+static int direct_room(void)
+{
+	long kb;
+	if (!is_acc || !opt.falcon || !falcon_usable || tls_ovl_loaded() || !acc_heap_bytes ||
+	    acc_heap_bytes - heap_use >= DIRECT_ROOM)
+		return 1;
+	kb = (heap_use + DIRECT_ROOM + 32L * 1024) / 1024;
+	if (acc_heap_tt && kb > atol(memkb_v)) {
+		snprintf(memkb_v, sizeof(memkb_v), "%ld", kb);
+		inf_write();
+	}
+	return 0;
+}
+
 /* every account's Inbox; asked: the user wants the answer whatever it is */
 static void check(int asked)
 {
 	char err[160], text[200];
 	long total = 0;
-	short i, fresh = 0, ok = 0;
+	short i, fresh = 0, ok = 0, naccts_skip = 0;
 	if (!settings())
 		return;
 	if (asked)
 		busy_bee(1);
 	conn_log_hold(1);		/* the log written at the end, or when its 4 KB fill */
 	last_err[0] = 0;
-	for (i = 0; i < naccts; i++) {
+	if (!direct_room()) {
+		/* a Direct connection with no room for TLS.OVL: said from the
+		   Desk menu, not checked */
+		str_copy(last_err, "no memory for a Direct connection here: HEAPKB= in EMAILCHK.INF",
+			 sizeof(last_err));
+		naccts_skip = 1;
+	}
+	for (i = 0; i < naccts && !naccts_skip; i++) {
 		conn_stop = 0;
 		if (newmail_count(accts[i], &nm[i], err, sizeof(err))) {
 			ok++;
@@ -455,12 +536,18 @@ static void check(int asked)
 	checked = 1;
 	last_check = pf_ms();
 	last_new = total;
-	mem_note();
+	if (strstr(last_err, "memory") && !naccts_skip)
+		mem_short();
+	else if (!naccts_skip)
+		mem_note();		/* (skipped: the room it wrote for next time stays) */
 	{
 		/* for the rigs: the emulator's console */
 		char note[200];
 		snprintf(note, sizeof(note), "EMAILCHK checked %d of %d account%s: %ld new%s%s%s", ok, naccts,
 			 naccts == 1 ? "" : "s", total, fresh ? ", fresh" : "", last_err[0] ? "; " : "", last_err);
+		pf_debug(note);
+		snprintf(note, sizeof(note), "EMAILCHK stack: %ld bytes used at most, heap %ld KB of %ld",
+			 stack_used(), heap_peak / 1024, acc_heap_bytes / 1024);
 		pf_debug(note);
 	}
 	if (!total && !asked)
@@ -499,7 +586,7 @@ static void about(void)
 
 static void opened(void)
 {
-	char when[80];
+	char when[160];
 	short r;
 	pf_debug("EMAILCHK opened");
 	bg_opened();
@@ -522,11 +609,11 @@ static void opened(void)
 		snprintf(when, sizeof(when), "It checks every %d minute%s.", opt.check, opt.check == 1 ? "" : "s");
 	else {
 		unsigned long ago = (pf_ms() - last_check) / 60000UL;
-		char found[40], minutes[24];
+		char found[80], minutes[24];
 		if (last_new)
 			snprintf(found, sizeof(found), "%ld new message%s", last_new, last_new == 1 ? "" : "s");
-		else
-			str_copy(found, last_err[0] ? "couldn't connect" : "nothing new", sizeof(found));
+		else	/* what went wrong, as the check said it */
+			snprintf(found, sizeof(found), "%.70s", last_err[0] ? last_err : "nothing new");
 		if (ago)
 			snprintf(minutes, sizeof(minutes), "%lu minute%s", ago, ago == 1 ? "" : "s");
 		snprintf(when, sizeof(when), "Checked %s ago: %s.", ago ? minutes : "under a minute", found);
@@ -539,6 +626,7 @@ static void opened(void)
 }
 
 /* ---------------- start ---------------- */
+
 
 static int vwk_open(void)
 {
@@ -557,13 +645,17 @@ static int vwk_open(void)
 	return 1;
 }
 
-/* memory, once, before the first event call (accmem.c): a check's
-   connection and the accounts; TLS.OVL's room too where it may load */
-#define OVL_ROOM (150L * 1024)
+/* memory, once, before the first event call (accmem.c): 64 KB, a
+   check through the gateway (it measured 80 KB with its margin, MEMKB=).
+   A Direct connection needs about 230 KB more (TLS.OVL, ROOTS.DAT,
+   BearSSL's buffers: MEMKB=313): taken at the first boot only in TT RAM,
+   where there is plenty. In ST RAM it would be taken from the program in
+   front (on a 4 MB Falcon with NVDI and the family's accessories, EMail
+   then couldn't open its screen: the hub's acc_all.py, 24 Oct 2026), so
+   there only HEAPKB= gives it */
 static void acc_memory(void)
 {
-	long ovl = get_cookie(0x5F435055L) >= 20 ? OVL_ROOM : 0;
-	acc_heap_take(128L * 1024 + ovl, 128L * 1024 + ovl, atol(heapkb_v), atol(memkb_v));
+	acc_heap_take(FIRST_HEAP, FIRST_HEAP + DIRECT_ROOM, atol(heapkb_v), atol(memkb_v));
 	{
 		void *p = Mxalloc(sizeof(st_fallback), 0);	/* ST RAM, for the icon */
 		if ((long)p > 0)
@@ -576,6 +668,7 @@ int main(void)
 	short msg[8];
 	AEVENT ev;
 	is_acc = _is_acc;
+	stack_paint();
 	ap_id = appl_init();
 	if (ap_id < 0)
 		return 1;
