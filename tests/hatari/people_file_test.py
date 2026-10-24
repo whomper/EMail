@@ -116,7 +116,7 @@ if mode == "econtact":
     ec_spec = "EContact"
     ec_dir = os.path.join(work, "econtact")
     shutil.rmtree(ec_dir, ignore_errors=True)
-    acc = "ECONTST.ACC" if machine.partition(":")[0] == "ST" else "ECONTACT.ACC"
+    acc = "ECONTACT.ACC"
     tag = rig.release(ec_spec, ec_dir, acc)
     print("EContact", tag)
     ec_src = os.path.join(ec_dir, "src")

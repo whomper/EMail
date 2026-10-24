@@ -1598,7 +1598,7 @@ int main(void)
 	path_join(tls_ovl_path, sizeof(tls_ovl_path), dir, "TLS.OVL");	/* beside CACERT.PEM */
 	crash_install(dir, "EMail", mail_version);
 	help_init();			/* memory the help viewer may read */
-	av_init("EMAIL|EMAILST");	/* the desktop's AV server, if there is one */
+	av_init("EMAIL");		/* the desktop's AV server, if there is one */
 	people_init(64, 0, names_came, picked);	/* names from EContact */
 	people_setup();
 	crash_cleanup = crash_quit;

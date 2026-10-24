@@ -5,9 +5,9 @@
 latest release, as Erez has it, not a build of its main.
 
 As people_test.py (Dovecot, the SMTP stand-in, FAKESTNG.PRG over the
-serial port), but C:\\ECONTACT.ACC is EContact's release (ECONTST.ACC, the ST
-edition, on ST, as a user there has it; not on ST-1, where the two don't
-fit together and EContact runs as a program: Erez, 19 Oct 2026), with an address
+serial port), but C:\\ECONTACT.ACC is EContact's release (not on ST-1, where
+the two don't fit together and EContact runs as a program: Erez, 19 Oct
+2026), with an address
 book of Dana, Avi and Grace (tests/hatari/people.vcf) made by EContact's
 card-cli from the same release's source. EMail replies to Dana, types
 "Grace" on the To: line and presses ^B: EContact's window opens searching
@@ -68,7 +68,7 @@ rig.stop_at_exit(srv, smtp)
 ec_spec = "EContact@" + more[0] if more else "EContact"
 ec_dir = os.path.join(work, "econtact")
 shutil.rmtree(ec_dir, ignore_errors=True)
-acc = "ECONTST.ACC" if machine.partition(":")[0] == "ST" else "ECONTACT.ACC"
+acc = "ECONTACT.ACC"
 tag = rig.release(ec_spec, ec_dir, acc)
 print("EContact", tag)
 ec_src = os.path.join(ec_dir, "src")
@@ -152,8 +152,8 @@ try:
     check("the reply went to Dana", "dana@example.com" in to)
     check("and to Grace, chosen in EContact %s" % tag, "Grace Baker <grace@example.net>" in to)
 
-    # the other way: EContact's mail button hands EMail (either edition,
-    # av_send "EMAIL|EMAILST") a mailto:, and EMail opens a new message
+    # the other way: EContact's mail button hands EMail (av_send "EMAIL")
+    # a mailto:, and EMail opens a new message
     r.click(40, 9)                       # the Desk menu
     time.sleep(1)
     r.click(60, 60)                      # EContact, the first accessory under About EMail

@@ -730,16 +730,13 @@ static int ecal_answered(short id)
    opens its New Event dialog filled from it; the next one overwrites it */
 void reader_to_ecal(short i)
 {
-	static const char *const names[2] = { "ECAL    ", "ECALST  " };
 	char path[220], cmd[230], *data;
 	long len;
-	short id = -1, k;
+	short id;
 	int ok;
 	if (!cur_msg || i < 0 || i >= cur_msg->nparts)
 		return;
-	for (k = 0; k < 2 && id < 0; k++)
-		id = appl_find(names[k]);
-	if (id < 0) {
+	if ((id = appl_find("ECAL    ")) < 0) {
 		alert(1, "[1][ECal isn't running: open it|and try again, or save the|invitation.][ OK ]");
 		return;
 	}
@@ -754,7 +751,7 @@ void reader_to_ecal(short i)
 		return;
 	}
 	snprintf(cmd, sizeof(cmd), strchr(path, ' ') ? "'%s'" : "%s", path);
-	av_send(names[k - 1], cmd);
+	av_send("ECAL", cmd);
 	status(ecal_answered(id) ? "The invitation is in ECal: confirm it there"
 				 : "ECal didn't answer: try again when it's free");
 }

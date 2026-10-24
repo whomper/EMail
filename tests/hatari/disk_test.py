@@ -229,7 +229,7 @@ if bufs and bufs[0] > 0:
     print("  A2 wrote %d bytes to the pack through a %d-byte buffer: %d piece(s)" % (wrote, bufs[0], max(pieces, 1)))
 else:
     print("  A2: EMail didn't say its buffer size (%d bytes written)" % wrote)
-OTHERS = re.compile(r"^[A-Z]:\\(ECAL|ECALST|ECONTACT|ECONTST|EHYPVIEW|EFTP)(\\|\.|$)", re.I)
+OTHERS = re.compile(r"^[A-Z]:\\(ECAL|ECONTACT|EHYPVIEW|EFTP)(\\|\.|$)", re.I)
 for job in ("A1", "A2", "B1", "B2"):
     count = collections.Counter()
     files = collections.Counter()
