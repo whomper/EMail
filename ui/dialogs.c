@@ -915,9 +915,9 @@ static void part_look(short x, short y)
 	d_add(G_STRING, 0, 0, (long)"quoted text, links; with four", x + 3, ROW(3), 29, 1);
 	d_add(G_STRING, 0, 0, (long)"colours, links in blue", x + 3, ROW(4), 22, 1);
 	/* the AES's own 3D look (5.6): greyed where it has none (TOS 1 to
-	   3, EmuTOS) */
+	   3, EmuTOS in black and white or four colours) */
 	k = d_tick(x, ROW(5), "3D dialogs", T_3D);
-	d_add(G_STRING, 0, 0, (long)"(TOS 4, MagiC, XaAES)", x + 3, ROW(6), 21, 1);
+	d_add(G_STRING, 0, 0, (long)"(TOS 4, MagiC, XaAES, EmuTOS in colour)", x, ROW(6), 39, 1);
 	if (!dlg_3d_ok()) {
 		tree[tick_box[k]].ob_state |= DISABLED;
 		tree[tick_lbl[k]].ob_state |= DISABLED;

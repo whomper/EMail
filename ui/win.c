@@ -164,6 +164,7 @@ static void bar_of(WIN *w, PANEBAR *b)
 	b->total = w->total;
 	b->shown = win_rows(w);
 	b->top = w->top;
+	b->across = 0;		/* down the pane's right side */
 }
 
 static void draw_header(WIN *w)

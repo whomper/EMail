@@ -608,7 +608,7 @@ int store_save_settings(void)
 		"DSP", "%d", opt.dsp);
 	put_fmt(&b, "1 = colours (selection, unread counts, flags, quotes, links) with 16 or more; with 4 links in blue",
 		"COLOUR", "%d", opt.colour);
-	put_fmt(&b, "1 = dialogs in the 3D look where the AES has one (TOS 4, MagiC, XaAES); 0 = flat",
+	put_fmt(&b, "1 = dialogs in the 3D look where the AES draws them (TOS 4, MagiC, XaAES, EmuTOS in colour); 0 = flat",
 		"DIALOGS3D", "%d", opt.dialogs3d);
 	put_fmt(&b, "1 = when EContact isn't loaded, names come from its contacts file (CONTACTS.TXT)",
 		"PEOPLEFILE", "%d", opt.peoplefile);

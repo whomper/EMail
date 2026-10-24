@@ -662,8 +662,8 @@ are underlined).
 sidebar: **Mail** (checking every few minutes, how many messages to load
 at a time, keeping read messages on disk), **Writing** (where lines
 wrap, starting with the Hebrew keyboard), **Signature**, **Look**
-(colours, and 3D dialogs: the AES's own 3D look where it has one, TOS 4,
-MagiC and XaAES among them; greyed where it hasn't), **Contacts** (EContact's file, below) and **Connection** (the
+(colours, and 3D dialogs: the AES's own 3D look where it draws one, TOS
+4, MagiC, XaAES and EmuTOS in colour; greyed where it doesn't), **Contacts** (EContact's file, below) and **Connection** (the
 time zone, the Direct connection, the DSP and the protocol log).
 
 **The time zone** (Settings > Connection) is chosen by name from a
