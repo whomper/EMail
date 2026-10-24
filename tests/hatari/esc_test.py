@@ -110,7 +110,10 @@ def menu(x, y):
 
 
 try:
-    time.sleep(40)                       # boot, log in, mirror the inbox
+    # boot, log in, mirror the inbox: until EMail's window is still, not
+    # a fixed time (at 40 s a busy start missed the menu, and the menu's
+    # second click opened a message instead)
+    r.settle(40, 240)
     before, got = inf(), fetches()
 
     menu(272, 123)                       # Folder > Download all messages
