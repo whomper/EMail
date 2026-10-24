@@ -42,12 +42,14 @@ ROOT = os.path.normpath(os.path.join(HERE, "..", ".."))
 IMAP, SMTP = 10143, 10025
 TRACE = os.path.join(ROOT, "build", "trace", rig.PRG)
 # EMail's first layout with the system font: where the arrows and the
-# rows are, by the screen's height (the Falcon's 640x480, ST high)
+# rows are, by the screen's height (the Falcon's 640x480 with TOS 4's
+# 23-pixel bars, ST high with TOS 1.04's 19), left of the column the
+# AES keeps for the window's size box (the guidelines, 5.1)
 ROW = 16                                 # a list row with the system font, until one is drawn
-SPOTS = {480: dict(arrow=(630, 219), list_box=(214, 98, 620, 226),
-                   rarrow=(630, 456), reader_box=(214, 254, 620, 462)),
-         400: dict(arrow=(630, 184), list_box=(214, 95, 620, 192),
-                   rarrow=(630, 376), reader_box=(214, 217, 620, 384))}
+SPOTS = {480: dict(arrow=(605, 217), list_box=(220, 98, 594, 226),
+                   rarrow=(605, 466), reader_box=(220, 254, 594, 462)),
+         400: dict(arrow=(611, 182), list_box=(216, 95, 602, 192),
+                   rarrow=(611, 371), reader_box=(216, 217, 602, 370))}
 
 work, machine, more = rig.cli("Falcon")
 if not os.path.exists(TRACE):
