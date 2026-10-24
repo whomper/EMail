@@ -230,8 +230,11 @@ like a modern mail program:
 - **Message** (bottom right): the selected message. Click an attachment
   line (`»`) to save it with the file selector. A calendar invitation
   shows as `» Invitation:` and its title: double-click it to add it to
-  ECal (see From other programs). HTML-only mail is shown
-  as text. Quoted lines are coloured by how deep they are quoted (light
+  ECal (see From other programs). A message sent as both plain text
+  and HTML, as most are, is shown from its HTML, as text: its links
+  by their names, a quoted reply's lines with `>` before them, and a
+  picture by its words (a picture that is a link, such as "Shop now",
+  can be clicked). Quoted lines are coloured by how deep they are quoted (light
   grey in black and white). **Links** are underlined (and blue, in
   colour): the addresses written in a message (`http://`, `https://`,
   `www.`, `mailto:`) and an HTML message's links. Click one to open it:

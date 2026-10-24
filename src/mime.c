@@ -286,30 +286,36 @@ static int tag_is(const char *t, long tl, const char *name)
 	return tl >= n && !strncasecmp(t, name, n) && (tl == n || !isalnum((u8)t[n]));
 }
 
-/* an <a>'s href (the tag's text t[0..tl) after "<"), when it is an
-   address the reader opens; &amp; in it is "&". malloc'ed, or NULL */
-static char *href(const char *t, long tl)
+static int blank(char c)
 {
-	long i, e, k = 0;
+	return c == ' ' || c == '\t' || c == '\n' || c == '\r';
+}
+
+/* the value of attribute name in a tag's text t[0..tl) (after "<"), its
+   &amp; &quot; &#39; &lt; &gt; as the characters; blanks left out (an
+   address) or made single spaces (words). malloc'ed, or NULL */
+static char *attr(const char *t, long tl, const char *name, int words)
+{
+	long nl = (long)strlen(name), i, e, k = 0;
 	char *u;
-	for (i = 1; i + 4 <= tl; i++)
-		if ((t[i - 1] == ' ' || t[i - 1] == '\t' || t[i - 1] == '\n' || t[i - 1] == '\r') &&
-		    !strncasecmp(t + i, "href", 4))
+	for (i = 1; i + nl <= tl; i++)
+		if (blank(t[i - 1]) && !strncasecmp(t + i, name, nl) && (i + nl == tl || blank(t[i + nl]) ||
+									 t[i + nl] == '='))
 			break;
-	if (i + 4 > tl)
+	if (i + nl > tl)
 		return 0;
-	for (i += 4; i < tl && (t[i] == ' ' || t[i] == '\t' || t[i] == '\n' || t[i] == '\r'); i++)
+	for (i += nl; i < tl && blank(t[i]); i++)
 		;
 	if (i >= tl || t[i] != '=')
 		return 0;
-	for (i++; i < tl && (t[i] == ' ' || t[i] == '\t' || t[i] == '\n' || t[i] == '\r'); i++)
+	for (i++; i < tl && blank(t[i]); i++)
 		;
 	if (i < tl && (t[i] == '"' || t[i] == '\'')) {
 		char q = t[i++];
 		for (e = i; e < tl && t[e] != q; e++)
 			;
 	} else {
-		for (e = i; e < tl && t[e] != ' ' && t[e] != '\t' && t[e] != '\n' && t[e] != '\r'; e++)
+		for (e = i; e < tl && !blank(t[e]); e++)
 			;
 	}
 	while (i < e && (u8)t[i] <= ' ')
@@ -319,24 +325,51 @@ static char *href(const char *t, long tl)
 	if (!(u = malloc(e - i + 1)))
 		return 0;
 	while (i < e) {
-		if (t[i] == '&' && e - i >= 5 && !strncasecmp(t + i, "&amp;", 5)) {
-			u[k++] = '&';
-			i += 5;
-		} else if (t[i] == '&' && e - i >= 5 && !strncmp(t + i, "&#38;", 5)) {
-			u[k++] = '&';
-			i += 5;
+		static const struct { const char *s; char c; } ent[] = {
+			{ "&amp;", '&' }, { "&#38;", '&' }, { "&quot;", '"' }, { "&#39;", '\'' },
+			{ "&lt;", '<' }, { "&gt;", '>' }, { "&nbsp;", ' ' }, { 0, 0 }
+		};
+		short j;
+		for (j = 0; ent[j].s; j++) {
+			long l = (long)strlen(ent[j].s);
+			if (e - i >= l && !strncasecmp(t + i, ent[j].s, l))
+				break;
+		}
+		if (ent[j].s) {
+			u[k++] = ent[j].c;
+			i += (long)strlen(ent[j].s);
 		} else if ((u8)t[i] > ' ') {
 			u[k++] = t[i++];
 		} else {
+			if (words && k && u[k - 1] != ' ')
+				u[k++] = ' ';
 			i++;
 		}
 	}
 	u[k] = 0;
-	if (!link_wanted(u)) {
+	return u;
+}
+
+/* an <a>'s href, when it is an address the reader opens: malloc'ed, or NULL */
+static char *href(const char *t, long tl)
+{
+	char *u = attr(t, tl, "href", 0);
+	if (u && !link_wanted(u)) {
 		free(u);
-		return 0;
+		u = 0;
 	}
 	return u;
+}
+
+/* a quoted line's start (<blockquote>, depth bq): "> ", ">> " ... */
+static void quote_mark(SBUF *b, short bq)
+{
+	short k;
+	if (!bq || (b->len && b->s[b->len - 1] != '\n'))
+		return;
+	for (k = 0; k < bq; k++)
+		sb_addc(b, '>');
+	sb_addc(b, ' ');
 }
 
 /* the link of an <a> ends at the text's end b->len: kept when there is
@@ -371,7 +404,7 @@ char *html_to_text_links(const char *h, long n, long *outlen, MLINK **lk, short 
 {
 	SBUF b;
 	long i = 0, link_at = 0;
-	short skip = 0, pre = 0, space = 0, nl = 2;
+	short skip = 0, pre = 0, space = 0, nl = 2, bq = 0;
 	char *link = 0;		/* the <a href> open, from link_at */
 	sb_init(&b);
 
@@ -412,7 +445,34 @@ char *html_to_text_links(const char *h, long n, long *outlen, MLINK **lk, short 
 				if (lk && link)
 					link_end(&b, lk, nlk, link_at, link);
 				link = lk && !close ? href(t, tl) : 0;
+				if (link && nl)
+					quote_mark(&b, bq);	/* the line's quote marks aren't the link's */
 				link_at = b.len;
+				continue;
+			}
+			if (!close && tag_is(t, tl, "img")) {
+				/* a picture: its words (alt), so a picture that is a
+				   link ("Shop now") has text to click */
+				char *alt = attr(t, tl, "alt", 1);
+				if (alt && *alt) {
+					if (space && nl == 0)
+						sb_addc(&b, ' ');
+					space = 0;
+					quote_mark(&b, bq);
+					sb_adds(&b, alt);
+					nl = 0;
+				}
+				free(alt);
+				continue;
+			}
+			if (tag_is(t, tl, "blockquote")) {
+				/* a quote (a reply's): its lines start "> ", as plain text quotes */
+				while (nl < 2) {
+					sb_addc(&b, '\n');
+					nl++;
+				}
+				bq = close ? (bq > 0 ? bq - 1 : 0) : (bq < 8 ? bq + 1 : 8);
+				space = 0;
 				continue;
 			}
 			if (tag_is(t, tl, "pre")) {
@@ -429,7 +489,7 @@ char *html_to_text_links(const char *h, long n, long *outlen, MLINK **lk, short 
 				continue;
 			}
 			if (tag_is(t, tl, "p") || (tag_is(t, tl, "h1") || tag_is(t, tl, "h2") ||
-			    tag_is(t, tl, "h3") || tag_is(t, tl, "h4") || tag_is(t, tl, "blockquote"))) {
+			    tag_is(t, tl, "h3") || tag_is(t, tl, "h4"))) {
 				while (nl < 2) {
 					sb_addc(&b, '\n');
 					nl++;
@@ -440,6 +500,7 @@ char *html_to_text_links(const char *h, long n, long *outlen, MLINK **lk, short 
 			if (!close && tag_is(t, tl, "li")) {
 				if (nl < 1)
 					sb_addc(&b, '\n');
+				quote_mark(&b, bq);
 				sb_adds(&b, "  - ");
 				nl = 0;
 				space = 0;
@@ -452,6 +513,7 @@ char *html_to_text_links(const char *h, long n, long *outlen, MLINK **lk, short 
 			if (!close && tag_is(t, tl, "hr")) {
 				if (nl < 1)
 					sb_addc(&b, '\n');
+				quote_mark(&b, bq);
 				sb_adds(&b, "----------------------------------------\n");
 				nl = 1;
 				continue;
@@ -496,8 +558,11 @@ char *html_to_text_links(const char *h, long n, long *outlen, MLINK **lk, short 
 				if (space && nl == 0)
 					sb_addc(&b, ' ');
 				space = 0;
-				if (k)
-					sb_add(&b, out, k), nl = 0;
+				if (k) {
+					quote_mark(&b, bq);
+					sb_add(&b, out, k);
+					nl = 0;
+				}
 				continue;
 			}
 		}
@@ -513,6 +578,8 @@ char *html_to_text_links(const char *h, long n, long *outlen, MLINK **lk, short 
 		if (space && nl == 0)
 			sb_addc(&b, ' ');
 		space = 0;
+		if (c != '\n')
+			quote_mark(&b, bq);
 		sb_addc(&b, (char)c);
 		nl = c == '\n' ? nl + 1 : 0;
 		i++;
@@ -695,8 +762,13 @@ static void walk_multipart(WALK *w, long start, long end, const char *boundary, 
 					if (ct && str_istr(ct, "text/calendar"))	/* an invitation: kept, for ECal */
 						walk(w, part_start, pe, depth + 1, 0);
 					else if (is_multi || is_plain || is_html) {
-						short rank = is_plain ? 0 : is_multi ? 0 : 1;
-						if (rank < best_html || best_s < 0) {
+						/* the HTML (or a multipart/related
+						   around it) before the plain text, as
+						   Erez chose (24 Oct 2026): its links
+						   go by their names; of two alike the
+						   last, the richer (RFC 2046) */
+						short rank = is_plain && !is_html ? 1 : 0;
+						if (rank <= best_html || best_s < 0) {
 							best_html = rank;
 							best_s = part_start;
 							best_e = pe;

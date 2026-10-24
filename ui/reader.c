@@ -534,14 +534,14 @@ show:
 		short k, invite = 0;
 		for (k = 0; k < cur_msg->nparts; k++)
 			invite |= mime_is_calendar(&cur_msg->parts[k]);
-		if (cur_msg->html)
-			win_info(&w_reader, "HTML shown as text");
-		else if (invite)
+		if (invite)
 			win_info(&w_reader, "double-click the invitation for ECal");
 		else if (cur_msg->nparts)
 			win_info(&w_reader, "click an attachment to save it");
 		else if (nlinks)
 			win_info(&w_reader, "click a link to open it");
+		else if (cur_msg->html)
+			win_info(&w_reader, "HTML shown as text");
 		else
 			win_info(&w_reader, "");
 	}

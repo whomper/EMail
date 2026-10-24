@@ -5,9 +5,10 @@
 
 As invite_test.py (Dovecot, FAKESTNG.PRG over the serial port). INBOX's
 newest message is plain text with web addresses written in it (one in
-a Hebrew sentence, drawn right to left), the next
-an HTML message with an <a href> on "the news". The links are drawn in
-the accent colour and underlined: the test finds a link by its
+a Hebrew sentence, drawn right to left), the next an HTML message with
+an <a href> on "the news", then one sent as plain text and HTML, shown
+from its HTML (the link on "Falcon page"). The links are drawn in the
+accent colour and underlined: the test finds a link by its
 underline in the reader, and clicks it.
 
 1. With build/fakeweb.acc as C:\\EWEB.ACC, a stand-in for a browser that
@@ -36,6 +37,7 @@ IMAP, SMTP = 10143, 10025
 PLAIN = "https://example.com/show?a=1&b=2"
 HTML = "http://news.example/today?id=42"
 LONG = "http://track.example/c?u=" + "0123456789" * 15     # past a command line's 125
+ALT = "https://www.atari-forum.com/viewtopic.php?t=12345&start=20"
 
 work, machine, more = rig.cli("Falcon")
 if machine.partition(":")[0] not in ("Falcon", "Falcon-4", "TT") or ":16" not in machine:
@@ -76,6 +78,13 @@ with open(os.path.join(MD, "new", "6-html.eml"), "wb") as f:
              "Content-Type: text/html; charset=utf-8\r\n\r\n"
              "<html><body><p>Hello,</p><p>Read <a href=\"%s\">the news</a> today.</p></body></html>\r\n"
              % HTML.replace("&", "&amp;")).encode())
+with open(os.path.join(MD, "new", "8-alt.eml"), "wb") as f:   # plain and HTML, as Gmail sends: the HTML's shown
+    f.write(("From: Dana <dana@example.com>\r\nTo: dana@test.local\r\nSubject: Look at this\r\n"
+             "Date: Wed, 21 Oct 2026 08:00:00 +0300\r\nMessage-ID: <alt-1@example.com>\r\nMIME-Version: 1.0\r\n"
+             "Content-Type: multipart/alternative; boundary=A1\r\n\r\n--A1\r\nContent-Type: text/plain\r\n\r\n"
+             "The new Falcon page: %s\r\n--A1\r\nContent-Type: text/html\r\n\r\n"
+             "<div>The new <a href=\"%s\">Falcon page</a>.</div>\r\n--A1--\r\n"
+             % (ALT, ALT.replace("&", "&amp;"))).encode())
 with open(os.path.join(MD, "new", "7-long.eml"), "wb") as f:
     f.write(("From: Shop <shop@example.com>\r\nTo: dana@test.local\r\nSubject: Your order\r\n"
              "Date: Tue, 20 Oct 2026 20:00:00 +0300\r\nMessage-ID: <order-1@example.com>\r\nMIME-Version: 1.0\r\n"
@@ -145,7 +154,7 @@ r = rig.Rig(work, machine, serial=(fifo_out, fifo_in))
 try:
     r.settle(45, 240)                    # boot, log in, mirror the inbox
     r.shot("l1-inbox")
-    for row, (name, url) in enumerate((("plain", PLAIN), ("html", HTML))):
+    for row, (name, url) in enumerate((("plain", PLAIN), ("html", HTML), ("plain-and-html", ALT))):
         r.click(330, 108 + 16 * row)     # the newest, then the next
         time.sleep(10)
         shot = r.shot("l2-%s" % name)
@@ -165,7 +174,7 @@ finally:
 # 2. and 3. no browser running (plain TOS): EMail quits, and EWeb starts
 # on the link, a long one by LINK.HTM
 os.remove(os.path.join(hd, "EWEB.ACC"))
-for part, (row, url, look) in enumerate(((0, PLAIN, "example.com/show"), (2, LONG, "track.example/c"))):
+for part, (row, url, look) in enumerate(((0, PLAIN, "example.com/show"), (3, LONG, "track.example/c"))):
     r = rig.Rig(work, machine, serial=(fifo_out, fifo_in))
     try:
         r.settle(45, 240)

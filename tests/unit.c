@@ -126,8 +126,9 @@ static const char *multipart =
 	"16nXnNeV150gMTk5MA==\r\n"
 	"--YY\r\n"
 	"Content-Type: text/html; charset=utf-8\r\n"
+	"Content-Transfer-Encoding: base64\r\n"
 	"\r\n"
-	"<p>HTML version</p>\r\n"
+	"PHA+16nXnNeV150gMTk5MDwvcD4=\r\n"
 	"--YY--\r\n"
 	"--XX\r\n"
 	"Content-Type: image/png; name=\"pic.png\"\r\n"
@@ -144,7 +145,7 @@ static void t_mime(void)
 	char *d;
 	CHECK(m != 0, "parse");
 	CHECK(!strcmp(m->subject, shalom_atari), "subject [%s]", m->subject);
-	CHECK(!strcmp(m->text, "\xD6\xCD\xC7\xDA 1990"), "plain part chosen: [%s]", m->text);
+	CHECK(!strcmp(m->text, "\xD6\xCD\xC7\xDA 1990") && m->html, "the HTML part chosen: [%s]", m->text);
 	CHECK(m->nparts == 1, "one attachment, got %d", m->nparts);
 	CHECK(m->nparts && !strcmp(m->parts[0].name, "\xD7.png"), "rfc2231 filename [%s]",
 	      m->nparts ? m->parts[0].name : "");
@@ -240,6 +241,26 @@ static void t_links(void)
 			free(lk[n].url);
 		free(lk);
 		free(t);
+	}
+	{
+		/* a reply as Gmail sends it: the HTML chosen, its link by its
+		   name, the quote as "> " lines, a picture link by its alt */
+		const char *raw = "Subject: Re: show\r\nContent-Type: multipart/alternative; boundary=a\r\n\r\n"
+				  "--a\r\nContent-Type: text/plain\r\n\r\nSee https://x.example/p\r\n> old\r\n"
+				  "--a\r\nContent-Type: text/html\r\n\r\n<div>See the <a href=\"https://x.example/p\">page</a>.</div>"
+				  "<blockquote>old <a href=\"http://y.example\">y</a><blockquote>older</blockquote></blockquote>"
+				  "<a href=\"https://shop.example/\"><img src=\"b.png\" alt=\"Shop &amp; save\"></a>\r\n--a--\r\n";
+		MSG *m = mime_parse(raw, strlen(raw));
+		CHECK(m && m->html && !strcmp(m->text, "See the page.\n\n> old y\n\n>> older\n\nShop & save"),
+		      "HTML reply: [%s]", m ? m->text : "");
+		CHECK(m && m->nlinks == 3, "its links: %d", m ? m->nlinks : -1);
+		if (m && m->nlinks == 3) {
+			CHECK(!strncmp(m->text + m->links[0].at, "page", 4) && m->links[0].n == 4, "by its name");
+			CHECK(!strncmp(m->text + m->links[1].at, "y", 1) && m->links[1].n == 1, "in a quote, past its marks");
+			CHECK(!strncmp(m->text + m->links[2].at, "Shop & save", 11) && m->links[2].n == 11 &&
+			      !strcmp(m->links[2].url, "https://shop.example/"), "a picture by its alt");
+		}
+		mime_free(m);
 	}
 	{
 		const char *raw = "Subject: links\r\nContent-Type: multipart/mixed; boundary=b\r\n\r\n"
