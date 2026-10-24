@@ -101,6 +101,7 @@ typedef struct {
 	short peoplefile;	/* EContact not loaded: names from its CONTACTS.TXT (guidelines 4.1) */
 	char peopledir[200];	/* EContact's folder, where CONTACTS.TXT is */
 	char browser[200];	/* EWeb's program, started on a link when no browser runs */
+	short dialogs3d;	/* dialogs in the AES's 3D look, where it has one (guidelines 5.6) */
 } OPTIONS;
 
 typedef struct {

@@ -27,6 +27,7 @@
 #include "dd.h"
 #include "aboutbox.h"
 #include "mbar.h"
+#include "dialog.h"
 #include "../src/version.h"
 
 short vdi_h, cw, ch, scr_w, scr_h, desk_x, desk_y, desk_w, desk_h, planes;
@@ -1595,6 +1596,7 @@ int main(void)
 	secret_warn = warn_plain;	/* before anything is saved */
 	falcon_usable = get_cookie(0x5F435055L) >= 20;	/* _CPU: TLS.OVL needs a 68020 */
 	store_init(dir);
+	dlg_3d_on = opt.dialogs3d;	/* before the first dialog (5.6) */
 	path_join(tls_ovl_path, sizeof(tls_ovl_path), dir, "TLS.OVL");	/* beside CACERT.PEM */
 	crash_install(dir, "EMail", mail_version);
 	help_init();			/* memory the help viewer may read */

@@ -28,6 +28,7 @@
 #include "tos.h"
 #include "plat.h"
 #include "alert.h"
+#include "dialog.h"
 #include "aboutbox.h"
 #include "accmem.h"
 #include "bgwork.h"
@@ -288,6 +289,7 @@ static int settings(void)
 		inf_size = size;
 		newmail_load(folder);
 		memset(nm, 0, sizeof(nm));
+		dlg_3d_on = opt.dialogs3d;	/* EMail's 3D setting for its alerts too (5.6) */
 		path_join(tls_ovl_path, sizeof(tls_ovl_path), folder, "TLS.OVL");
 		falcon_dsp_init();
 		/* EMail's protocol log on (LOG=1): the accessory's own beside

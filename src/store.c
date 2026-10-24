@@ -42,6 +42,7 @@ static void defaults(void)
 	opt.offline = 0;
 	opt.dsp = 1;
 	opt.colour = 1;
+	opt.dialogs3d = 1;
 	opt.peoplefile = 0;
 	opt.peopledir[0] = 0;
 	opt.browser[0] = 0;
@@ -439,6 +440,7 @@ static void set_opt(const char *k, const char *v)
 	else if (!strcmp(k, "peopledir")) str_copy(opt.peopledir, v, sizeof(opt.peopledir));
 	else if (!strcmp(k, "browser")) str_copy(opt.browser, v, sizeof(opt.browser));
 	else if (!strcmp(k, "colour") || !strcmp(k, "color")) opt.colour = n != 0;
+	else if (!strcmp(k, "dialogs3d")) opt.dialogs3d = n != 0;
 	else if (!strcmp(k, "hebfont")) opt.hebfont = n >= 0 && n <= 2 ? n : 0;
 }
 
@@ -606,6 +608,8 @@ int store_save_settings(void)
 		"DSP", "%d", opt.dsp);
 	put_fmt(&b, "1 = colours (selection, unread counts, flags, quotes, links) with 16 or more; with 4 links in blue",
 		"COLOUR", "%d", opt.colour);
+	put_fmt(&b, "1 = dialogs in the 3D look where the AES has one (TOS 4, MagiC, XaAES); 0 = flat",
+		"DIALOGS3D", "%d", opt.dialogs3d);
 	put_fmt(&b, "1 = when EContact isn't loaded, names come from its contacts file (CONTACTS.TXT)",
 		"PEOPLEFILE", "%d", opt.peoplefile);
 	put_path(&b, "EContact's folder, where its contacts file is (C:\\ECONTACT)", "PEOPLEDIR", opt.peopledir);
