@@ -11,7 +11,10 @@
  * window of its own with the usual GEM slider. Sizes go to EMAIL.INF.
  *
  * What the AES draws in its own look is the AES's (the guidelines, 5.1):
- * the main window is sized by its SIZER, and each pane's bar is
+ * the main window is sized by its SIZER; the message pane, at the
+ * window's right edge, scrolls with the window's own slider (Erez, 24 Oct
+ * 2026: the column the AES keeps beside its size box is used, not left
+ * empty), and the folder and list panes have bars of their own,
  * common/ui/panebar.c's, AES objects drawn by objc_draw.
  */
 #include <string.h>
@@ -35,8 +38,8 @@ static short sbw;			/* a pane's bar: the AES's slider column (pb_width) */
 #define DIV 4				/* divider thickness */
 
 #define EDKIND (NAME | CLOSER | FULLER | MOVER | SIZER | UPARROW | DNARROW | VSLIDE)
-/* sized by the AES's own SIZER (5.1), its look the AES's */
-#define MAINKIND (NAME | CLOSER | FULLER | MOVER | SIZER | INFO)
+/* sized by the AES's own SIZER (5.1), and its slider the message pane's */
+#define MAINKIND (NAME | CLOSER | FULLER | MOVER | SIZER | INFO | UPARROW | DNARROW | VSLIDE)
 
 static int intersect(GRECT *a, GRECT *b)
 {
@@ -84,7 +87,7 @@ static void set_pane(WIN *w, short x, short y, short wd, short ht)
 	w->box.h = ht;
 	w->work.x = x;
 	w->work.y = y + header_h();
-	w->work.w = wd - sbw;
+	w->work.w = wd - (w == &w_reader ? 0 : sbw);	/* the reader: the window's slider */
 	w->work.h = ht - header_h();
 	if (w->work.h < 0)
 		w->work.h = 0;
@@ -123,6 +126,7 @@ static void layout(void)
 		if (w->resized)
 			w->resized(w);
 	}
+	win_sliders(&w_reader);	/* the window's slider: the message pane's */
 }
 
 static GRECT div_v(void)
@@ -147,12 +151,14 @@ static GRECT div_h(void)
 
 /* ---------------- drawing ---------------- */
 
+/* a pane's own bar; none (0 wide) for the reader, which has the
+   window's slider */
 static GRECT sb_rect(WIN *w)
 {
 	GRECT r;
 	r.x = w->box.x + w->box.w - sbw;
 	r.y = w->work.y;
-	r.w = sbw;
+	r.w = w == &w_reader ? 0 : sbw;
 	r.h = w->work.h;
 	return r;
 }
@@ -252,7 +258,7 @@ static void draw_main(GRECT *clip)
 			clip_on(clip);
 		}
 		r = sb_rect(w);
-		if (intersect(clip, &r)) {
+		if (r.w > 0 && intersect(clip, &r)) {
 			PANEBAR b;
 			bar_of(w, &b);
 			pb_draw(&b, &r);
@@ -358,12 +364,15 @@ void win_redraw_lines(WIN *w, long first, long n)
 void win_sliders(WIN *w)
 {
 	long rows = win_rows(w), size, pos;
-	if (w->pane) {
+	short h = w->h;
+	if (w->pane && w != &w_reader) {
 		GRECT s = sb_rect(w);
 		main_redraw(&s);
 		return;
 	}
-	if (w->h <= 0)
+	if (w == &w_reader)		/* the main window's slider */
+		h = main_iconified ? -1 : main_h;
+	if (h <= 0)
 		return;
 	if (w->total <= rows) {
 		size = 1000;
@@ -376,8 +385,8 @@ void win_sliders(WIN *w)
 		size = 30;
 	if (pos > 1000)
 		pos = 1000;
-	wind_set(w->h, WF_VSLSIZE, (short)size, 0, 0, 0);
-	wind_set(w->h, WF_VSLIDE, (short)pos, 0, 0, 0);
+	wind_set(h, WF_VSLSIZE, (short)size, 0, 0, 0);
+	wind_set(h, WF_VSLIDE, (short)pos, 0, 0, 0);
 }
 
 /* GEM draws titles as stored: lay Hebrew out right to left first */
@@ -672,7 +681,7 @@ void win_scroll_to(WIN *w, long top)
 	if (top == w->top)
 		return;
 	w->top = top;
-	if (w->pane) {
+	if (w->pane && w != &w_reader) {
 		/* only the slider's old and new places (all of the bar took an
 		   8 MHz ST 70 ms) */
 		PANEBAR b;
@@ -876,6 +885,24 @@ int win_mouse(short mx, short my, short button, short clicks, short kstate)
 
 /* ---------------- AES messages ---------------- */
 
+/* the window's arrows and slider, for w (the editor, or the message
+   pane through the main window's) */
+static void slider_message(WIN *w, short *msg)
+{
+	long rows = win_rows(w), max = w->total - rows;
+	if (msg[0] == WM_VSLID) {
+		if (max > 0)
+			win_scroll_to(w, (long)msg[4] * max / 1000);
+		return;
+	}
+	switch (msg[4]) {
+	case 0: win_scroll_to(w, w->top - rows); break;
+	case 1: win_scroll_to(w, w->top + rows); break;
+	case 2: win_scroll_to(w, w->top - 1); break;
+	case 3: win_scroll_to(w, w->top + 1); break;
+	}
+}
+
 void main_closed(void);
 
 static void main_message(short *msg)
@@ -922,6 +949,11 @@ static void main_message(short *msg)
 	}
 	case WM_CLOSED:
 		main_closed();
+		break;
+	case WM_ARROWED:
+	case WM_VSLID:
+		if (!main_iconified)
+			slider_message(&w_reader, msg);
 		break;
 	case WM_BOTTOMED:
 		wind_set(main_h, WF_BOTTOM, 0, 0, 0, 0);
@@ -1070,21 +1102,9 @@ void win_message(short *msg)
 			win_redraw(w, 0);
 		}
 		break;
-	case WM_ARROWED: {
-		long rows = win_rows(w);
-		switch (msg[4]) {
-		case 0: win_scroll_to(w, w->top - rows); break;
-		case 1: win_scroll_to(w, w->top + rows); break;
-		case 2: win_scroll_to(w, w->top - 1); break;
-		case 3: win_scroll_to(w, w->top + 1); break;
-		}
+	case WM_ARROWED:
+	case WM_VSLID:
+		slider_message(w, msg);
 		break;
-	}
-	case WM_VSLID: {
-		long rows = win_rows(w), max = w->total - rows;
-		if (max > 0)
-			win_scroll_to(w, (long)msg[4] * max / 1000);
-		break;
-	}
 	}
 }

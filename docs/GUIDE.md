@@ -259,10 +259,11 @@ like a modern mail program:
 
 **Drag the dividers** between the panes to size them; the pointer turns
 into a hand over a divider. The window's own size box (bottom right)
-sizes the window. Each pane has its own scroll bar, drawn as your
-desktop draws scroll bars (in 3D on TOS 4, in its theme under XaAES):
-click an arrow or hold it, click the bar above or below the slider for
-a page, or drag the slider. The pane
+sizes the window. The message pane scrolls with the window's own
+slider, at its right edge; the folder and message lists have scroll
+bars of their own, drawn as your desktop draws scroll bars (in 3D on
+TOS 4, in its theme under XaAES): click an arrow or hold it, click the
+bar above or below the slider for a page, or drag the slider. The pane
 with the dark header has the keyboard: click a pane, or press Tab to
 move on. The main window's own place and size, the dividers, the
 editor's place and the font are all kept in `EMAIL.INF` for next time.

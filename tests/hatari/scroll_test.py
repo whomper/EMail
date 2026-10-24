@@ -43,13 +43,14 @@ IMAP, SMTP = 10143, 10025
 TRACE = os.path.join(ROOT, "build", "trace", rig.PRG)
 # EMail's first layout with the system font: where the arrows and the
 # rows are, by the screen's height (the Falcon's 640x480 with TOS 4's
-# 23-pixel bars, ST high with TOS 1.04's 19), left of the column the
-# AES keeps for the window's size box (the guidelines, 5.1)
+# 23-pixel bars, ST high with TOS 1.04's 19). The list's arrow is its
+# own bar's (panebar.c); the message pane's is the window's own, in the
+# column beside the AES's size box (the guidelines, 5.1)
 ROW = 16                                 # a list row with the system font, until one is drawn
 SPOTS = {480: dict(arrow=(605, 217), list_box=(220, 98, 594, 226),
-                   rarrow=(605, 466), reader_box=(220, 254, 594, 462)),
+                   rarrow=(628, 445), reader_box=(220, 254, 617, 462)),
          400: dict(arrow=(611, 182), list_box=(216, 95, 602, 192),
-                   rarrow=(611, 371), reader_box=(216, 217, 602, 370))}
+                   rarrow=(630, 372), reader_box=(216, 217, 621, 370))}
 
 work, machine, more = rig.cli("Falcon")
 if not os.path.exists(TRACE):
@@ -170,10 +171,14 @@ try:
     # with a GDOS font of 10 points (the hub's run under NVDI)
     drawn = [x for x in t if x[0] == "DRAW"]
     row = drawn[0][3] if drawn else ROW
-    check("three steps down the reader: three copies, a line (%d) drawn at each" % row,
-          len([x for x in t if x[0] == "COPY" and x[1] == "reader"]) == 3 and
-          len([x for x in drawn if x[1] == "reader" and x[3] == row]) == 3 and
-          len(drawn) == 3 and row < 30)
+    # the reader's arrow is the window's own (5.1): the AES sends a step
+    # for each click, and TOS 4's another while the button is still down,
+    # so three clicks are three steps or more; each one a copy and a line
+    copies = len([x for x in t if x[0] == "COPY" and x[1] == "reader"])
+    check("three steps down the reader: a copy and a line (%d) drawn at each (%d steps)" % (row, copies),
+          3 <= copies <= 6 and
+          len([x for x in drawn if x[1] == "reader" and x[3] == row]) == copies and
+          len(drawn) == copies and row < 30)
     rscrolled = shot("s2b-reader")
     r.ctrl(",")                          # Settings, OK: everything drawn from scratch
     time.sleep(3)
