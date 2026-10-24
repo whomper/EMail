@@ -9,6 +9,10 @@
  * each pane has a header strip and its own scroll bar, and the pane last
  * clicked has the keyboard (its header is drawn dark). The editor is a
  * window of its own with the usual GEM slider. Sizes go to EMAIL.INF.
+ *
+ * What the AES draws in its own look is the AES's (the guidelines, 5.1):
+ * the main window is sized by its SIZER, and each pane's bar is
+ * common/ui/panebar.c's, AES objects drawn by objc_draw.
  */
 #include <string.h>
 #include "ui.h"
@@ -16,6 +20,7 @@
 #include "util.h"
 #include "bidi.h"
 #include "iconify.h"
+#include "panebar.h"
 
 WIN w_folders, w_list, w_reader, w_editor;
 static WIN *panes[] = { &w_folders, &w_list, &w_reader };
@@ -26,14 +31,12 @@ short main_iconified;			/* shown as EMail's icon (WM_ICONIFY) */
 static GRECT mwork;			/* the main window's work area */
 static WIN *focus = &w_list;
 static char main_info[120];
-static short sbw;			/* scroll bar width */
+static short sbw;			/* a pane's bar: the AES's slider column (pb_width) */
 #define DIV 4				/* divider thickness */
 
 #define EDKIND (NAME | CLOSER | FULLER | MOVER | SIZER | UPARROW | DNARROW | VSLIDE)
-/* no SIZER: with no sliders of its own the AES would keep an empty
-   column down the right edge for it. The main window draws its own size
-   box below the message pane's scroll bar instead. */
-#define MAINKIND (NAME | CLOSER | FULLER | MOVER | INFO)
+/* sized by the AES's own SIZER (5.1), its look the AES's */
+#define MAINKIND (NAME | CLOSER | FULLER | MOVER | SIZER | INFO)
 
 static int intersect(GRECT *a, GRECT *b)
 {
@@ -93,7 +96,7 @@ static void layout(void)
 {
 	short fw = opt.pane_w, lh = opt.pane_h, i;
 	short minw = 10 * cw + sbw, minh = header_h() + 3 * ch;
-	sbw = cw * 2 > 16 ? 16 : cw * 2;
+	sbw = pb_width();
 	if (!fw)
 		fw = 24 * cw + sbw;
 	if (!lh)
@@ -151,120 +154,16 @@ static GRECT sb_rect(WIN *w)
 	r.y = w->work.y;
 	r.w = sbw;
 	r.h = w->work.h;
-	if (w == &w_reader)
-		r.h -= sbw;		/* the size box goes below it */
 	return r;
 }
 
-/* the main window's size box: the bottom right corner */
-static GRECT grip_rect(void)
+/* a pane's bar as panebar.c wants it */
+static void bar_of(WIN *w, PANEBAR *b)
 {
-	GRECT r;
-	r.w = sbw;
-	r.h = sbw;
-	r.x = mwork.x + mwork.w - sbw;
-	r.y = mwork.y + mwork.h - sbw;
-	return r;
-}
-
-/* thumb position and size inside the track (between the arrows) */
-static void thumb(WIN *w, short *ty, short *th, short *track_y, short *track_h)
-{
-	GRECT s = sb_rect(w);
-	long rows = win_rows(w);
-	short ah = sbw;
-	*track_y = s.y + ah;
-	*track_h = s.h - 2 * ah;
-	if (*track_h < 4)
-		*track_h = 4;
-	if (w->total <= rows) {
-		*ty = *track_y;
-		*th = *track_h;
-		return;
-	}
-	*th = (short)(*track_h * rows / w->total);
-	if (*th < 8)
-		*th = 8;
-	*ty = *track_y + (short)((long)(*track_h - *th) * w->top / (w->total - rows));
-}
-
-static void box_outline(short x, short y, short wd, short ht)
-{
-	short p[10];
-	p[0] = x;
-	p[1] = y;
-	p[2] = x + wd - 1;
-	p[3] = y;
-	p[4] = x + wd - 1;
-	p[5] = y + ht - 1;
-	p[6] = x;
-	p[7] = y + ht - 1;
-	p[8] = x;
-	p[9] = y;
-	vswr_mode(vdi_h, 1);
-	vsl_color(vdi_h, 1);
-	v_pline(vdi_h, 5, p);
-}
-
-static void arrow(short x, short y, short wd, short ht, int up)
-{
-	short cx = x + wd / 2, p[6], k = (ht - 4) / 2 > 3 ? 3 : (ht - 4) / 2;
-	short cy = y + ht / 2;
-	box_outline(x, y, wd, ht);
-	if (k < 1)
-		k = 1;
-	p[0] = cx - k;
-	p[1] = up ? cy + k / 2 + 1 : cy - k / 2 - 1;
-	p[2] = cx;
-	p[3] = up ? cy - k / 2 - 1 : cy + k / 2 + 1;
-	p[4] = cx + k;
-	p[5] = p[1];
-	v_pline(vdi_h, 3, p);
-}
-
-static void draw_scrollbar(WIN *w)
-{
-	GRECT s = sb_rect(w), t;
-	short ty, th, try_, trh;
-	if (s.h <= 0)
-		return;
-	fill(&s, 0);
-	arrow(s.x, s.y, s.w, sbw, 1);
-	arrow(s.x, s.y + s.h - sbw, s.w, sbw, 0);
-	thumb(w, &ty, &th, &try_, &trh);
-	/* the track in the desktop pattern, the thumb white */
-	t.x = s.x + 1;
-	t.y = try_;
-	t.w = s.w - 2;
-	t.h = trh;
-	vsf_interior(vdi_h, colour ? 1 : 2);
-	vsf_style(vdi_h, 1);
-	vsf_color(vdi_h, colour ? pen[P_PANEL] : 1);
-	{
-		short p[4];
-		p[0] = t.x;
-		p[1] = t.y;
-		p[2] = t.x + t.w - 1;
-		p[3] = t.y + t.h - 1;
-		vswr_mode(vdi_h, 1);
-		vr_recfl(vdi_h, p);
-	}
-	t.y = ty;
-	t.h = th;
-	fill(&t, 0);
-	box_outline(s.x, ty, s.w, th);
-	box_outline(s.x, s.y, s.w, s.h);
-}
-
-/* drawn like the AES's own: a small window over a bigger one */
-static void draw_grip(void)
-{
-	GRECT g = grip_rect();
-	short a = g.w / 2, b = g.h / 2;
-	fill(&g, 0);
-	box_outline(g.x, g.y, g.w, g.h);
-	box_outline(g.x + 3, g.y + 3, g.w - 6, g.h - 6);
-	box_outline(g.x + 3, g.y + 3, a, b);
+	b->r = sb_rect(w);
+	b->total = w->total;
+	b->shown = win_rows(w);
+	b->top = w->top;
 }
 
 static void draw_header(WIN *w)
@@ -352,12 +251,13 @@ static void draw_main(GRECT *clip)
 			clip_on(clip);
 		}
 		r = sb_rect(w);
-		if (intersect(clip, &r))
-			draw_scrollbar(w);
+		if (intersect(clip, &r)) {
+			PANEBAR b;
+			bar_of(w, &b);
+			pb_draw(&b, &r);
+			clip_on(clip);
+		}
 	}
-	r = grip_rect();
-	if (intersect(clip, &r))
-		draw_grip();
 	r = div_v();
 	if (intersect(clip, &r))
 		draw_divider(&r);
@@ -771,7 +671,17 @@ void win_scroll_to(WIN *w, long top)
 	if (top == w->top)
 		return;
 	w->top = top;
-	win_sliders(w);
+	if (w->pane) {
+		/* only the slider's old and new places (all of the bar took an
+		   8 MHz ST 70 ms) */
+		PANEBAR b;
+		GRECT m;
+		bar_of(w, &b);
+		m = pb_moved(&b, old);
+		main_redraw(&m);
+	} else {
+		win_sliders(w);
+	}
 	{
 		GRECT a = w->work;
 		a.y += w->head_h;
@@ -802,40 +712,31 @@ static short button_down(short *mx, short *my)
 	return mb & 3;
 }
 
-/* a press on a pane's scroll bar */
-static void scrollbar_press(WIN *w, short my)
+/* a press on a pane's bar: panebar.c's arrows, track and slider */
+static WIN *bar_win;
+static PANEBAR bar_held;
+
+static int bar_scroll(long n)
 {
-	GRECT s = sb_rect(w);
-	short ty, th, try_, trh, mx, y;
-	long rows = win_rows(w);
-	thumb(w, &ty, &th, &try_, &trh);
-	if (my < s.y + sbw || my >= s.y + s.h - sbw) {
-		/* an arrow: one line, repeating while held */
-		short d = my < s.y + sbw ? -1 : 1, first = 1;
-		do {
-			win_scroll_to(w, w->top + d);
-			evnt_timer_(first ? 250 : 40);
-			first = 0;
-		} while (button_down(&mx, &y));
-		return;
-	}
-	if (my < ty || my >= ty + th) {
-		/* the track: a page */
-		win_scroll_to(w, w->top + (my < ty ? -(rows - 1) : rows - 1));
-		return;
-	}
-	/* the thumb: follow the mouse */
-	{
-		short grab = my - ty;
-		wind_update(3);
-		while (button_down(&mx, &y)) {
-			long max = w->total - rows;
-			if (max > 0 && trh > th)
-				win_scroll_to(w, (long)(y - grab - try_) * max / (trh - th));
-			evnt_timer_(20);
-		}
-		wind_update(2);
-	}
+	long old = bar_win->top;
+	win_scroll_to(bar_win, old + n);
+	bar_held.top = bar_win->top;
+	return bar_win->top != old;
+}
+
+static int bar_goto(long t)
+{
+	long old = bar_win->top;
+	win_scroll_to(bar_win, t);
+	bar_held.top = bar_win->top;
+	return bar_win->top != old;
+}
+
+static void scrollbar_press(WIN *w, short mx, short my)
+{
+	bar_win = w;
+	bar_of(w, &bar_held);
+	pb_click(&bar_held, mx, my, bar_scroll, bar_goto);
 }
 
 /* drag a divider; vertical: between folders and the rest */
@@ -916,9 +817,8 @@ void win_hover(short mx, short my)
 	short h = wind_find(mx, my), t, d, want = ARROW;
 	wind_get(0, WF_TOP, &t, &d, &d, &d);
 	if (h == main_h && t == main_h && !main_iconified) {
-		GRECT g = grip_rect();
 		/* the flat hand, as over Claude ST's divider */
-		if (inside(&g, mx, my) || on_divider(mx, my, 1) || on_divider(mx, my, 0))
+		if (on_divider(mx, my, 1) || on_divider(mx, my, 0))
 			want = FLAT_HAND;
 	}
 	if (want != hover_shape) {
@@ -929,76 +829,6 @@ void win_hover(short mx, short my)
 	evnt_set_m1(1, mx, my, 1, 1);
 }
 
-/* drag the size box. EMail draws the outline itself, the way the
-   dividers are dragged: graf_rubberbox() hung TOS 4's AES here. */
-static void xor_box(GRECT *r)
-{
-	short p[10];
-	p[0] = p[6] = p[8] = r->x;
-	p[1] = p[3] = p[9] = r->y;
-	p[2] = p[4] = r->x + r->w - 1;
-	p[5] = p[7] = r->y + r->h - 1;
-	graf_mouse(M_OFF, 0);
-	v_pline(vdi_h, 5, p);
-	graf_mouse(M_ON, 0);
-}
-
-static void main_resize(void)
-{
-	GRECT c, b, scr;
-	short mx, my, ox, oy, held, shown = 0, minw = 40 * cw, minh = 12 * ch;
-	wind_get(main_h, WF_CURRXYWH, &c.x, &c.y, &c.w, &c.h);
-	button_down(&mx, &my);
-	ox = c.x + c.w - mx;		/* where in the box it was grabbed */
-	oy = c.y + c.h - my;
-	b = c;
-	scr.x = 0;
-	scr.y = 0;
-	scr.w = scr_w;
-	scr.h = scr_h;
-	wind_update(BEG_UPDATE);
-	wind_update(3);
-	graf_mouse(FLAT_HAND, 0);
-	clip_on(&scr);
-	vswr_mode(vdi_h, 3);		/* XOR */
-	vsl_color(vdi_h, 1);
-	do {
-		GRECT n = c;
-		held = button_down(&mx, &my);
-		n.w = mx + ox - c.x;
-		n.h = my + oy - c.y;
-		if (n.w < minw)
-			n.w = minw;
-		if (n.h < minh)
-			n.h = minh;
-		if (c.x + n.w > scr_w)
-			n.w = scr_w - c.x;
-		if (c.y + n.h > scr_h)
-			n.h = scr_h - c.y;
-		if (!shown || n.w != b.w || n.h != b.h) {
-			if (shown)
-				xor_box(&b);
-			b = n;
-			xor_box(&b);
-			shown = 1;
-		}
-		evnt_timer_(10);
-	} while (held);
-	xor_box(&b);
-	vswr_mode(vdi_h, 1);
-	graf_mouse(ARROW, 0);
-	hover_shape = ARROW;
-	wind_update(2);
-	wind_update(END_UPDATE);
-	if (b.w == c.w && b.h == c.h)
-		return;
-	wind_set(main_h, WF_CURRXYWH, c.x, c.y, b.w, b.h);
-	get_main_work();
-	save_main_place();
-	layout();
-	main_redraw(0);
-}
-
 /* a mouse press anywhere; returns 1 if it was ours */
 int win_mouse(short mx, short my, short button, short clicks, short kstate)
 {
@@ -1007,11 +837,6 @@ int win_mouse(short mx, short my, short button, short clicks, short kstate)
 	if (h > 0 && ((h == main_h && main_iconified) || (h == w_editor.h && w_editor.iconified)))
 		return 0;	/* an icon takes no clicks */
 	if (h > 0 && h == main_h) {
-		r = grip_rect();
-		if (inside(&r, mx, my)) {
-			main_resize();
-			return 1;
-		}
 		if (on_divider(mx, my, 1)) {
 			divider_drag(1);
 			return 1;
@@ -1027,7 +852,7 @@ int win_mouse(short mx, short my, short button, short clicks, short kstate)
 			win_focus(w);
 			r = sb_rect(w);
 			if (inside(&r, mx, my)) {
-				scrollbar_press(w, my);
+				scrollbar_press(w, mx, my);
 			} else if (inside(&w->work, mx, my)) {
 				if ((button & 2) && w->rclick)
 					w->rclick(w, mx, my);
