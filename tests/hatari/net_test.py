@@ -28,6 +28,7 @@ ROOT = os.path.normpath(os.path.join(HERE, "..", ".."))
 IMAP, SMTP = 10143, 10025
 
 work, machine, more = rig.cli("Falcon")
+ST = machine.partition(":")[0] in ("ST", "ST-1")   # a 68000
 os.makedirs(work, exist_ok=True)
 srv = os.path.join(work, "srv")
 hd = os.path.join(work, "hd")
@@ -60,9 +61,10 @@ os.makedirs(os.path.join(hd, "AUTO"))
 rig.install_prg(hd)
 rig.fakesting(os.path.join(hd, "AUTO"))
 with open(os.path.join(hd, "EMAIL.INF"), "w", newline="") as f:
-    # the ST edition finds Falcon mode on, as EMAIL.PRG left it: it must go
-    # through the gateway all the same, and leave the setting as it was
-    f.write("[options]\r\n" + ("falcon=1\r\n" if rig.PRG == "EMAILST.PRG" else "") +
+    # on an ST, EMail finds a Direct connection on, as a Falcon left it:
+    # it must go through the gateway all the same (a 68000 can't load
+    # TLS.OVL), and leave the setting as it was
+    f.write("[options]\r\n" + ("falcon=1\r\n" if ST else "") +
             "tz=180\r\nlog=1\r\nsignature=Sent from my Falcon\r\n[account]\r\nname=Dana\r\nfullname=Dana Falcon\r\n"
             "email=dana@test.local\r\nin=imap\r\nhost=127.0.0.1\r\nport=%d\r\nuser=dana\r\n"
             "pass=secret\r\nsmtphost=127.0.0.1\r\nsmtpport=%d\r\n"
@@ -122,10 +124,10 @@ try:
     typ, data = m.search(None, "ALL")
     print("in Sent:", len(data[0].split()))
     print("inbox subjects:", subjects)
-    if rig.PRG == "EMAILST.PRG":
+    if ST:
         inf = open(os.path.join(hd, "EMAIL.INF"), errors="replace").read()
         kept = "FALCON=1" in inf
-        print("ST edition: Falcon mode kept for EMAIL.PRG:", kept)
+        print("on an ST: the Direct connection kept for the Falcon:", kept)
         ok = ok and kept
 finally:
     r.stop()

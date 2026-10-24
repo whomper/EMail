@@ -389,7 +389,7 @@ int dlg_account(ACCOUNT *a)
 		acct_preset(a);
 	str_copy(host, opt.falcon ? a->dhost : a->host, sizeof(host));
 	snprintf(port, sizeof(port), "%u", opt.falcon ? acct_port(a, 0) : a->port);
-	/* each mode has its own login: Falcon mode's goes to the provider,
+	/* each mode has its own login: a Direct connection's goes to the provider,
 	   the gateway's to the Pi (which may want something else) */
 	acct_fill_logins(a);
 	str_copy(user, opt.falcon ? a->duser : a->user, sizeof(user));
@@ -401,7 +401,7 @@ int dlg_account(ACCOUNT *a)
 
 	d_begin(62, 21);
 	d_add(G_STRING, 0, 0, (long)"Mail account", 2, 1, 12, 1);
-	d_text(16, 1, opt.falcon ? "Falcon mode: the provider's servers, login"
+	d_text(16, 1, opt.falcon ? "Direct connection: the provider's servers"
 				 : "the Pi gateway's servers and login");
 	d_text(2, 3, "Account name:");
 	f_name = d_long(17, 3, name, 30, sizeof(name) - 1, 0);
@@ -926,17 +926,10 @@ static void part_connection(short x, short y)
 	zone_label();
 	zone_btn = d_add(G_BOXTEXT, TOUCHEXIT, 0, (long)d_ted(s_zlabel, 0, 0x1180), x + 11, ROW(0), 29, 1);
 	((TEDINFO *)tree[zone_btn].ob_spec)->te_thickness = -1;
-#ifdef MAIL_ST
-	/* the ST edition has no TLS of its own (common/src/tls_none.c) */
-	d_add(G_STRING, 0, 0, (long)"Secure servers through the Pi gateway", x, ROW(1), 37, 1);
-	d_add(G_STRING, 0, 0, (long)"(Falcon mode is in EMAIL.PRG)", x + 3, ROW(2), 29, 1);
-	d_tick(x, ROW(3), "Write a protocol log (EMAIL.LOG)", T_LOG);
-#else
-	d_tick(x, ROW(1), "Falcon mode: TLS on this Atari", T_FALCON);
-	d_add(G_STRING, 0, 0, (long)"off: plain, through the Pi gateway", x + 3, ROW(2), 34, 1);
+	d_tick(x, ROW(1), "Direct connection: TLS on this Atari", T_FALCON);
+	d_add(G_STRING, 0, 0, (long)"(68020 or better); off: the Pi gateway", x + 3, ROW(2), 38, 1);
 	d_tick(x + 3, ROW(3), "Use the DSP for the signatures", T_DSP);
 	d_tick(x, ROW(4), "Write a protocol log (EMAIL.LOG)", T_LOG);
-#endif
 }
 
 #define SW 13			/* the list's width */

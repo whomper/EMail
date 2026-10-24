@@ -21,6 +21,7 @@
 #include "util.h"
 #include "crash.h"
 #include "help.h"
+#include "tlsovl.h"
 #include "av.h"
 #include "clip.h"
 #include "dd.h"
@@ -112,9 +113,7 @@ static const MBAR_ITEM m_opts[] = {
 	{ "Font...", 0, C_FONT },
 	{ "-", 0, 0 },
 	{ "Work offline", 0, C_OFFLINE },
-#ifndef MAIL_ST
-	{ "Falcon mode (TLS)", 0, C_FALCON },
-#endif
+	{ "Direct connection (TLS)", 0, C_FALCON },
 	{ "Hebrew keyboard", "F10", C_HEBREW },
 	{ "Protocol log", 0, C_LOG },
 	{ 0, 0, 0 }
@@ -172,9 +171,7 @@ void menu_update(void)
 	enable(C_DELFOLDER, cur_finfo && !cur_finfo->local && !cur_finfo->role);
 	enable(C_RENFOLDER, cur_finfo && !cur_finfo->local && !cur_finfo->role && !cur_finfo->noselect);
 	menu_icheck(mb.tree, mbar_object(&mb, C_OFFLINE), opt.offline);
-#ifndef MAIL_ST
 	menu_icheck(mb.tree, mbar_object(&mb, C_FALCON), opt.falcon);
-#endif
 	menu_icheck(mb.tree, mbar_object(&mb, C_HEBREW), hebrew_kbd);
 	menu_icheck(mb.tree, mbar_object(&mb, C_LOG), opt.log);
 }
@@ -360,11 +357,9 @@ static const char *link_page(const char *url)
    asked for once (and kept in EMAIL.INF) */
 static int find_browser(char *out, int size)
 {
-#ifdef MAIL_ST
-	static const char *const names[2] = { "EWEBST.PRG", "EWEB.PRG" };
-#else
-	static const char *const names[2] = { "EWEB.PRG", "EWEBST.PRG" };
-#endif
+	/* EWeb's ST edition first on a 68000 */
+	static const char *const names[2][2] = { { "EWEBST.PRG", "EWEB.PRG" }, { "EWEB.PRG", "EWEBST.PRG" } };
+	int big = get_cookie(0x5F435055L) >= 20;	/* _CPU: a 68020 or better */
 	char path[200], name[16];
 	short button = 0, k;
 	char *e;
@@ -373,13 +368,13 @@ static int find_browser(char *out, int size)
 		return 1;
 	}
 	for (k = 0; k < 2; k++) {
-		path_join(out, size, opt.workdir, names[k]);
+		path_join(out, size, opt.workdir, names[big][k]);
 		if (pf_exists(out))
 			return 1;
 	}
 	str_copy(path, opt.workdir[0] ? opt.workdir : "C:", sizeof(path) - 4);
 	strcat(path, "\\*.PRG");
-	strcpy(name, names[0]);
+	strcpy(name, names[big][0]);
 	if (!fsel_exinput(path, name, &button, "Where is EWeb (EWEB.PRG)?") || !button || !name[0])
 		return 0;
 	if ((e = strrchr(path, '\\')) != 0)
@@ -1351,10 +1346,11 @@ static void command(short cmd)
 	menu_update();
 }
 
-/* ---------------- Falcon mode ----------------
- * On: EMail talks TLS to the providers itself (BearSSL on the 68030, RSA
- * signatures on the DSP). Off: plain, through the Raspberry Pi gateway.
- * Each account keeps both sets of servers. */
+/* ---------------- Direct connection (FALCON= in EMAIL.INF) ----------------
+ * On: EMail talks TLS to the providers itself, with TLS.OVL (BearSSL on a
+ * 68020 or better, RSA signatures on a Falcon's DSP; the AERA guidelines,
+ * 7.4). Off: plain, through the Raspberry Pi gateway. Each account keeps
+ * both sets of servers. */
 short dlg_falcon;
 
 int falcon_mode_set(int on)
@@ -1362,12 +1358,21 @@ int falcon_mode_set(int on)
 	if (on) {
 		char missing[200];
 		int i;
+		char err[160];
 		if (get_cookie(0x5F435055L) < 20) {	/* _CPU */
-			alert(1, "[3][Falcon mode needs a 68020 or|better (Falcon, TT): this|Atari is too slow for TLS.][ OK ]");
+			alert(1, "[3][A Direct connection needs a|68020 or better (Falcon, TT):|this Atari is too slow for|TLS. The Pi gateway does it.][ OK ]");
 			return 0;
 		}
+		/* TLS.OVL, said at once rather than at the first connection */
+		busy(1);
+		if (!tls_ovl_load(err, sizeof(err))) {
+			busy(0);
+			alert(1, "[3][%s][ OK ]", err);
+			return 0;
+		}
+		busy(0);
 		if (!pf_exists(conn_cacert)) {
-			alert(1, "[3][Falcon mode needs the root|certificates: put CACERT.PEM|next to EMAIL.PRG. Get it|from curl.se/docs/caextract|or from EMail's GitHub page.][ OK ]");
+			alert(1, "[3][A Direct connection needs the|root certificates: put|CACERT.PEM next to EMAIL.PRG.|Get it from curl.se/docs/|caextract or EMail's GitHub page.][ OK ]");
 			return 0;
 		}
 		missing[0] = 0;
@@ -1379,7 +1384,7 @@ int falcon_mode_set(int on)
 			}
 		}
 		if (missing[0])
-			alert(1, "[1][Falcon mode connects to the|providers directly. Enter the|servers for: %s|in Options > Accounts.][ OK ]", missing);
+			alert(1, "[1][A Direct connection reaches the|providers itself. Enter the|servers for: %s|in Options > Accounts.][ OK ]", missing);
 	}
 	opt.falcon = (short)on;
 	falcon_dsp_init();
@@ -1588,7 +1593,9 @@ int main(void)
 
 	work_dir(dir, sizeof(dir));
 	secret_warn = warn_plain;	/* before anything is saved */
+	falcon_usable = get_cookie(0x5F435055L) >= 20;	/* _CPU: TLS.OVL needs a 68020 */
 	store_init(dir);
+	path_join(tls_ovl_path, sizeof(tls_ovl_path), dir, "TLS.OVL");	/* beside CACERT.PEM */
 	crash_install(dir, "EMail", mail_version);
 	help_init();			/* memory the help viewer may read */
 	av_init("EMAIL|EMAILST");	/* the desktop's AV server, if there is one */

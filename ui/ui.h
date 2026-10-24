@@ -200,15 +200,10 @@ int  folder_takes(ACCOUNT *a, FINFO *f);	/* the open folder's messages can go th
 FINFO *folders_drop_target(short mx, short my, GRECT *row);
 void cmd_edit_account(ACCOUNT *a);
 void cmd_refresh_folders(ACCOUNT *a);
-int  falcon_mode_set(int on);		/* 1 if it is now as asked */
-extern short dlg_falcon;		/* the Settings dialog's Falcon mode box */
-#ifdef MAIL_ST				/* the ST edition: no TLS, no DSP */
-#define falcon_dsp_init() ((void)0)
-#define falcon_dsp_state() "68000"
-#else
-void falcon_dsp_init(void);		/* RSA on the DSP in Falcon mode (dsp.c) */
+int  falcon_mode_set(int on);		/* a Direct connection (FALCON=): 1 if it is now as asked */
+extern short dlg_falcon;		/* the Settings dialog's Direct connection box */
+void falcon_dsp_init(void);		/* RSA on the DSP in a Direct connection (dsp_ovl.c) */
 const char *falcon_dsp_state(void);	/* "DSP" / "68030" for the About box */
-#endif
 
 /* right-click menus (common/ui/popup.c): the chosen item, or -1 */
 #include "popup.h"

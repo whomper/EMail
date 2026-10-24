@@ -118,7 +118,7 @@ try:
     log = open(os.path.join(hd, "PEOPLE.LOG"), errors="replace").read() if os.path.exists(
         os.path.join(hd, "PEOPLE.LOG")) else ""
     print("PEOPLE.LOG:", log.replace("\r\n", " | "))
-    asker = rig.PRG.split(".")[0]        # the AES name: EMAIL, or EMAILST (the ST edition)
+    asker = rig.PRG.split(".")[0]        # the AES name: EMAIL
     check("EMail asked EContact for names as %s" % asker, "names:%s " % asker in log and "dana@example.com" in log)
     check("^B asked EContact to pick", "pick:%s" % asker in log)
 

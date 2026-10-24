@@ -2,8 +2,8 @@
 # Copyright (C) 2026 AERA | Erez Yaary
 # EMail - an email client for the Atari ST/STE/TT/Falcon, in C.
 #
-#   make            builds EMAIL.PRG and the ST edition EMAILST.PRG with a
-#                   stock m68k ELF cross compiler
+#   make            builds EMAIL.PRG, for every Atari, with a stock m68k
+#                   ELF cross compiler
 #                   (Debian/Ubuntu: apt install gcc-m68k-linux-gnu).
 #                   No MiNTLib needed: the program is freestanding and
 #                   common/tools/elf2tos.py writes the TOS header.
@@ -18,8 +18,8 @@
 # program (.github/workflows/release.yml).
 #
 # The Atari build follows Claude ST (github.com/whomper/ClaudeST). The code
-# EMail shares with the other AERA programs (BearSSL, the DSP RSA, bidi,
-# dates, passwords, the libc headers, the build tools) is in common/, a git
+# EMail shares with the other AERA programs (TLS.OVL, bidi, dates,
+# passwords, the libc headers, the build tools) is in common/, a git
 # subtree of github.com/whomper/AERA-Atari: change it there, then
 # tools/sync-common.sh.
 
@@ -35,48 +35,36 @@ CFLAGS  += $(TRACECF)
 LDFLAGS := -m68000 -nostdlib -static -no-pie -Wl,--emit-relocs -Wl,-T,common/atari/link.ld \
            -Wl,--build-id=none -Wl,-z,noexecstack -Wl,--no-warn-rwx-segments
 
-# BearSSL 0.6 (common/third_party/bearssl) for Falcon mode. On the Atari it is
-# built for the 68030: Falcon mode needs one, the rest of EMail stays
-# 68000 code and runs on any ST.
+# A Direct connection's TLS (BearSSL 0.6, the DSP's RSA) is TLS.OVL
+# (the AERA guidelines, 7.4): built once in AERA-Atari as 68030 code and
+# kept in common/tlsovl, loaded by a TT or Falcon when it first needs it,
+# never by an ST. EMail itself is 68000 code, one program for every
+# Atari; atari/tls_ovl.c and ui/dsp_ovl.c stand where tls.c and dsp.c
+# were. The builds on this computer (make test, itest) link src/tls.c and
+# BearSSL, which answer the same calls.
 BSSL    := common/third_party/bearssl
 BSSLSRC := $(wildcard $(BSSL)/src/*/*.c)
-BSSLDEF := -DBR_USE_URANDOM=0 -DBR_USE_GETENTROPY=0 -DBR_USE_UNIX_TIME=0 \
-           -DBR_USE_WIN32_TIME=0 -DBR_USE_WIN32_RAND=0 -DBR_RDRAND=0
-BSSLCF  := -m68030 -O2 -fomit-frame-pointer -ffreestanding -fno-builtin -fno-pic -fno-pie \
-           -fno-tree-loop-distribute-patterns -fno-asynchronous-unwind-tables -w \
-           -nostdinc -isystem $(GCCINC) -Iatari/include -Icommon/atari/include -I$(BSSL)/inc -I$(BSSL)/src $(BSSLDEF)
-BSSLOBJ  = $(patsubst $(BSSL)/src/%.c,$(OBJDIR)/bssl/%.o,$(BSSLSRC))
 HBSSLOBJ = $(patsubst $(BSSL)/src/%.c,$(OBJDIR)/hbssl/%.o,$(BSSLSRC))
 
-CORE    := util charset mime links conn tls imap pop3 smtp store compose mail futil bidi secret ctime tz
-ATARI   := libc tos plat_tos net_tos sting gem dsprsa crash bigbuf
-UI      := main draw win folders list reader editor dialogs popup font fontsel about dsp theme help av alert mbar aboutbox iconify clip clipedit dd busy people_ask dialog field av_people people_file
+CORE    := util charset mime links conn imap pop3 smtp store compose mail futil bidi secret ctime tz
+ATARI   := libc tos plat_tos net_tos sting gem tls_ovl crash bigbuf
+UI      := main draw win folders list reader editor dialogs popup font fontsel about dsp_ovl theme help av alert mbar aboutbox iconify clip clipedit dd busy people_ask dialog field av_people people_file
 
 OBJDIR  := build
 OBJS    := $(OBJDIR)/crt0.o $(OBJDIR)/sting_s.o $(OBJDIR)/nf.o $(OBJDIR)/crash_s.o \
-           $(addprefix $(OBJDIR)/,$(addsuffix .o,$(CORE) $(ATARI) $(UI)))
+           $(addprefix $(OBJDIR)/,$(addsuffix .o,$(CORE) ovl $(ATARI) $(UI)))
 HDRS    := $(wildcard src/*.h atari/*.h atari/include/*.h ui/*.h \
            common/src/*.h common/atari/*.h common/atari/include/*.h common/ui/*.h common/dsp/*.h)
 
-# the ST edition, EMAILST.PRG: no TLS of its own (common/src/tls_none.c),
-# so no BearSSL and no DSP: about 115 KB less for a 1 MB ST. It reaches
-# secure servers through the Pi gateway, as EMAIL.PRG does out of Falcon
-# mode, with the same EMAIL.INF and folders.
-STDIR   := $(OBJDIR)/st
-STCORE  := $(filter-out tls,$(CORE)) tls_none
-STATARI := $(filter-out dsprsa,$(ATARI))
-STUI    := $(filter-out dsp,$(UI))
-STOBJS  := $(OBJDIR)/crt0.o $(OBJDIR)/sting_s.o $(OBJDIR)/nf.o $(OBJDIR)/crash_s.o \
-           $(addprefix $(STDIR)/,$(addsuffix .o,$(STCORE) $(STATARI) $(STUI)))
-STCF    := $(CFLAGS) -DMAIL_ST -DTLS_FULL_EDITION=\"EMAIL.PRG\" -DNO_ICON256
-
 # what goes onto the Atari: binary/ (built, never committed)
-all: binary/EMAIL.PRG binary/EMAILST.PRG binary/ROOTS.DAT
+all: binary/EMAIL.PRG binary/TLS.OVL binary/ROOTS.DAT
 
 binary/EMAIL.PRG: $(OBJDIR)/mail.elf common/tools/elf2tos.py | binary
 	PRGFLAGS=7 python3 common/tools/elf2tos.py $< $@
-binary/EMAILST.PRG: $(STDIR)/mail.elf common/tools/elf2tos.py | binary
-	PRGFLAGS=7 python3 common/tools/elf2tos.py $< $@
+
+# the family's TLS.OVL as AERA-Atari built it: copied, never built here
+binary/TLS.OVL: common/tlsovl/TLS.OVL | binary
+	cp $< $@
 
 # the version: VERSION holds the last release (major.minor, e.g. 1.30),
 # and the build never writes it. Every build shows it as it is, in the
@@ -91,10 +79,8 @@ FORCE:
 $(OBJDIR)/build.o: $(OBJDIR)/build.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-$(OBJDIR)/mail.elf: $(OBJS) $(OBJDIR)/build.o $(OBJDIR)/libbearssl.a common/atari/link.ld
-	$(CC) $(LDFLAGS) -o $@ $(OBJS) $(OBJDIR)/build.o $(OBJDIR)/libbearssl.a -lgcc
-$(STDIR)/mail.elf: $(STOBJS) $(OBJDIR)/build.o common/atari/link.ld
-	$(CC) $(LDFLAGS) -o $@ $(STOBJS) $(OBJDIR)/build.o -lgcc
+$(OBJDIR)/mail.elf: $(OBJS) $(OBJDIR)/build.o common/atari/link.ld
+	$(CC) $(LDFLAGS) -o $@ $(OBJS) $(OBJDIR)/build.o -lgcc
 
 # EMail's icon (the AERA guidelines, 5.5): drawn in common/icons/EMAIL.txt,
 # made into icons/ (the desktop's RSC and ICN files), ui/icon.h and
@@ -102,14 +88,6 @@ $(STDIR)/mail.elf: $(STOBJS) $(OBJDIR)/build.o common/atari/link.ld
 # committed, and a release carries icons/
 icons:
 	python3 common/tools/appicon.py EMAIL --rsc icons/EMAIL.RSC --rscnv icons/EMAILNV.RSC --icn icons/EMAIL.ICN --mask icons/EMAILMK.ICN --headers ui --docs docs
-
-$(OBJDIR)/bssl/%.o: $(BSSL)/src/%.c
-	@mkdir -p $(dir $@)
-	$(CC) $(BSSLCF) -c -o $@ $<
-
-$(OBJDIR)/libbearssl.a: $(BSSLOBJ)
-	rm -f $@
-	$(CROSS)ar rcs $@ $^
 
 $(OBJDIR)/%.o: src/%.c $(HDRS) | $(OBJDIR)
 	$(CC) $(CFLAGS) -c -o $@ $<
@@ -123,18 +101,6 @@ $(OBJDIR)/%.o: common/atari/%.c $(HDRS) | $(OBJDIR)
 	$(CC) $(CFLAGS) -c -o $@ $<
 $(OBJDIR)/%.o: common/ui/%.c $(HDRS) | $(OBJDIR)
 	$(CC) $(CFLAGS) -c -o $@ $<
-$(STDIR)/%.o: src/%.c $(HDRS) | $(STDIR)
-	$(CC) $(STCF) -c -o $@ $<
-$(STDIR)/%.o: atari/%.c $(HDRS) | $(STDIR)
-	$(CC) $(STCF) -c -o $@ $<
-$(STDIR)/%.o: ui/%.c $(HDRS) | $(STDIR)
-	$(CC) $(STCF) -c -o $@ $<
-$(STDIR)/%.o: common/src/%.c $(HDRS) | $(STDIR)
-	$(CC) $(STCF) -c -o $@ $<
-$(STDIR)/%.o: common/atari/%.c $(HDRS) | $(STDIR)
-	$(CC) $(STCF) -c -o $@ $<
-$(STDIR)/%.o: common/ui/%.c $(HDRS) | $(STDIR)
-	$(CC) $(STCF) -c -o $@ $<
 # the stack: 32 KB instead of crt0's 48. The most EMail was seen to use,
 # with the stack painted in falcon_test (RSA on the 68030), net_test,
 # stop_test and a 1.4 MB message, is 15 KB; the 16 KB saved help a 1 MB ST
@@ -153,18 +119,12 @@ $(OBJDIR)/nf.o: common/atari/nf.S | $(OBJDIR)
 $(OBJDIR)/trace/EMAIL.PRG: FORCE
 	$(MAKE) OBJDIR=$(OBJDIR)/trace TRACECF=-DDRAW_TRACE $(OBJDIR)/trace/mail.elf
 	PRGFLAGS=7 python3 common/tools/elf2tos.py $(OBJDIR)/trace/mail.elf $@
-$(OBJDIR)/trace/EMAILST.PRG: FORCE
-	$(MAKE) OBJDIR=$(OBJDIR)/trace TRACECF=-DDRAW_TRACE $(OBJDIR)/trace/st/mail.elf
-	PRGFLAGS=7 python3 common/tools/elf2tos.py $(OBJDIR)/trace/st/mail.elf $@
 
 # EMail crashing on purpose with F1 to F5 (-DCRASH_TEST), for
 # common/tests/crash/app_crash.py (never released)
 $(OBJDIR)/crashtest/EMAIL.PRG: FORCE
 	$(MAKE) OBJDIR=$(OBJDIR)/crashtest TRACECF=-DCRASH_TEST $(OBJDIR)/crashtest/mail.elf
 	PRGFLAGS=7 python3 common/tools/elf2tos.py $(OBJDIR)/crashtest/mail.elf $@
-$(OBJDIR)/crashtest/EMAILST.PRG: FORCE
-	$(MAKE) OBJDIR=$(OBJDIR)/crashtest TRACECF=-DCRASH_TEST $(OBJDIR)/crashtest/st/mail.elf
-	PRGFLAGS=7 python3 common/tools/elf2tos.py $(OBJDIR)/crashtest/st/mail.elf $@
 
 # a stand-in for EContact's answering side, for tests/hatari/people_test.py
 # (never released)
@@ -192,7 +152,7 @@ $(OBJDIR)/fakeweb.acc: tests/atari/fakeweb.c $(addprefix $(OBJDIR)/,$(addsuffix 
 		$(addprefix $(OBJDIR)/,$(addsuffix .o,$(FAKECAL))) $(OBJDIR)/nf.o -lgcc
 	python3 common/tools/elf2tos.py $(OBJDIR)/fakeweb.elf $@
 
-$(OBJDIR) $(STDIR) binary:
+$(OBJDIR) binary:
 	mkdir -p $@
 
 # ---- host build: the same mail core, for tests and mail-cli ----
@@ -200,7 +160,7 @@ HOSTCC     ?= cc
 HOSTCFLAGS := -O1 -g -Wall -Wextra -Wno-unused-parameter -Wno-sign-compare \
               -Wno-format-truncation -Isrc -Icommon/src -fsanitize=address,undefined
 # each core file is the app's own (src/) or shared (common/src/)
-HOSTSRC    := $(foreach m,$(CORE),$(firstword $(wildcard src/$(m).c common/src/$(m).c))) \
+HOSTSRC    := $(foreach m,$(CORE) tls,$(firstword $(wildcard src/$(m).c common/src/$(m).c))) \
               tests/host/plat_posix.c tests/host/version.c
 HOSTLIB    := $(OBJDIR)/libbearssl-host.a
 
@@ -285,7 +245,7 @@ binary/EMAIL.HYP: docs/GUIDE.md tools/mkhelp.py VERSION docs/front.json docs/hel
 
 # a release's files: each one in dist/, and all of them in
 # dist/EMAIL-x.y.zip (the icons in icons/), for the release workflow
-DIST    := binary/EMAIL.PRG binary/EMAILST.PRG binary/CACERT.PEM binary/ROOTS.DAT binary/EMAIL.HYP binary/EMAIL.REF
+DIST    := binary/EMAIL.PRG binary/TLS.OVL binary/CACERT.PEM binary/ROOTS.DAT binary/EMAIL.HYP binary/EMAIL.REF
 ICONS   := icons/EMAIL.RSC icons/EMAILNV.RSC icons/EMAIL.ICN icons/EMAILMK.ICN
 dist: all help
 	rm -rf dist

@@ -7,8 +7,7 @@ Erez's video of 20 Oct 2026 showed panes drawn again for no reason: every
 row of the list at each scroll step and again when EContact's names came,
 the whole folder pane when a message was chosen, the reader blank while
 a message was laid out. EMAIL.PRG is the test build build/trace/EMAIL.PRG
-(make build/trace/EMAIL.PRG; with AERA_EDITION=st,
-build/trace/EMAILST.PRG), which says on the emulator's console what
+(make build/trace/EMAIL.PRG), which says on the emulator's console what
 each pane draws ("DRAW list y h", "COPY list y h"). With 40 messages on
 Dovecot (as net_test.py: FAKESTNG.PRG and serial_bridge.py), it checks:
 

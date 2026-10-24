@@ -15,25 +15,28 @@
 #include "icon256.h"
 #include "../src/version.h"
 #include "../src/plat.h"
+#include "tlsovl.h"
 
 void dlg_about(void)
 {
 	static char conn[80], where[60];
 	char avail[60];
 	short i, online = 0;
-#ifdef MAIL_ST
-#define EDITION "The ST edition, EMAILST.PRG"
-#else
-#define EDITION 0
-#endif
-	ABOUT a = { "EMail", mail_version, "E-mail for the Atari ST, TT and Falcon", { conn, where, EDITION }, { 0, 0, 0 },
+	char direct[40];
+	ABOUT a = { "EMail", mail_version, "E-mail for the Atari ST, TT and Falcon", { conn, where, 0 }, { 0, 0, 0 },
 		    icon_bits, icon16_px, icon16_rgb, icon256_px, icon256_rgb };
 	for (i = 0; i < naccts; i++)
 		if (accts[i]->im)
 			online = 1;
+	/* a Direct connection: TLS.OVL's version once loaded, and the DSP */
+	if (!tls_ovl_loaded())
+		str_copy(direct, "Direct connection", sizeof(direct));
+	else
+		snprintf(direct, sizeof(direct), "Direct (TLS.OVL %s%s)", tls_ovl_version(),
+			 strcmp(falcon_dsp_state(), "DSP") ? "" : ", DSP");
 	snprintf(conn, sizeof(conn), "%s  \xF9  %s  \xF9  %s",
 		 strcmp(net_stack(), "none") ? net_stack() : "no network",
-		 opt.falcon ? (strcmp(falcon_dsp_state(), "DSP") ? "Falcon" : "Falcon/DSP") : "Gateway",
+		 opt.falcon ? direct : "Gateway",
 		 opt.offline ? "offline" : online ? "online" : "ready");
 	/* the memory it runs in: TT RAM when there is some */
 	pf_memory(where, sizeof(where), avail, sizeof(avail));

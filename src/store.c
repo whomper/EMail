@@ -187,7 +187,7 @@ void acct_fill_logins(ACCOUNT *a)
 	}
 }
 
-/* the big providers' servers, for Falcon mode */
+/* the big providers' servers, for a Direct connection */
 static const struct {
 	const char *domains, *in, *out;
 	unsigned short inport, outport;
@@ -406,10 +406,12 @@ static void zone_detect(void)
 		 sizeof(opt.tzname));
 }
 
-/* EMAIL.INF's Falcon mode as it was read: the ST edition, which has no
-   TLS (tls_available 0), runs through the gateway and writes it back as
-   it found it, for EMAIL.PRG */
+/* EMAIL.INF's FALCON= (a Direct connection) as it was read: where there
+   is no TLS (a build without it, tls_available 0, or an Atari with a
+   68000, falcon_usable 0) EMail runs through the gateway and writes it
+   back as it found it, for the Falcon whose EMAIL.INF it was */
 static short falcon_inf;
+int falcon_usable = 1;
 
 static void set_opt(const char *k, const char *v)
 {
@@ -430,7 +432,7 @@ static void set_opt(const char *k, const char *v)
 	else if (!strcmp(k, "font")) shorts(v, &opt.font_id, 2);
 	else if (!strcmp(k, "falcon")) {
 		falcon_inf = n != 0;
-		opt.falcon = tls_available && falcon_inf;
+		opt.falcon = tls_available && falcon_usable && falcon_inf;
 	}
 	else if (!strcmp(k, "dsp")) opt.dsp = n != 0;
 	else if (!strcmp(k, "peoplefile")) opt.peoplefile = n != 0;
@@ -458,7 +460,7 @@ int store_init(const char *workdir)
 	}
 	path_join(mail_dir, sizeof(mail_dir), workdir, "EMAIL");
 	pf_mkdir(mail_dir);
-	/* Falcon mode: the root certificates next to EMAIL.PRG, the random
+	/* a Direct connection: the root certificates next to EMAIL.PRG, the random
 	   seed with the mail */
 	path_join(conn_cacert, sizeof(conn_cacert), workdir, "CACERT.PEM");
 	path_join(tls_seed_path, sizeof(tls_seed_path), mail_dir, "SEED.DAT");
@@ -598,9 +600,9 @@ int store_save_settings(void)
 		"FONT", "%d,%d", opt.font_id, opt.font_pt);
 	put_fmt(&b, "the font's Hebrew letters: 0 = Atari places, 1 = ISO-8859-8, 2 = DOS 862 (Options > Font)",
 		"HEBFONT", "%d", opt.hebfont);
-	put_fmt(&b, "1 = Falcon mode: TLS on the Atari, straight to the providers; 0 = through the Pi gateway",
-		"FALCON", "%d", tls_available ? opt.falcon : falcon_inf);
-	put_fmt(&b, "Falcon mode: 1 = the DSP checks the servers' signatures, 0 = the 68030 does",
+	put_fmt(&b, "1 = Direct connection: TLS on the Atari (TLS.OVL, a 68020 or better), straight to the providers; 0 = through the Pi gateway",
+		"FALCON", "%d", tls_available && falcon_usable ? opt.falcon : falcon_inf);
+	put_fmt(&b, "Direct connection: 1 = the DSP checks the servers' signatures, 0 = the 68030 does",
 		"DSP", "%d", opt.dsp);
 	put_fmt(&b, "1 = colours (selection, unread counts, flags, quotes, links) with 16 or more; with 4 links in blue",
 		"COLOUR", "%d", opt.colour);
@@ -632,18 +634,18 @@ int store_save_settings(void)
 		put_secret(&b, "SMTP password, if the SMTP login differs (encrypted)", "SMTPPASS", a->smtppass);
 		put_str(&b, "IMAP folder for copies of sent mail; empty = the server's Sent folder",
 			"SENT", a->sentname);
-		put_str(&b, "Falcon mode: the provider's incoming server", "DHOST", a->dhost);
+		put_str(&b, "Direct connection: the provider's incoming server", "DHOST", a->dhost);
 		put_fmt(&b, "its port: 993 (IMAP) and 995 (POP3) are TLS, others STARTTLS", "DPORT", "%u", a->dport);
 		put_fmt(&b, "0 = TLS or STARTTLS by the port, 1 = always TLS, 2 = always STARTTLS",
 			"DSEC", "%d", a->dsec);
-		put_str(&b, "Falcon mode: the provider's outgoing (SMTP) server", "DSMTPHOST", a->dsmtphost);
+		put_str(&b, "Direct connection: the provider's outgoing (SMTP) server", "DSMTPHOST", a->dsmtphost);
 		put_fmt(&b, "its port: 465 is TLS, 587 STARTTLS", "DSMTPPORT", "%u", a->dsmtpport);
 		put_fmt(&b, "0 = TLS or STARTTLS by the port, 1 = always TLS, 2 = always STARTTLS",
 			"DSMTPSEC", "%d", a->dsmtpsec);
-		put_str(&b, "Falcon mode: login for the provider's incoming server", "DUSER", a->duser);
-		put_secret(&b, "Falcon mode: its password, encrypted (iCloud, Gmail: an app password)", "DPASS", a->dpass);
-		put_str(&b, "Falcon mode: SMTP login; empty = same as incoming, - = none", "DSMTPUSER", a->dsmtpuser);
-		put_secret(&b, "Falcon mode: SMTP password, if the SMTP login differs (encrypted)", "DSMTPPASS", a->dsmtppass);
+		put_str(&b, "Direct connection: login for the provider's incoming server", "DUSER", a->duser);
+		put_secret(&b, "Direct connection: its password, encrypted (iCloud, Gmail: an app password)", "DPASS", a->dpass);
+		put_str(&b, "Direct connection: SMTP login; empty = same as incoming, - = none", "DSMTPUSER", a->dsmtpuser);
+		put_secret(&b, "Direct connection: SMTP password, if the SMTP login differs (encrypted)", "DSMTPPASS", a->dsmtppass);
 	}
 	r = pf_save(inf_path, b.s, b.len);
 	sb_free(&b);

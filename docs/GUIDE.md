@@ -10,8 +10,9 @@ reads and writes Hebrew.
 - An Atari with TOS 1.04 or newer (TOS 4 on the Falcon), EmuTOS, MagiC or
   MiNT, and a screen of at least 640×200 (ST medium); 640×400 (ST high)
   or the Falcon's 640×480 show three windows side by side
-- 1 MB of memory or more: EMail itself takes about 450 KB, the ST
-  edition (below) about 326 KB, and more memory holds bigger folders. With EContact's accessory loaded, 2 MB or
+- 1 MB of memory or more: EMail itself takes about 332 KB, and about
+  140 KB more on a TT or Falcon while `TLS.OVL` is loaded for a Direct
+  connection; more memory holds bigger folders. With EContact's accessory loaded, 2 MB or
   more: on a 1 MB ST the two don't fit together, so there use EContact as
   a program (`ECONTACT.PRG`), between EMail's runs
 - A TCP/IP stack:
@@ -25,41 +26,42 @@ reads and writes Hebrew.
 - For providers that need encryption (nearly all), one of:
   - a Raspberry Pi or other Linux computer on your network as a gateway
     (any Atari), see [The Raspberry Pi gateway](#the-raspberry-pi-gateway), or
-  - **Falcon mode**: EMail does the encryption itself (a Falcon, or a TT,
-    with 4 MB of memory or more), see [Falcon mode](#falcon-mode)
+  - a **Direct connection**: EMail does the encryption itself (a Falcon,
+    or a TT, with 4 MB of memory or more), see [Direct connection](#direct-connection)
 
 ## Installing
 
 The files are in the latest release on EMail's GitHub page
 (github.com/whomper/EMail/releases), each on its own and all together in
 `EMAIL-x.y.zip`. Copy `EMAIL.PRG` to any folder on any drive: nothing
-has to be in a particular place.
+has to be in a particular place. It is the same program for every Atari,
+from a 1 MB ST to a Falcon.
 
-On an ST, take `EMAILST.PRG` instead, **the ST edition**: the same
-program without Falcon mode (an ST is too slow for the encryption, and
-reaches secure servers through the Pi gateway), about 120 KB smaller in
-memory, which leaves a 1 MB ST more room for your mail. It reads the same
-`EMAIL.INF` and folders, so you can move between the two; it leaves the
-Falcon mode setting as it found it for `EMAIL.PRG`. Use one of them at a
-time. EMail keeps everything in the folder it
+`TLS.OVL` holds the encryption for a Direct connection (see [Direct
+connection](#direct-connection)). On a TT or Falcon, copy it next to
+`EMAIL.PRG`; EMail loads it the first time a Direct connection needs it.
+An ST never loads it (an ST is too slow for the encryption and reaches
+secure servers through the Pi gateway), so on an ST you can leave it
+out, and the memory stays free for your mail. EMail keeps everything in the folder it
 is started from, which the desktop makes its own folder, so a folder of
 its own keeps it all together. Here it is `C:\EMAIL\`:
 
 ```
 C:\EMAIL\EMAIL.PRG      the program
+C:\EMAIL\TLS.OVL       the encryption for a Direct connection (TT, Falcon)
 C:\EMAIL\EMAIL.INF      settings and accounts (each setting has a note above it)
 C:\EMAIL\EMAIL.KEY      the key the passwords in EMAIL.INF are encrypted with
 C:\EMAIL\ADDRESS.TXT   the addresses you wrote to (Ctrl+B without EContact)
 C:\EMAIL\EMAIL.LOG      protocol log, when switched on
 C:\EMAIL\EMAIL.FNT      which fonts are fixed-width (see Options > Font)
 C:\EMAIL\CRASH.LOG      what happened, if EMail ever crashes
-C:\EMAIL\CACERT.PEM    root certificates, for Falcon mode only
-C:\EMAIL\ROOTS.DAT     the same, decoded ahead of time (Falcon mode only)
+C:\EMAIL\CACERT.PEM    root certificates, for a Direct connection only
+C:\EMAIL\ROOTS.DAT     the same, decoded ahead of time (Direct connection only)
 C:\EMAIL\EMAIL.HYP     this guide, for EHypView or ST-Guide (the Help key opens it)
 C:\EMAIL\EMAIL.REF     its page names, for ST-Guide's reference list (optional)
 C:\EMAIL\EMAIL\         your mail: one folder per account, one per mailbox,
                         each with its messages in one file (MESSAGES.DAT)
-C:\EMAIL\EMAIL\SEED.DAT  randomness kept for Falcon mode's encryption
+C:\EMAIL\EMAIL\SEED.DAT  randomness kept for a Direct connection's encryption
 ```
 
 Start it. The first time, EMail asks for your account.
@@ -73,9 +75,11 @@ shows that list at any time.
 
 ## Updating
 
-Copy the new release's files over the old ones: `EMAIL.PRG` (or
-`EMAILST.PRG`), `EMAIL.HYP` and `EMAIL.REF`, and for Falcon mode
-`CACERT.PEM` and `ROOTS.DAT`.
+Copy the new release's files over the old ones: `EMAIL.PRG`, `EMAIL.HYP`
+and `EMAIL.REF`, and for a Direct connection `TLS.OVL`, `CACERT.PEM` and
+`ROOTS.DAT`. Coming from 1.55 or before on an ST, delete `EMAILST.PRG`:
+`EMAIL.PRG` is for every Atari now, and reads the same `EMAIL.INF` and
+folders.
 `EMAIL.INF`, `EMAIL.KEY` and your mail stay as they are. Keep EMAIL.KEY
 with EMAIL.INF: without it EMail asks for the passwords again. Coming
 from a version before 1.37, type your signature once more, in Options >
@@ -149,11 +153,11 @@ EMAIL.INF alone can't read them, but whoever has both files can, so keep
 EMAIL.KEY to yourself. Lose EMAIL.KEY (or start with a new one) and EMail asks
 you to type the passwords again.
 
-## Falcon mode
+## Direct connection
 
-EMail works in one of two ways, chosen with **Options > Falcon mode
-(TLS)** or "Falcon mode: TLS on this Atari" in Options > Settings >
-Connection:
+EMail works in one of two ways, chosen with **Options > Direct connection
+(TLS)** or "Direct connection: TLS on this Atari" in Options > Settings >
+Connection (this was called Falcon mode before 1.56):
 
 - **Off** (the default, any Atari): EMail talks plainly to the Raspberry
   Pi gateway, and the Pi encrypts the connection to your provider.
@@ -163,10 +167,16 @@ Connection:
   the 68030). "Use the DSP for the signatures" in Settings > Connection
   switches that off, leaving all of it to the 68030 (slower, but a way to rule the DSP out if something goes wrong).
 
-Falcon mode needs:
+A Direct connection needs:
 
 - a 68020 or better: a Falcon, or a TT (without the DSP part); a 68000
-  ST is too slow, and EMail says so
+  ST is too slow, and EMail says so. An `EMAIL.INF` from a Falcon with
+  the Direct connection on works on an ST all the same: EMail goes
+  through the gateway there and leaves the setting as it is
+- `TLS.OVL` next to `EMAIL.PRG`, from the release: the encryption
+  (BearSSL, and the DSP's part), about 140 KB, the same file for every
+  AERA program. EMail loads it when you switch the Direct connection on,
+  and says at once if it is missing or doesn't suit
 - 4 MB of memory or more (1 MB is not enough for TLS next to your mail)
 - `CACERT.PEM` and `ROOTS.DAT` next to `EMAIL.PRG`, both in the
   release. CACERT.PEM holds the root certificates EMail trusts (the
@@ -180,10 +190,10 @@ Falcon mode needs:
   TLS runs twice as fast there as in ST RAM
 
 Each account keeps two sets of servers and logins, so you can switch back
-and forth without typing them again: the gateway's (used when Falcon mode
-is off) and the provider's own (used when it is on). Options > Accounts >
+and forth without typing them again: the gateway's (used when the Direct
+connection is off) and the provider's own (used when it is on). Options > Accounts >
 Edit shows the set of the mode you are in, and changing a password in one
-mode leaves the other alone. The first time, Falcon mode's login starts as
+mode leaves the other alone. The first time, the Direct connection's login starts as
 a copy of the gateway's. Your name and address are shared. When you switch
 it on, EMail fills them in for Gmail, iCloud, Yahoo, GMX, web.de, AOL,
 Fastmail and Zoho from the e-mail address, and names any account whose
@@ -199,14 +209,14 @@ servers you still have to type in. The usual ports:
 
 For iCloud that is `imap.mail.me.com` 993 and `smtp.mail.me.com` 587; for
 Gmail `imap.gmail.com` 993 and `smtp.gmail.com` 465. Either way EMail
-never sends a password over an unencrypted connection in Falcon mode.
+never sends a password over an unencrypted connection in a Direct connection.
 
 Connecting takes a few seconds on a 50 MHz Falcon; after that mail comes
 in at 15 to 25 KB/s (the 68030 decrypts every byte; through the Pi it is
 about 37 KB/s), which is plenty for text.
-About > shows how the current connection is made (Falcon/DSP, Falcon
-or Gateway), and the protocol log
-records the cipher and the timings.
+About > shows how the current connection is made (Direct, with TLS.OVL's
+version and the DSP when it checks the signatures, or Gateway), and the
+protocol log records the cipher, the timings and TLS.OVL's loading.
 
 EMail first offers the server only ChaCha20-Poly1305, which the 68030
 decrypts twice as fast as AES-GCM; a server that refuses gets every
@@ -312,7 +322,7 @@ RAM (the fast RAM of a TT, or of a Falcon with an accelerator card)
 whenever the machine has some: faster, and more room than ST RAM. The
 About box says "Running in TT RAM", or "Running in ST RAM (TT RAM not
 used)" when the program file's TT RAM flags were switched off. It also
-names the connection: Gateway, Falcon (TLS on the 68030) or Falcon/DSP.
+names the connection: Gateway, or Direct with TLS.OVL's version (and DSP).
 
 ## Writing
 
@@ -590,7 +600,7 @@ sidebar: **Mail** (checking every few minutes, how many messages to load
 at a time, keeping read messages on disk), **Writing** (where lines
 wrap, starting with the Hebrew keyboard), **Signature**, **Look**
 (colours), **Contacts** (EContact's file, below) and **Connection** (the
-time zone, Falcon mode, the DSP and the protocol log).
+time zone, the Direct connection, the DSP and the protocol log).
 
 **The time zone** (Settings > Connection) is chosen by name from a
 list (Asia/Jerusalem, Europe/London, ...) as in ECal; summer time follows
@@ -638,7 +648,9 @@ NVDI's colours. For EmuTOS,
   up — can other network programs reach the Pi? An answer that starts
   with "emailgate:" comes from the gateway, and says what it couldn't do
   (reach your provider, trust its certificate, or let your Atari in).
-- **Falcon mode: "certificate not trusted"**: is CACERT.PEM next to
+- **"TLS.OVL is missing"** (or doesn't suit): copy `TLS.OVL` from the
+  release next to `EMAIL.PRG`, the one that came with it.
+- **Direct connection: "certificate not trusted"**: is CACERT.PEM next to
   EMAIL.PRG, and is the server name right (the certificate must be for
   that name)? **"certificate out of date"**: check the date, time and
   time zone. **"not enough memory"**: close other programs, check in
@@ -666,7 +678,7 @@ NVDI's colours. For EmuTOS,
 
 ## Limits
 
-- Encryption on the Atari itself (Falcon mode) needs a 68020 or better
+- Encryption on the Atari itself (a Direct connection) needs a 68020 or better
   (a Falcon or TT) and 4 MB;
   other machines use the gateway. TLS 1.2 only (every provider has it).
 - No OAuth sign-in (Outlook.com, Microsoft 365).

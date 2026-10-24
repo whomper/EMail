@@ -69,7 +69,8 @@ These come from AERA-Atari's repo template and are the same in every app's CLAUD
   builds the help file with the version; no rigs, itest or real-TOS run.
   A change to the docs alone needs no release of its own: it goes out
   with the next one.
-- **A release** carries `EMAIL.PRG`, `EMAIL.HYP` and `.REF` (hcp from `common/tools/build-hcp.sh`),
+- **A release** carries `EMAIL.PRG` (one program for every Atari), `TLS.OVL` (common's, copied as it
+  is, never built here: guidelines 7.4), `EMAIL.HYP` and `.REF` (hcp from `common/tools/build-hcp.sh`),
   `CACERT.PEM`, `ROOTS.DAT` and the icon. The icons are committed in `icons/` (`make icons`).
 - The help file's front page (guidelines 4.3) is `docs/front.json`, laid out by
   `common/tools/helpfront.py`. Its window picture `docs/help/WINDOW.IMG` is committed: when
