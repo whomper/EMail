@@ -214,11 +214,19 @@ static const struct {
 };
 #define NKEYS (short)(sizeof(keys) / sizeof(keys[0]))
 
+/* read before the heap is taken (2.1: nothing malloc'd before it, or
+   GEMDOS memory is held for good): one open, into a buffer of its own */
 static void inf_read(void)
 {
-	char *buf = pf_load(inf, 0), *line, *next;
-	if (!buf)
+	static char buf[2048];
+	char *line, *next;
+	long n;
+	int h = pf_open(inf, PF_READ);
+	if (h < 0)
 		return;
+	n = pf_read(h, buf, sizeof(buf) - 1);
+	pf_close(h);
+	buf[n > 0 ? n : 0] = 0;
 	for (line = buf; line && *line; line = next) {
 		char *eq, *k;
 		short i;
@@ -233,7 +241,6 @@ static void inf_read(void)
 			if (!strcasecmp(str_trim(k), keys[i].key))
 				str_copy(keys[i].val, str_trim(eq + 1), keys[i].size);
 	}
-	free(buf);
 }
 
 /* written whole: each setting a paragraph, its note, its line and an
@@ -342,7 +349,18 @@ static int settings(void)
 	if (stamp != inf_stamp || size != inf_size) {
 		inf_stamp = stamp;
 		inf_size = size;
+		aes_profile_tag("settings");	/* (an AES_PROFILE build: what the stretch was) */
+#ifdef AES_PROFILE
+		{
+			unsigned long t0 = pf_ms();
+			char note[60];
+			newmail_load(folder);
+			snprintf(note, sizeof(note), "EMAILCHK settings read in %lu ms", pf_ms() - t0);
+			pf_debug(note);
+		}
+#else
 		newmail_load(folder);
+#endif
 		if (is_acc && naccts < MAXACCT && naccts < inf_accounts(path))
 			mem_short();	/* an account that didn't fit */
 		memset(nm, 0, sizeof(nm));
@@ -522,6 +540,7 @@ static void check(int asked)
 	}
 	for (i = 0; i < naccts && !naccts_skip; i++) {
 		conn_stop = 0;
+		aes_profile_tag("check");
 		if (newmail_count(accts[i], &nm[i], err, sizeof(err))) {
 			ok++;
 			total += nm[i].count;
@@ -536,6 +555,14 @@ static void check(int asked)
 	checked = 1;
 	last_check = pf_ms();
 	last_new = total;
+	aes_profile_tag("after");
+#ifdef AES_PROFILE
+	{
+		char t[60];
+		snprintf(t, sizeof(t), "EMAILCHK after the accounts at %lu", pf_ms());
+		pf_debug(t);
+	}
+#endif
 	if (strstr(last_err, "memory") && !naccts_skip)
 		mem_short();
 	else if (!naccts_skip)
@@ -543,6 +570,10 @@ static void check(int asked)
 	{
 		/* for the rigs: the emulator's console */
 		char note[200];
+#ifdef AES_PROFILE
+		snprintf(note, sizeof(note), "EMAILCHK noted at %lu", pf_ms());
+		pf_debug(note);
+#endif
 		snprintf(note, sizeof(note), "EMAILCHK checked %d of %d account%s: %ld new%s%s%s", ok, naccts,
 			 naccts == 1 ? "" : "s", total, fresh ? ", fresh" : "", last_err[0] ? "; " : "", last_err);
 		pf_debug(note);
@@ -656,6 +687,8 @@ static int vwk_open(void)
 static void acc_memory(void)
 {
 	acc_heap_take(FIRST_HEAP, FIRST_HEAP + DIRECT_ROOM, atol(heapkb_v), atol(memkb_v));
+	if (acc_heap_tt)
+		pf_bounce_init();	/* the files' ST RAM, now rather than at the first read */
 	{
 		void *p = Mxalloc(sizeof(st_fallback), 0);	/* ST RAM, for the icon */
 		if ((long)p > 0)
@@ -686,6 +719,9 @@ int main(void)
 	net_init();
 	pf_idle = busy_idle;
 	tls_file_info = pf_info;
+#ifdef AES_PROFILE
+	newmail_stage = aes_profile_tag;	/* the stretches named by the check's stages */
+#endif
 	if (!is_acc) {
 		/* as a program: the same as from the Desk menu, once */
 		opened();

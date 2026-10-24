@@ -33,6 +33,10 @@ int  pf_exists(const char *path);
 int  pf_mkdir(const char *path);		/* 1 made, 0 already there, < 0 error */
 int  pf_remove(const char *path);
 int  pf_rename(const char *from, const char *to);
+/* the Atari: the piece of ST RAM that reads and writes to TT RAM go
+   through, taken now (an accessory with its heap in TT RAM, before its
+   first event call); otherwise it is taken at the first such read */
+void pf_bounce_init(void);
 /* call cb for every plain file in dir; stop early if cb returns non-zero */
 int  pf_list(const char *dir, int (*cb)(const char *name, long size, void *ud), void *ud);
 

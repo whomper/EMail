@@ -38,6 +38,10 @@ int newmail_count(ACCOUNT *a, NEWMAIL *n, char *err, int errlen);
 int newmail_fresh(const NEWMAIL *n);
 void newmail_told(NEWMAIL *n);
 
+/* called with each stage's name as a check goes ("login", "fetch"...):
+   EMAILCHK.ACC's AES_PROFILE build names its stretches with it */
+extern void (*newmail_stage)(const char *stage);
+
 /* EMAIL.INF read again (store_init) for the checker: the accounts it had
    freed first. workdir: EMail's folder. The number of accounts */
 int newmail_load(const char *workdir);

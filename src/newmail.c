@@ -14,6 +14,14 @@
 #include "store.h"
 #include "newmail.h"
 
+void (*newmail_stage)(const char *stage);
+
+static void stage(const char *s)
+{
+	if (newmail_stage)
+		newmail_stage(s);
+}
+
 /* the Inbox's UIDVALIDITY and UIDNEXT when EMail last synced it: the
    first line of its INDEX.DAT ("MAILIDX version uidvalidity uidnext
    ..."), read alone. 0 when there is none */
@@ -65,12 +73,15 @@ static int imap_new(ACCOUNT *a, NEWMAIL *n, char *err, int errlen)
 	IMAP *im;
 	UNSEEN u;
 	int r;
+	stage("index");
 	if (!inbox_seen(a, &validity, &base))
 		validity = base = 0;
+	stage("login");
 	im = imap_login(acct_host(a, 0), acct_port(a, 0), acct_sec(a, 0), acct_user(a, 0), acct_pass(a, 0),
 			err, errlen);
 	if (!im)
 		return 0;
+	stage("examine");
 	r = imap_select(im, "INBOX", 1);
 	if (r <= 0) {
 		snprintf(err, errlen, "%s", im->err);
@@ -90,11 +101,14 @@ static int imap_new(ACCOUNT *a, NEWMAIL *n, char *err, int errlen)
 	if (im->exists && (!im->uidnext || im->uidnext > base)) {
 		char set[24];
 		snprintf(set, sizeof(set), "%lu:*", base);
+		stage("fetch");
 		r = imap_fetch(im, set, "(FLAGS)", unseen_cb, &u);
 		if (r <= 0)
 			snprintf(err, errlen, "%s", im->err);
 	}
+	stage("logout");
 	imap_logout(im);
+	stage("done");
 	if (r <= 0)
 		return 0;
 	n->count = u.count;
@@ -122,6 +136,7 @@ static int pop_new(ACCOUNT *a, NEWMAIL *n, char *err, int errlen)
 	POPNEW c;
 	POP3 *p;
 	int r;
+	stage("login");
 	p = pop3_login(acct_host(a, 0), acct_port(a, 0), acct_sec(a, 0), acct_user(a, 0), acct_pass(a, 0),
 		       err, errlen);
 	if (!p)
@@ -136,10 +151,13 @@ static int pop_new(ACCOUNT *a, NEWMAIL *n, char *err, int errlen)
 	sb_adds(&kb, "\n");
 	c.known = kb.s ? kb.s : "\n\n";
 	c.count = 0;
+	stage("list");
 	r = pop3_list(p, pop_cb, &c);
 	if (r <= 0)
 		snprintf(err, errlen, "%s", p->err);
+	stage("quit");
 	pop3_quit(p);
+	stage("done");
 	sb_free(&kb);
 	if (r <= 0)
 		return 0;

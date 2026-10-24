@@ -27,7 +27,13 @@ accessory loads TLS.OVL into its own memory and does TLS itself. That
 memory is taken only in TT RAM (Falcon, TT; not Falcon-4, where such an
 account is left unchecked and the check says why).
 
-    emailchk_test.py WORKDIR [MACHINE] [direct]
+With "trace", Hatari writes its GEMDOS and AES trace (trace1.txt, trace2.txt)
+and acc_trace.py checks the accessory against them: no file of its open
+across an event call, no GEMDOS memory taken after its first one (the
+guidelines, 2.2). CHK_ACC names another build of the accessory to test,
+such as an AES_PROFILE one (its stretches go to hatari.log as AESGAP).
+
+    emailchk_test.py WORKDIR [MACHINE] [direct] [trace]
 """
 import imaplib
 import os
@@ -46,6 +52,11 @@ IMAP, SMTP = 10143, 10025
 
 work, machine, more = rig.cli("Falcon")
 direct = "direct" in more
+trace = "trace" in more
+
+
+def traced(n):
+    return ["--trace", "gemdos,aes", "--trace-file", os.path.join(work, "trace%d.txt" % n)] if trace else []
 IMAPS = 10993
 os.makedirs(work, exist_ok=True)
 srv = os.path.join(work, "srv")
@@ -86,7 +97,8 @@ rig.stop_at_exit(srv, smtp)
 os.makedirs(os.path.join(hd, "AUTO"))
 em = hd
 rig.install_prg(hd)
-shutil.copy(os.path.join(ROOT, "binary", "EMAILCHK.ACC"), hd)
+shutil.copy(os.environ.get("CHK_ACC", os.path.join(ROOT, "binary", "EMAILCHK.ACC")),
+            os.path.join(hd, "EMAILCHK.ACC"))
 rig.fakesting(os.path.join(hd, "AUTO"))
 if direct:
     # the full Mozilla list, the test certificate with it, decoded here
@@ -159,7 +171,7 @@ def unseen():
     return n
 
 
-r = rig.Rig(work, machine, serial=(fifo_out, fifo_in), auto=None)
+r = rig.Rig(work, machine, serial=(fifo_out, fifo_in), auto=None, extra=traced(1))
 try:
     # 1. the first look: what is there was there before
     line = wait_check(1, 240)
@@ -213,7 +225,7 @@ finally:
     r.stop()
 
 # 5. EMail running: the accessory waits; after it, the next message
-r = rig.Rig(work, machine, serial=(fifo_out, fifo_in))
+r = rig.Rig(work, machine, serial=(fifo_out, fifo_in), extra=traced(2))
 try:
     r.settle(45, 240)
     r.shot("e1-email")
@@ -248,6 +260,13 @@ bridge.terminate()
 smtp.terminate()
 subprocess.run(["doveadm", "-c", os.path.join(srv, "dovecot.conf"), "stop"])
 shutil.rmtree(run_dir, ignore_errors=True)
+if trace:
+    for n in (1, 2):
+        out = subprocess.run([sys.executable, os.path.join(HERE, "acc_trace.py"),
+                              os.path.join(work, "trace%d.txt" % n)], capture_output=True, text=True).stdout
+        print(out, end="")
+        check("trace %d: no file open across an event call, no memory taken after the first" % n,
+              "\nOK:" in "\n" + out)
 print("screenshots in", os.path.join(work, "shots"))
 print("EMail check test:", "all passed" if not fails else "%d failed" % len(fails))
 sys.exit(1 if fails else 0)

@@ -48,6 +48,14 @@ static int via_st(const void *buf)
 	return !direct && bounce;
 }
 
+/* the bounce taken now: an accessory whose heap is in TT RAM, before its
+   first event call (memory taken later would be the program in front's,
+   the guidelines 2.2) */
+void pf_bounce_init(void)
+{
+	via_st((void *)TT_RAM);
+}
+
 long pf_read(int h, void *buf, long n)
 {
 	long got = 0, k, r;
