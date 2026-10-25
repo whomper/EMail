@@ -6,6 +6,10 @@ time the expensive parts of a TLS handshake on the machine itself.
 - `TLSB030.PRG`: BearSSL 0.6 compiled for the 68030 times X25519, P-256,
   ECDSA and RSA-2048 signature checks, SHA-256, AES-GCM and
   ChaCha20-Poly1305.
+- `RSA030.PRG`: the RSA public operation (a signature check) with its
+  Montgomery multiplication in 68030 assembly (`mont030.S`, `rsa030.c`),
+  against BearSSL's i31: the same answers, and the times. `rsacheck`
+  checks `rsa030.c` against BearSSL on the build machine.
 - `TLSDSP.PRG`: Montgomery multiplication (the core of RSA and elliptic
   curves) on the DSP56001, for 2048-bit and 256-bit numbers. It checks the
   DSP's answers against values worked out in Python (`gen.py`).
@@ -42,3 +46,24 @@ their header (PRGFLAGS=7 for tools/elf2tos.py).
 
 Best split: X25519 on the 68030 (about 0.5 s each), the RSA signature
 checks on the DSP (about 0.12 s each): a handshake in about 1.5 s.
+
+## RSA in 68030 assembly (RSA030.PRG), 25 Oct 2026
+
+A TT without a DSP took 17 s over Gmail's certificates (RSA-2048,
+RSA-4096, RSA-2048) and 22 s over GMX's, and both servers hung up during
+the handshake (two testers' logs). BearSSL's portable C builds each
+32-bit multiply-add of a Montgomery multiplication out of 64-bit C
+arithmetic, about 530 cycles each; PolarSSL, which Troll uses, has an
+assembly loop for the 68020 and up there. `mont030.S` is that loop:
+`mulu.l` with a 64-bit result, two of them per word, about 130 cycles.
+
+| Emulated (Hatari) | RSA-2048 | RSA-3072 | RSA-4096 |
+|---|---|---|---|
+| TT, 68030 32 MHz, TT RAM (EmuTOS): BearSSL i31 | 1705 ms | 4620 ms | 8175 ms |
+| the same, mont030.S | 252 ms | 562 ms | 995 ms |
+| Falcon, 68030 16 MHz, ST RAM (TOS 4.04): BearSSL i31 | 3960 ms | 11015 ms | 19415 ms |
+| the same, mont030.S | 453 ms | 1040 ms | 1865 ms |
+
+The same answers as BearSSL on every one. Gmail's chain on the TT: about
+11.6 s of RSA before, 1.5 s with it. Not for a 68060: its 64-bit
+`mulu.l` is emulated in software (060SP), so there BearSSL's C stays.

@@ -43,3 +43,16 @@ PRGFLAGS=7 python3 "$M/common/tools/elf2tos.py" "$W/tlsbench.elf" "$H/TLSB030.PR
 $CC $CF -Wno-array-bounds -c -o "$W/tlsdsp.o" "$H/tlsdsp.c"
 $CC $LF -o "$W/tlsdsp.elf" $RT "$W/tlsdsp.o" -lgcc
 PRGFLAGS=7 python3 "$M/common/tools/elf2tos.py" "$W/tlsdsp.elf" "$H/TLSDSP.PRG"
+
+# RSA030.PRG: the RSA public operation in 68030 assembly (mont030.S,
+# rsa030.c) against BearSSL's i31, the same answers and the times;
+# rsacheck: rsa030.c's arithmetic against BearSSL on this computer
+$CC $CF -Wall -I$M/common/third_party/bearssl/inc -c -o "$W/rsa030.o" "$H/rsa030.c"
+$CC $CF -Wall -c -o "$W/rsabench.o" "$H/rsabench.c"
+m68k-linux-gnu-as -m68030 -o "$W/mont030.o" "$H/mont030.S"
+$CC $LF -o "$W/rsabench.elf" $RT "$W/rsabench.o" "$W/rsa030.o" "$W/mont030.o" "$W/libbearssl.a" -lgcc
+PRGFLAGS=7 python3 "$M/common/tools/elf2tos.py" "$W/rsabench.elf" "$H/RSA030.PRG"
+make -s -C "$M" build/libbearssl-host.a
+gcc -O2 -Wall -I$M/common/third_party/bearssl/inc -o "$W/rsacheck" "$H/rsacheck.c" "$H/rsa030.c" "$H/mont_ref.c" \
+  "$M/build/libbearssl-host.a"
+"$W/rsacheck"
