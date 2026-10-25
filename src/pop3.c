@@ -70,8 +70,13 @@ static POP3 *login_once(const char *host, unsigned short port, int sec, const ch
 	conn_cmd(p->c, 1, "USER %s", user);
 	r = reply(p);
 	if (r > 0) {
+		/* Yahoo's and AOL's servers answer a refused PASS a minute on,
+		   just past the usual wait: give it two, as SMTP has */
+		long keep = p->c->timeout_ms;
+		p->c->timeout_ms = 120000;
 		conn_cmd(p->c, 1, "PASS %s", pass);
 		r = reply(p);
+		p->c->timeout_ms = keep;
 	} else if (r == 0) {
 		/* some servers only take SASL PLAIN: they refuse USER. A refused
 		   PASS is the answer: GMX hangs up after it, Yahoo stops answering */
