@@ -35,14 +35,16 @@ void (*pf_idle)(void) = idle;
 
 int net_open(const char *host, unsigned short port, char *err, int errlen) { return 5; }
 long net_write(int h, const void *buf, long n) { return n; }
-/* 7 bytes a read, 3 ms each, never a read that finds nothing */
+/* 7 bytes a read, 3 ms each, never a read that finds nothing; or (burst)
+   as much as fits */
+static int burst;
 long net_read(int h, void *buf, long max)
 {
 	long n = feed_len - fed;
 	now += 3;
 	if (n <= 0)
 		return 0;
-	if (n > 7)
+	if (n > 7 && !burst)
 		n = 7;
 	if (n > max)
 		n = max;
@@ -101,6 +103,26 @@ int main(void)
 			longest = now - last_turn;
 		snprintf(msg, sizeof(msg), "conn_read of %ld bytes the same: the longest stretch %lu ms (<= 50)", got, longest);
 		check(got == feed_len && longest <= 50, msg);
+	}
+	{
+		/* the whole reply in one read, 10 ms of the caller's work a line
+		   (EMail's untagged() and conn_log on an ST): a turn still every
+		   40 ms or so, not one per read */
+		long n = 0;
+		burst = 1;
+		fed = 0;
+		feed_len = 80 * 60;	/* 60 lines in one 4 KB-ish read and a bit */
+		turns = 0;
+		longest = 0;
+		last_turn = now;
+		while (n < 60 && conn_getline(c, &b) >= 0) {
+			n++;
+			now += 10;
+		}
+		if (now - last_turn > longest)
+			longest = now - last_turn;
+		snprintf(msg, sizeof(msg), "%ld lines from one read, 10 ms each: the longest stretch %lu ms (<= 50)", n, longest);
+		check(n == 60 && longest <= 50, msg);
 	}
 	sb_free(&b);
 	conn_close(c);
