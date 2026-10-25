@@ -147,6 +147,12 @@ int  zone_offset_now(void);
 int  zone_offset_at(unsigned long utc);	/* at a UTC time in seconds */
 long zone_utc_now(void);		/* minutes since 1970, UTC */
 int  store_init(const char *workdir);	/* loads EMAIL.INF (creates dirs) */
+/* store_init in steps, for work in the background (EMAILCHK.ACC: the
+   guidelines, 2.2): store_begin reads the file (0: there is none), each
+   store_step takes a few of its lines, 1 while there are more */
+int  store_begin(const char *workdir);
+int  store_step(void);
+extern short store_inf_accounts;	/* the [account]s in it, those that didn't fit too */
 int  store_save_settings(void);
 /* EMAIL.INF had passwords that EMAIL.KEY can't open (a lost or new key):
    they are empty and must be typed again */

@@ -45,5 +45,8 @@ extern void (*newmail_stage)(const char *stage);
 /* EMAIL.INF read again (store_init) for the checker: the accounts it had
    freed first. workdir: EMail's folder. The number of accounts */
 int newmail_load(const char *workdir);
+/* the same in steps (store.h): newmail_begin (0: no EMAIL.INF), then
+   store_step until it returns 0 */
+int newmail_begin(const char *workdir);
 
 #endif

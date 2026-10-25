@@ -59,6 +59,7 @@ static char last_err[120];
 static short checked;			/* checked since the machine started */
 static short prg_ran;			/* EMAIL.PRG was seen running */
 static short reread = 1;		/* EMAIL.INF to be looked at before the next check */
+static short reading;			/* ... and being read, in steps */
 
 #define FIRST_HEAP	(64L * 1024)
 #define DIRECT_ROOM	(232L * 1024)
@@ -313,20 +314,6 @@ static void mem_short(void)
 	alert(1, "[3][EMail check ran out of memory.|It takes more when the|Atari starts again.][ OK ]");
 }
 
-/* the [account] lines in EMAIL.INF */
-static short inf_accounts(const char *path)
-{
-	char *buf = pf_load(path, 0), *p;
-	short n = 0;
-	if (!buf)
-		return 0;
-	for (p = buf; (p = strstr(p, "\n[")) != 0; p++)
-		n += !strncasecmp(p + 1, "[account]", 9);
-	n += !strncasecmp(buf, "[account]", 9);
-	free(buf);
-	return n;
-}
-
 /* ---------------- EMail's settings ---------------- */
 
 static void prg_path(char *out, int size)
@@ -334,49 +321,80 @@ static void prg_path(char *out, int size)
 	path_join(out, size, folder, "EMAIL.PRG");
 }
 
-/* EMAIL.INF read again when it changed: EMail's accounts and its timer */
-static int settings(void)
+/* EMAIL.INF's date and size against those it was read with: 1 changed
+   (taken as read from now), 0 the same, -1 there is none */
+static int inf_changed(void)
 {
 	char path[220];
 	long size;
 	unsigned long stamp;
 	if (!folder[0])
-		return 0;
+		return -1;
 	path_join(path, sizeof(path), folder, "EMAIL.INF");
 	stamp = pf_info(path, &size);
 	if (!stamp)
+		return -1;
+	if (stamp == inf_stamp && size == inf_size)
 		return 0;
-	if (stamp != inf_stamp || size != inf_size) {
-		inf_stamp = stamp;
-		inf_size = size;
-		aes_profile_tag("settings");	/* (an AES_PROFILE build: what the stretch was) */
-#ifdef AES_PROFILE
-		{
-			unsigned long t0 = pf_ms();
-			char note[60];
-			newmail_load(folder);
-			snprintf(note, sizeof(note), "EMAILCHK settings read in %lu ms", pf_ms() - t0);
-			pf_debug(note);
-		}
-#else
+	inf_stamp = stamp;
+	inf_size = size;
+	return 1;
+}
+
+/* what the accessory takes from EMAIL.INF, once it has been read */
+static void settings_done(void)
+{
+	if (is_acc && naccts < MAXACCT && naccts < store_inf_accounts)
+		mem_short();	/* an account that didn't fit */
+	memset(nm, 0, sizeof(nm));
+	dlg_3d_on = opt.dialogs3d;	/* EMail's 3D setting for its alerts too (5.6) */
+	path_join(tls_ovl_path, sizeof(tls_ovl_path), folder, "TLS.OVL");
+	falcon_dsp_init();
+	/* EMail's protocol log on (LOG=1): the accessory's own beside
+	   its INF, EMAILCHK.LOG, written at the end of each check */
+	if (opt.log) {
+		str_copy(conn_logfile, inf, sizeof(conn_logfile));
+		strcpy(conn_logfile + strlen(conn_logfile) - 3, "LOG");
+	} else {
+		conn_logfile[0] = 0;
+	}
+}
+
+/* EMAIL.INF read again when it changed: EMail's accounts and its timer.
+   All at once, for the user who asked (the Desk menu, Check now); in the
+   background it is read in steps (settings_begin). 0: there is none */
+static int settings(void)
+{
+	int c = inf_changed();
+	if (c < 0)
+		return 0;
+	if (c) {
 		newmail_load(folder);
-#endif
-		if (is_acc && naccts < MAXACCT && naccts < inf_accounts(path))
-			mem_short();	/* an account that didn't fit */
-		memset(nm, 0, sizeof(nm));
-		dlg_3d_on = opt.dialogs3d;	/* EMail's 3D setting for its alerts too (5.6) */
-		path_join(tls_ovl_path, sizeof(tls_ovl_path), folder, "TLS.OVL");
-		falcon_dsp_init();
-		/* EMail's protocol log on (LOG=1): the accessory's own beside
-		   its INF, EMAILCHK.LOG, written at the end of each check */
-		if (opt.log) {
-			str_copy(conn_logfile, inf, sizeof(conn_logfile));
-			strcpy(conn_logfile + strlen(conn_logfile) - 3, "LOG");
-		} else {
-			conn_logfile[0] = 0;
-		}
+		settings_done();
 	}
 	return 1;
+}
+
+/* the same between event calls (the guidelines, 2.2: on an 8 MHz ST its
+   parsing alone took 165 ms): begun here, then settings_step until it
+   returns 0. 1 when there are steps to take */
+static int settings_begin(void)
+{
+	if (inf_changed() <= 0)
+		return 0;
+	aes_profile_tag("settings");	/* (an AES_PROFILE build: what the stretch was) */
+	if (newmail_begin(folder))
+		return 1;
+	settings_done();
+	return 0;
+}
+
+static int settings_step(void)
+{
+	if (store_step())
+		return 1;
+	settings_done();
+	return 0;
 }
 
 /* the folder, from EMAIL.PRG chosen in the file selector */
@@ -525,6 +543,11 @@ static void check(int asked)
 	char err[160], text[200];
 	long total = 0;
 	short i, fresh = 0, ok = 0, naccts_skip = 0;
+	if (!asked && inf_changed() > 0) {
+		reread = 1;		/* in steps first (and inf_stamp back: read it) */
+		inf_stamp = 0;
+		return;
+	}
 	if (!settings())
 		return;
 	if (asked)
@@ -583,6 +606,7 @@ static void check(int asked)
 	}
 	if (!total && !asked)
 		return;
+	pf_idle();		/* a turn for the others between the check and its box */
 	if (!total) {
 		if (last_err[0])
 			alert(1, "[3][%s][ OK ]", last_err);
@@ -734,7 +758,7 @@ int main(void)
 
 	for (;;) {
 		short which, pending, running;
-		pending = (short)(folder[0] && (reread || may_check()));
+		pending = (short)(folder[0] && (reread || reading || may_check()));
 		which = evnt_multi_(MU_MESAG | MU_TIMER, 0, 0, 0, bg_timer(pending, 1000), msg, &ev);
 		bg_tick();
 		if (which & MU_MESAG) {
@@ -765,12 +789,18 @@ int main(void)
 			reread = 1;		/* its settings may have changed */
 		}
 		if (!running && folder[0] && bg_may_work()) {
-			if (reread) {
-				reread = 0;
-				settings();
-			}
-			if (may_check())
+			if (reread || reading) {
+				bg_begin();
+				if (reread) {		/* the file read, a turn of its own */
+					reread = 0;
+					reading = (short)settings_begin();
+				} else {
+					while (reading && bg_more())
+						reading = (short)settings_step();
+				}
+			} else if (may_check()) {
 				check(0);
+			}
 		}
 	}
 }

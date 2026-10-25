@@ -486,6 +486,17 @@ static void t_inf(void)
 	CHECK(opt.peoplefile == 1 && !strcmp(opt.peopledir, "C:\\ECONTACT"), "EContact's file read back: %d %s",
 	      opt.peoplefile, opt.peopledir);
 	CHECK(!store_lost_passwords, "EMAIL.KEY opens them");
+	/* in steps (EMAILCHK.ACC): the same, a few lines a step */
+	{
+		int steps = 0;
+		forget_accounts();
+		CHECK(store_begin(dir), "store_begin finds EMAIL.INF");
+		while (store_step())
+			steps++;
+		CHECK(steps > 2 && naccts == 1 && store_inf_accounts == 1 && !strcmp(accts[0]->pass, "x ;y") &&
+		      !strcmp(opt.signature, "Dana\nTel Aviv") && zone_offset_now() == 180,
+		      "read in %d steps as at once", steps + 1);
+	}
 	/* another key: the password is gone, and EMail says so */
 	{
 		char kf[120];

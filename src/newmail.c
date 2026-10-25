@@ -188,12 +188,21 @@ void newmail_told(NEWMAIL *n)
 	n->told_next = n->uidnext;
 }
 
-int newmail_load(const char *workdir)
+int newmail_begin(const char *workdir)
 {
 	while (naccts > 0) {
 		ACCOUNT *a = accts[--naccts];
 		accts[naccts] = 0;
 		free(a);
 	}
-	return store_init(workdir);
+	return store_begin(workdir);
+}
+
+int newmail_load(const char *workdir)
+{
+	if (!newmail_begin(workdir))
+		return 0;
+	while (store_step())
+		;
+	return naccts;
 }

@@ -444,12 +444,15 @@ static void set_opt(const char *k, const char *v)
 	else if (!strcmp(k, "hebfont")) opt.hebfont = n >= 0 && n <= 2 ? n : 0;
 }
 
-int store_init(const char *workdir)
-{
-	char *buf, *line, *next;
-	ACCOUNT *cur = 0;
-	short in_opts = 0, i;
+/* EMAIL.INF being read: what store_begin loaded, the line store_step is
+   at, the account it is in */
+static char *rd_buf, *rd_line;
+static ACCOUNT *rd_cur;
+static short rd_opts;
+short store_inf_accounts;
 
+int store_begin(const char *workdir)
+{
 	defaults();
 	pf_size_open = pf_handle_size;	/* one look per file read */
 	str_copy(opt.workdir, workdir, sizeof(opt.workdir));
@@ -468,50 +471,85 @@ int store_init(const char *workdir)
 	path_join(tls_seed_path, sizeof(tls_seed_path), mail_dir, "SEED.DAT");
 	path_join(tls_roots_cache, sizeof(tls_roots_cache), workdir, "ROOTS.DAT");
 
-	buf = pf_load(inf_path, 0);
-	if (!buf)
-		return 0;
-	for (line = buf; line && *line; line = next) {
-		char *eq, *k;
-		next = strchr(line, '\n');
-		if (next)
-			*next++ = 0;
-		k = str_trim(line);
-		if (*k == ';' || *k == '#' || !*k)
-			continue;
-		if (*k == '[') {
-			in_opts = !strncasecmp(k, "[options]", 9);
-			cur = !strncasecmp(k, "[account]", 9) ? acct_new() : 0;
-			continue;
+	free(rd_buf);
+	rd_buf = rd_line = pf_load(inf_path, 0);
+	rd_cur = 0;
+	rd_opts = 0;
+	store_inf_accounts = 0;
+	return rd_buf != 0;
+}
+
+/* one line of EMAIL.INF */
+static void inf_line(char *line)
+{
+	char *eq, *k;
+	k = str_trim(line);
+	if (*k == ';' || *k == '#' || !*k)
+		return;
+	if (*k == '[') {
+		rd_opts = !strncasecmp(k, "[options]", 9);
+		rd_cur = 0;
+		if (!strncasecmp(k, "[account]", 9)) {
+			store_inf_accounts++;
+			rd_cur = acct_new();
 		}
-		eq = strchr(k, '=');
-		if (!eq)
-			continue;
-		*eq = 0;
-		{
-			char *key = str_trim(k), *val = eq + 1;
-			char *sc;
-			long i;
-			for (i = 0; key[i]; i++)	/* names in any case: PASS, pass */
-				key[i] = (char)tolower((unsigned char)key[i]);
-			/* "value ; comment" - but passwords may contain ';' */
-			if (strcmp(key, "pass") && strcmp(key, "smtppass") && strcmp(key, "dpass") &&
-			    strcmp(key, "dsmtppass") && strcmp(key, "signature") &&
-			    (sc = strstr(val, " ;")))
-				*sc = 0;
-			val = str_trim(val);
-			if (cur)
-				set_acct(cur, key, val);
-			else if (in_opts)
-				set_opt(key, val);
-		}
+		return;
 	}
-	free(buf);
+	eq = strchr(k, '=');
+	if (!eq)
+		return;
+	*eq = 0;
+	{
+		char *key = str_trim(k), *val = eq + 1;
+		char *sc;
+		long i;
+		for (i = 0; key[i]; i++)	/* names in any case: PASS, pass */
+			key[i] = (char)tolower((unsigned char)key[i]);
+		/* "value ; comment" - but passwords may contain ';' */
+		if (strcmp(key, "pass") && strcmp(key, "smtppass") && strcmp(key, "dpass") &&
+		    strcmp(key, "dsmtppass") && strcmp(key, "signature") &&
+		    (sc = strstr(val, " ;")))
+			*sc = 0;
+		val = str_trim(val);
+		if (rd_cur)
+			set_acct(rd_cur, key, val);
+		else if (rd_opts)
+			set_opt(key, val);
+	}
+}
+
+#define STEP_LINES 8
+
+int store_step(void)
+{
+	short n, i;
+	if (!rd_buf)
+		return 0;
+	for (n = 0; n < STEP_LINES && rd_line && *rd_line; n++) {
+		char *line = rd_line;
+		rd_line = strchr(line, '\n');
+		if (rd_line)
+			*rd_line++ = 0;
+		inf_line(line);
+	}
+	if (rd_line && *rd_line)
+		return 1;
+	free(rd_buf);
+	rd_buf = rd_line = 0;
 	if (!opt.tzname[0] || !tz_find(opt.tzname))
 		zone_detect();		/* written with the next save */
 	tls_tz_minutes = zone_offset_now();
 	for (i = 0; i < naccts; i++)
 		acct_fill_logins(accts[i]);
+	return 0;
+}
+
+int store_init(const char *workdir)
+{
+	if (!store_begin(workdir))
+		return 0;
+	while (store_step())
+		;
 	return naccts;
 }
 
