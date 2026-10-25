@@ -486,17 +486,41 @@ static void t_inf(void)
 	CHECK(opt.peoplefile == 1 && !strcmp(opt.peopledir, "C:\\ECONTACT"), "EContact's file read back: %d %s",
 	      opt.peoplefile, opt.peopledir);
 	CHECK(!store_lost_passwords, "EMAIL.KEY opens them");
-	/* "Check for new mail at start": on unless STARTCHECK=0, kept */
-	CHECK(opt.startcheck == 1, "STARTCHECK on when not given");
-	opt.startcheck = 0;
-	CHECK(store_save_settings() == 0, "saved with STARTCHECK=0");
+	/* "Start offline": off unless set, kept; EMail starts as it says */
+	CHECK(opt.startoffline == 0 && opt.offline == 0, "STARTOFFLINE off when not given: online");
+	opt.startoffline = 1;
+	opt.offline = 0;		/* (the menu's, this session) */
+	CHECK(store_save_settings() == 0, "saved with STARTOFFLINE=1");
 	forget_accounts();
 	store_init(dir);
-	CHECK(opt.startcheck == 0, "STARTCHECK=0 read back");
-	opt.startcheck = 1;
+	CHECK(opt.startoffline == 1 && opt.offline == 1, "STARTOFFLINE=1 read back: starts offline");
+	opt.startoffline = 0;
 	store_save_settings();
 	forget_accounts();
 	store_init(dir);
+	{
+		/* an EMail 1.58 INF that was left offline starts offline */
+		char *t = pf_load(path, &len), *o = t ? strstr(t, "\r\nSTARTOFFLINE=0\r\n") : 0;
+		SBUF b;
+		sb_init(&b);
+		if (o) {
+			sb_add(&b, t, o - t);
+			sb_adds(&b, "\r\nOFFLINE=1\r\n");	/* in its place, as 1.58 wrote it */
+			sb_adds(&b, o + strlen("\r\nSTARTOFFLINE=0\r\n"));
+		}
+		CHECK(o != 0, "STARTOFFLINE=0 written");
+		pf_save(path, b.s, b.len);
+		forget_accounts();
+		store_init(dir);
+		CHECK(opt.startoffline == 1 && opt.offline == 1, "OFFLINE=1 of an older EMail: starts offline");
+		opt.startoffline = 0;
+		store_save_settings();
+		forget_accounts();
+		store_init(dir);
+		CHECK(opt.offline == 0, "and online again once the setting is off");
+		free(t);
+		sb_free(&b);
+	}
 	/* in steps (EMAILCHK.ACC): the same, a few lines a step */
 	{
 		int steps = 0;

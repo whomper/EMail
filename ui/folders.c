@@ -188,7 +188,7 @@ FINFO *folders_drop_target(short mx, short my, GRECT *row)
 	return ent[i].fi;
 }
 
-static void select_folder(ACCOUNT *a, FINFO *fi, int sync)
+void folders_select(ACCOUNT *a, FINFO *fi)
 {
 	long newmsgs, i;
 	if (!fi || fi->noselect)
@@ -209,7 +209,7 @@ static void select_folder(ACCOUNT *a, FINFO *fi, int sync)
 	list_load();
 	/* a folder checked in the last two minutes is shown as it is: hopping
 	   between folders shouldn't wait for the server every time */
-	if (sync && !fi->local && !opt.offline && (!fi->synced || pf_ms() - fi->synced > 120000UL)) {
+	if (!fi->local && !opt.offline && (!fi->synced || pf_ms() - fi->synced > 120000UL)) {
 		busy(1);
 		mail_err[0] = 0;
 		if (!mail_sync_folder(a, fi, &newmsgs) && mail_err[0] && !mail_unreachable)
@@ -220,16 +220,6 @@ static void select_folder(ACCOUNT *a, FINFO *fi, int sync)
 		win_redraw(&w_folders, 0);
 	}
 	menu_update();
-}
-
-void folders_select(ACCOUNT *a, FINFO *fi)
-{
-	select_folder(a, fi, 1);
-}
-
-void folders_show(ACCOUNT *a, FINFO *fi)
-{
-	select_folder(a, fi, 0);
 }
 
 static void click(WIN *w, short mx, short my, short clicks, short kstate)

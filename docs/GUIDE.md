@@ -699,8 +699,11 @@ Trash) and remember what they fetched, so nothing comes twice. With
 "leave mail on the server" off, EMail deletes it from the server once it
 is safely on disk.
 
-**Offline** (Options > Work offline): EMail doesn't connect, and you can
-read everything already on disk. New messages wait in the Outbox.
+**Offline** (Options > Work offline): EMail doesn't connect and doesn't
+check on its timer, and you can read everything already on disk. New
+messages wait in the Outbox. Switched off again, EMail checks at once and
+then on its timer. The menu switches it for this session; whether EMail
+starts offline is the setting in Settings > Mail.
 
 **Not connected**: when a connection or login fails, EMail says so once
 and then works from the cache for that account, as if offline: messages
@@ -722,21 +725,19 @@ are underlined).
 
 **Settings** (Options > Settings, Ctrl+,) has six parts in its
 sidebar: **Mail** (checking every few minutes, how many messages to load
-at a time, keeping read messages on disk, checking at start), **Writing** (where lines
+at a time, keeping read messages on disk, starting offline), **Writing** (where lines
 wrap, starting with the Hebrew keyboard), **Signature**, **Look**
 (colours, and 3D dialogs: the AES's own 3D look where it draws one, TOS
 4, MagiC, XaAES and EmuTOS in colour; greyed where it doesn't), **Contacts** (EContact's file, below) and **Connection** (the
 time zone, the Direct connection, the DSP and the protocol log).
 
-**Check for new mail at start** (Settings > Mail, on at first): EMail
-checks every account as it starts, then opens the first Inbox. Off,
-EMail starts at once with the mail it has on disk, without connecting;
-the timed check ("Check for new mail every ... minutes") brings the new
-mail, the first one that many minutes after the start, and Check mail
-(Shift+Ctrl+N or Ctrl+K) at any time. That first check is the whole one EMail
-would have made at the start: the folder list, the Inbox, the other
-folders' counts and the Outbox. A folder you open before it is asked for
-its own messages as always.
+**Start offline, with the mail on disk** (Settings > Mail, off at
+first): EMail starts at once, offline, with the folders and messages it
+has on disk, and doesn't connect, nor check on its timer. When you switch
+Options > Work offline off, it connects and checks at once (the folder
+list, every Inbox, the other folders' counts, the Outbox), and from then
+on checks every few minutes as set. Off (as before), EMail checks every
+account as it starts, then opens the first Inbox.
 
 **The time zone** (Settings > Connection) is chosen by name from a
 list (Asia/Jerusalem, Europe/London, ...) as in ECal; summer time follows
@@ -761,8 +762,8 @@ Outbox keep their names. Folder > Delete folder removes the open one with
 all its messages. Right-click a folder to rename or delete any folder,
 to mark all its messages as read, or to download them all.
 The folder list is read from the server at the first check of a session:
-when EMail starts, or, with "Check for new mail at start" off, at the
-first timed check or Check mail. Folder > Refresh folder list reads it
+when EMail starts, or, when it starts offline, as it goes online. Folder >
+Refresh folder list reads it
 again after you changed it elsewhere.
 
 ## The desktop icon

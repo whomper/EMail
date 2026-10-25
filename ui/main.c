@@ -1349,11 +1349,17 @@ static void command(short cmd)
 		list_titles();
 		break;
 	case C_OFFLINE:
+		/* for this session (how EMail starts is Settings > Mail's):
+		   offline, the connections close and the timed checks stop;
+		   online, a check at once (the folder list, the Inbox, the
+		   counts, the Outbox) and the timed checks from then on */
 		opt.offline = !opt.offline;
+		list_titles();
+		menu_update();
 		if (opt.offline)
 			mail_disconnect_all();
-		store_save_settings();
-		list_titles();
+		else
+			cmd_check_all();
 		break;
 	case C_HEBREW: set_hebrew_kbd(!hebrew_kbd); break;
 	case C_FONT: font_menu(); break;
@@ -1676,21 +1682,17 @@ int main(void)
 		alert(1, "[1][Welcome to EMail!||Let's set up your mail account.][ OK ]");
 		cmd_accounts();
 	} else {
-		/* check mail at start, then open the first inbox; or, with
-		   "Check for new mail at start" off, the inbox as it is on
-		   disk at once, the timed checks bringing the new mail */
+		/* check mail at start, then open the first inbox; started
+		   offline (Settings > Mail), the inbox as it is on disk, and
+		   no connection until Options > Work offline goes online */
 		FINFO *in;
 		if (store_lost_passwords)
 			alert(1, "[1][EMAIL.KEY is missing or new: type the passwords again in Options > Accounts.][ OK ]");
-		if (!opt.offline && opt.startcheck)
+		if (!opt.offline)
 			cmd_check_all();
 		in = folder_role(accts[0], FR_INBOX);
-		if (in) {
-			if (opt.startcheck)
-				folders_select(accts[0], in);
-			else
-				folders_show(accts[0], in);
-		}
+		if (in)
+			folders_select(accts[0], in);
 	}
 	last_check = pf_ms();
 	evnt_set_m1(1, 0, 0, 1, 1);

@@ -1,17 +1,20 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-2.0-or-later
 # Copyright (C) 2026 AERA | Erez Yaary
-"""Settings > Mail, "Check for new mail at start" (STARTCHECK= in
-EMAIL.INF; Erez, 25 Oct 2026: off, EMail starts fast).
+"""Settings > Mail, "Start offline, with the mail on disk" (STARTOFFLINE=
+in EMAIL.INF), and Options > Work offline (Erez, 25 Oct 2026: started
+offline, EMail starts fast; going online connects and starts the timed
+checks; going offline stops them).
 
 As net_test.py (Dovecot, FAKESTNG.PRG over the serial port), with a check
 a minute (CHECK=1) and the protocol log on, so EMAIL.LOG says when EMail
 connects:
-1. STARTCHECK=0: EMail starts, opens the Inbox from disk and doesn't
-   connect; the timed check, a minute later, does.
-2. STARTCHECK=1 (as before): EMail connects as it starts.
+1. STARTOFFLINE=1: EMail starts and doesn't connect, nor on its timer
+   (90 s). Options > Work offline off: it connects at once.
+2. Options > Work offline on again: no more timed checks (90 s).
+3. Not given (as before): EMail connects as it starts.
 
-    startcheck_test.py WORKDIR [MACHINE]
+    startoffline_test.py WORKDIR [MACHINE]
 """
 import os
 import shutil
@@ -24,6 +27,8 @@ import rig
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.normpath(os.path.join(HERE, "..", ".."))
 IMAP, SMTP = 10143, 10025
+OPTIONS = (345, 8)          # the Options menu's title
+WORK_OFFLINE = (345, 92)    # its fifth row: Accounts, Settings, Font, a line, Work offline
 
 work, machine, more = rig.cli("Falcon")
 os.makedirs(work, exist_ok=True)
@@ -66,12 +71,12 @@ def check(what, good, detail=""):
         fails.append(what)
 
 
-def inf(startcheck):
+def inf(startoffline):
     with open(os.path.join(hd, "EMAIL.INF"), "w", newline="") as f:
         f.write("[options]\r\ntz=180\r\ncheck=1\r\nlog=1\r\n%s[account]\r\nname=Dana\r\nfullname=Dana Falcon\r\n"
                 "email=dana@test.local\r\nin=imap\r\nhost=127.0.0.1\r\nport=%d\r\nuser=dana\r\n"
                 "pass=secret\r\nsmtphost=127.0.0.1\r\nsmtpport=%d\r\n"
-                % ("" if startcheck is None else "startcheck=%d\r\n" % startcheck, IMAP, SMTP))
+                % ("" if startoffline is None else "startoffline=%d\r\n" % startoffline, IMAP, SMTP))
 
 
 def connects():
@@ -89,6 +94,14 @@ def wait_connect(n, most):
     return connects() >= n
 
 
+def work_offline(r, name):
+    r.click(*OPTIONS)
+    time.sleep(1.5)
+    r.shot(name)
+    r.click(*WORK_OFFLINE)
+    time.sleep(2)
+
+
 fifo_out, fifo_in = os.path.join(work, "st_out"), os.path.join(work, "st_in")
 for p in (fifo_out, fifo_in):
     if os.path.exists(p):
@@ -97,27 +110,35 @@ for p in (fifo_out, fifo_in):
 bridge = rig.bridge(work, fifo_out, fifo_in)
 shutil.rmtree(os.path.join(work, "shots"), ignore_errors=True)
 
-# 1. off: no connection at the start; the timed check a minute later
-inf(0)
+inf(1)
 r = rig.Rig(work, machine, serial=(fifo_out, fifo_in))
 try:
+    # 1. started offline: nothing, not even on the minute's timer
     r.settle(30, 120)
-    started = time.time()
-    r.shot("s1-started")
-    check("STARTCHECK=0: EMail starts without connecting", connects() == 0, "%d connections" % connects())
-    check("... the timed check (a minute) connects", wait_connect(1, 150),
-          "after %d s" % (time.time() - started))
-    r.shot("s2-timed")
+    r.shot("o1-started")
+    check("STARTOFFLINE=1: EMail starts without connecting", connects() == 0, "%d connections" % connects())
+    time.sleep(90)
+    check("... nor on its timer (a minute)", connects() == 0, "%d connections" % connects())
+    # going online: a check at once
+    work_offline(r, "o2-menu")
+    check("Work offline off: EMail connects at once", wait_connect(1, 45), "%d connections" % connects())
+    r.settle(5, 60)
+    r.shot("o3-online")
+    # 2. offline again: the timer stops
+    n = connects()
+    work_offline(r, "o4-menu")
+    time.sleep(90)
+    check("Work offline on again: no more timed checks", connects() == n, "%d, then %d" % (n, connects()))
 finally:
     r.stop()
 
-# 2. the default: EMail checks as it starts
+# 3. the default: EMail checks as it starts
 os.remove(log)
 inf(None)
 r = rig.Rig(work, machine, serial=(fifo_out, fifo_in))
 try:
-    check("STARTCHECK not given (as before): EMail connects as it starts", wait_connect(1, 90))
-    r.shot("s3-default")
+    check("STARTOFFLINE not given (as before): EMail connects as it starts", wait_connect(1, 90))
+    r.shot("o5-default")
 finally:
     r.stop()
 bridge.terminate()

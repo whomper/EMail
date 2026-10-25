@@ -821,7 +821,7 @@ static void settings_load(void)
 	snprintf(s_page, sizeof(s_page), "%d", opt.page);
 	snprintf(s_wrap, sizeof(s_wrap), "%d", opt.wrap);
 	s_on[T_KEEP] = opt.keepcache;
-	s_on[T_START] = opt.startcheck;
+	s_on[T_START] = opt.startoffline;
 	s_on[T_LOG] = opt.log;
 	s_on[T_HEB] = opt.hebrew;
 	s_on[T_FALCON] = dlg_falcon;
@@ -874,7 +874,7 @@ static void part_mail(short x, short y)
 	d_add(G_STRING, 0, 0, (long)"Messages to load at a time", x, ROW(1), 26, 1);
 	d_field(x + FX, ROW(1), s_page, 4, '9');
 	d_tick(x, ROW(2), "Keep read messages on disk", T_KEEP);
-	d_tick(x, ROW(3), "Check for new mail at start", T_START);
+	d_tick(x, ROW(3), "Start offline, with the mail on disk", T_START);
 }
 
 static void part_writing(short x, short y)
@@ -1008,7 +1008,7 @@ int dlg_settings(void)
 	if (opt.wrap < 40 || opt.wrap > 78)
 		opt.wrap = 72;
 	opt.keepcache = s_on[T_KEEP];
-	opt.startcheck = s_on[T_START];
+	opt.startoffline = s_on[T_START];
 	opt.log = s_on[T_LOG];
 	opt.hebrew = s_on[T_HEB];
 	dlg_falcon = s_on[T_FALCON];

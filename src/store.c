@@ -37,7 +37,7 @@ static void defaults(void)
 	opt.check = 0;
 	opt.page = 100;
 	opt.keepcache = 1;
-	opt.startcheck = 1;
+	opt.startoffline = 0;
 	opt.log = 0;
 	opt.hebrew = 0;
 	opt.offline = 0;
@@ -455,6 +455,9 @@ static void zone_detect(void)
    68000, falcon_usable 0) EMail runs through the gateway and writes it
    back as it found it, for the Falcon whose EMAIL.INF it was */
 static short falcon_inf;
+/* OFFLINE= (EMail 1.58 and before: the menu's Work offline, kept) stands
+   for STARTOFFLINE= where that isn't given */
+static short startoffline_given, offline_inf;
 int falcon_usable = 1;
 
 static void set_opt(const char *k, const char *v)
@@ -463,13 +466,13 @@ static void set_opt(const char *k, const char *v)
 	if (!strcmp(k, "tz")) { opt.tz = n; tz_given = 1; }	/* minutes: before time zones */
 	else if (!strcmp(k, "timezone")) str_copy(opt.tzname, v, sizeof(opt.tzname));
 	else if (!strcmp(k, "check")) opt.check = n;
-	else if (!strcmp(k, "startcheck")) opt.startcheck = n != 0;
+	else if (!strcmp(k, "startoffline")) { opt.startoffline = n != 0; startoffline_given = 1; }
 	else if (!strcmp(k, "signature")) unescape(opt.signature, v, sizeof(opt.signature));
 	else if (!strcmp(k, "page")) opt.page = n < 20 ? 20 : n > 1000 ? 1000 : n;
 	else if (!strcmp(k, "keepcache")) opt.keepcache = n;
 	else if (!strcmp(k, "log")) opt.log = n;
 	else if (!strcmp(k, "hebrew")) opt.hebrew = n;
-	else if (!strcmp(k, "offline")) opt.offline = n;
+	else if (!strcmp(k, "offline")) offline_inf = n != 0;
 	else if (!strcmp(k, "wrap")) opt.wrap = n < 40 ? 40 : n > 78 ? 78 : n;
 	else if (!strcmp(k, "main")) shorts(v, &opt.main_x, 4);
 	else if (!strcmp(k, "panes")) shorts(v, &opt.pane_w, 2);
@@ -515,6 +518,7 @@ int store_begin(const char *workdir)
 	path_join(tls_seed_path, sizeof(tls_seed_path), mail_dir, "SEED.DAT");
 	path_join(tls_roots_cache, sizeof(tls_roots_cache), workdir, "ROOTS.DAT");
 
+	startoffline_given = offline_inf = 0;
 	free(rd_buf);
 	rd_buf = rd_line = pf_load(inf_path, 0);
 	rd_cur = 0;
@@ -601,6 +605,9 @@ int store_step(void)
 		acct_fill_logins(accts[i]);
 		acct_preset_kind(accts[i]);	/* a POP3 account saved with IMAP's server */
 	}
+	if (!startoffline_given)
+		opt.startoffline = offline_inf;
+	opt.offline = opt.startoffline;	/* the menu's Work offline: this session only */
 	return 0;
 }
 
@@ -678,8 +685,6 @@ int store_save_settings(void)
 		"TIMEZONE", opt.tzname);
 	put_fmt(&b, "check for new mail every this many minutes; 0 = only when you ask",
 		"CHECK", "%d", opt.check);
-	put_fmt(&b, "1 = check for new mail when EMail starts, 0 = start at once with the mail on disk "
-		"(the timed checks fetch it)", "STARTCHECK", "%d", opt.startcheck);
 	put_fmt(&b, "messages loaded at a time in a folder, \"Load more\" gets the next ones (20-1000)",
 		"PAGE", "%d", opt.page);
 	put_fmt(&b, "1 = keep messages you have read on disk after quitting, 0 = only their headers",
@@ -687,8 +692,8 @@ int store_save_settings(void)
 	put_fmt(&b, "1 = write the conversation with the servers to EMAIL.LOG (passwords hidden)",
 		"LOG", "%d", opt.log);
 	put_fmt(&b, "1 = start with the Hebrew keyboard (F10 switches)", "HEBREW", "%d", opt.hebrew);
-	put_fmt(&b, "1 = work offline: don't connect, keep new messages in the Outbox",
-		"OFFLINE", "%d", opt.offline);
+	put_fmt(&b, "1 = start offline, with the mail on disk: no connection and no timed checks "
+		"until Options > Work offline is switched off", "STARTOFFLINE", "%d", opt.startoffline);
 	put_fmt(&b, "the editor wraps lines at this column (40-78)", "WRAP", "%d", opt.wrap);
 	put_str(&b, "added below new messages from every account; \\n starts a new line (up to 4)",
 		"SIGNATURE", opt.signature);
