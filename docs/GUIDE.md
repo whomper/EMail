@@ -733,7 +733,10 @@ checks every account as it starts, then opens the first Inbox. Off,
 EMail starts at once with the mail it has on disk, without connecting;
 the timed check ("Check for new mail every ... minutes") brings the new
 mail, the first one that many minutes after the start, and Check mail
-(Shift+Ctrl+N or Ctrl+K) at any time.
+(Shift+Ctrl+N or Ctrl+K) at any time. That first check is the whole one EMail
+would have made at the start: the folder list, the Inbox, the other
+folders' counts and the Outbox. A folder you open before it is asked for
+its own messages as always.
 
 **The time zone** (Settings > Connection) is chosen by name from a
 list (Asia/Jerusalem, Europe/London, ...) as in ECal; summer time follows
@@ -757,8 +760,10 @@ messages already on disk stay with it. Inbox, Sent, Trash, Drafts and the
 Outbox keep their names. Folder > Delete folder removes the open one with
 all its messages. Right-click a folder to rename or delete any folder,
 to mark all its messages as read, or to download them all.
-The folder list is read from the server when EMail starts; Folder >
-Refresh folder list reads it again after you changed it elsewhere.
+The folder list is read from the server at the first check of a session:
+when EMail starts, or, with "Check for new mail at start" off, at the
+first timed check or Check mail. Folder > Refresh folder list reads it
+again after you changed it elsewhere.
 
 ## The desktop icon
 
