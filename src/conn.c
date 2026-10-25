@@ -415,8 +415,11 @@ static void conn_turn(void)
 static int fill(CONN *c)
 {
 	unsigned long start = pf_ms();
-	if (c->pos < c->len)
+	if (c->pos < c->len) {
+		conn_turn();	/* lines already here: a turn every 40 ms too (EMail:
+				   an EXAMINE's 9 lines in one read, 215 ms on an ST) */
 		return 1;
+	}
 	c->pos = c->len = 0;
 	for (;;) {
 		long r = c->tls ? tls_read(c->tls, c->buf, c->bufsize) : net_read(c->h, c->buf, c->bufsize);
