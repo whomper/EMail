@@ -1688,6 +1688,14 @@ int main(void)
 	}
 	last_check = pf_ms();
 	evnt_set_m1(1, 0, 0, 1, 1);
+	{
+		/* files or a mailto: given when EMail was started (dropped on
+		   its icon, a desktop's "open with"), the TOS way or the ARGV
+		   way of MiNT and MagiC: as a VA_START, in the main loop */
+		const char *c = cmd_line();
+		if (*c)
+			kept_start = strdup(c);
+	}
 
 	while (!quit) {
 		/* 0x101/3/0: wake on any button press, left or right */
