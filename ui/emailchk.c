@@ -795,13 +795,11 @@ int main(void)
 					reread = 0;
 					reading = (short)settings_begin();
 				} else {
-					/* an account's step (30 ms on an ST) only first
-					   in a turn, not at the end of the slice */
-					short first = 1;
-					while (reading && bg_more() && (first || !store_step_big())) {
+					/* an account's step (30 ms on an ST) only with
+					   room for it in the slice (bgwork.h) */
+					do
 						reading = (short)settings_step();
-						first = 0;
-					}
+					while (reading && bg_room(store_step_big() ? 30 : 0));
 				}
 			} else if (may_check()) {
 				check(0);
