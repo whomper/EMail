@@ -81,6 +81,7 @@ typedef struct {
 typedef struct {
 	short tz;		/* minutes east of UTC */
 	short check;		/* minutes between automatic checks, 0 = off */
+	short startcheck;	/* check every account when EMail starts (else only the timed checks) */
 	short page;		/* messages loaded at a time (more on request) */
 	short keepcache;	/* keep message bodies on disk when quitting */
 	short log;		/* write EMAIL.LOG */

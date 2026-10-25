@@ -37,6 +37,7 @@ static void defaults(void)
 	opt.check = 0;
 	opt.page = 100;
 	opt.keepcache = 1;
+	opt.startcheck = 1;
 	opt.log = 0;
 	opt.hebrew = 0;
 	opt.offline = 0;
@@ -462,6 +463,7 @@ static void set_opt(const char *k, const char *v)
 	if (!strcmp(k, "tz")) { opt.tz = n; tz_given = 1; }	/* minutes: before time zones */
 	else if (!strcmp(k, "timezone")) str_copy(opt.tzname, v, sizeof(opt.tzname));
 	else if (!strcmp(k, "check")) opt.check = n;
+	else if (!strcmp(k, "startcheck")) opt.startcheck = n != 0;
 	else if (!strcmp(k, "signature")) unescape(opt.signature, v, sizeof(opt.signature));
 	else if (!strcmp(k, "page")) opt.page = n < 20 ? 20 : n > 1000 ? 1000 : n;
 	else if (!strcmp(k, "keepcache")) opt.keepcache = n;
@@ -676,6 +678,8 @@ int store_save_settings(void)
 		"TIMEZONE", opt.tzname);
 	put_fmt(&b, "check for new mail every this many minutes; 0 = only when you ask",
 		"CHECK", "%d", opt.check);
+	put_fmt(&b, "1 = check for new mail when EMail starts, 0 = start at once with the mail on disk "
+		"(the timed checks fetch it)", "STARTCHECK", "%d", opt.startcheck);
 	put_fmt(&b, "messages loaded at a time in a folder, \"Load more\" gets the next ones (20-1000)",
 		"PAGE", "%d", opt.page);
 	put_fmt(&b, "1 = keep messages you have read on disk after quitting, 0 = only their headers",

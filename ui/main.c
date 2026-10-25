@@ -1676,15 +1676,21 @@ int main(void)
 		alert(1, "[1][Welcome to EMail!||Let's set up your mail account.][ OK ]");
 		cmd_accounts();
 	} else {
-		/* check mail at start, then open the first inbox */
+		/* check mail at start, then open the first inbox; or, with
+		   "Check for new mail at start" off, the inbox as it is on
+		   disk at once, the timed checks bringing the new mail */
 		FINFO *in;
 		if (store_lost_passwords)
 			alert(1, "[1][EMAIL.KEY is missing or new: type the passwords again in Options > Accounts.][ OK ]");
-		if (!opt.offline)
+		if (!opt.offline && opt.startcheck)
 			cmd_check_all();
 		in = folder_role(accts[0], FR_INBOX);
-		if (in)
-			folders_select(accts[0], in);
+		if (in) {
+			if (opt.startcheck)
+				folders_select(accts[0], in);
+			else
+				folders_show(accts[0], in);
+		}
 	}
 	last_check = pf_ms();
 	evnt_set_m1(1, 0, 0, 1, 1);

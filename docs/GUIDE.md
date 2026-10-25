@@ -722,11 +722,18 @@ are underlined).
 
 **Settings** (Options > Settings, Ctrl+,) has six parts in its
 sidebar: **Mail** (checking every few minutes, how many messages to load
-at a time, keeping read messages on disk), **Writing** (where lines
+at a time, keeping read messages on disk, checking at start), **Writing** (where lines
 wrap, starting with the Hebrew keyboard), **Signature**, **Look**
 (colours, and 3D dialogs: the AES's own 3D look where it draws one, TOS
 4, MagiC, XaAES and EmuTOS in colour; greyed where it doesn't), **Contacts** (EContact's file, below) and **Connection** (the
 time zone, the Direct connection, the DSP and the protocol log).
+
+**Check for new mail at start** (Settings > Mail, on at first): EMail
+checks every account as it starts, then opens the first Inbox. Off,
+EMail starts at once with the mail it has on disk, without connecting;
+the timed check ("Check for new mail every ... minutes") brings the new
+mail, the first one that many minutes after the start, and Check mail
+(Shift+Ctrl+N or Ctrl+K) at any time.
 
 **The time zone** (Settings > Connection) is chosen by name from a
 list (Asia/Jerusalem, Europe/London, ...) as in ECal; summer time follows

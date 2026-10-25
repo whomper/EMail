@@ -486,6 +486,17 @@ static void t_inf(void)
 	CHECK(opt.peoplefile == 1 && !strcmp(opt.peopledir, "C:\\ECONTACT"), "EContact's file read back: %d %s",
 	      opt.peoplefile, opt.peopledir);
 	CHECK(!store_lost_passwords, "EMAIL.KEY opens them");
+	/* "Check for new mail at start": on unless STARTCHECK=0, kept */
+	CHECK(opt.startcheck == 1, "STARTCHECK on when not given");
+	opt.startcheck = 0;
+	CHECK(store_save_settings() == 0, "saved with STARTCHECK=0");
+	forget_accounts();
+	store_init(dir);
+	CHECK(opt.startcheck == 0, "STARTCHECK=0 read back");
+	opt.startcheck = 1;
+	store_save_settings();
+	forget_accounts();
+	store_init(dir);
 	/* in steps (EMAILCHK.ACC): the same, a few lines a step */
 	{
 		int steps = 0;

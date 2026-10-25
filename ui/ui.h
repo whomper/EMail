@@ -121,6 +121,9 @@ void heb_font_map(char *s, long n, short where);
 /* views */
 void folders_build(void);
 void folders_select(ACCOUNT *a, FINFO *fi);
+/* the same with what is on disk only: the server isn't asked (a start
+   without checking: Settings > Mail) */
+void folders_show(ACCOUNT *a, FINFO *fi);
 extern ACCOUNT *cur_acct;
 extern FINFO *cur_finfo;
 extern FOLDER *cur_folder;
