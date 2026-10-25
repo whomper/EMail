@@ -569,6 +569,13 @@ static void busy_msg(const short *msg)
 		ui_modal_message(msg);
 }
 
+/* EMail's windows drawn again while a dialog of the AES's is open over
+   them (MiNT, MagiC: dialog.h) */
+static void dialog_redraw(const short *msg)
+{
+	win_message((short *)msg);
+}
+
 static void av_start(const char *s)
 {
 	char path[200];
@@ -1627,6 +1634,8 @@ int main(void)
 	net_init();
 	pf_idle = busy_idle;
 	busy_message = busy_msg;
+	dlg_title = "EMail";		/* a dialog's window title, where it has one */
+	dlg_redraw_hook = dialog_redraw;
 	mail_status = status;
 	tls_note = status;
 	tls_file_info = pf_info;	/* CACERT.PEM's date and size in one look */

@@ -254,11 +254,11 @@ static LFIELD *lf_at(short obj)
 	return 0;
 }
 
+/* an object drawn again where the dialog is now, through what shows of
+   it (a dialog may be a window, and moved: the guidelines, 3.5) */
 static void draw_obj(short obj)
 {
-	short x, y;
-	objc_offset(tree, obj, &x, &y);
-	objc_draw(tree, obj, 0, x - 2, y - 2, tree[obj].ob_width + 4, tree[obj].ob_height + 4);
+	dlg_draw(tree, obj);
 }
 
 static short first_editable(void)
@@ -304,7 +304,7 @@ static short form_loop(short start)
 				objc_edit(tree, edit, 0, &idx, ED_INIT);
 		}
 		/* messages too: EContact's answers can't wait (the guidelines, 4.1) */
-		evnt_multi_(MU_KEYBD | MU_BUTTON | MU_MESAG | MU_TIMER, 2, 1, 1, 250, m, &e);
+		dlg_evnt(MU_KEYBD | MU_BUTTON | MU_MESAG | MU_TIMER, 2, 1, 1, 250, m, &e);
 		if (e.which & MU_MESAG)
 			ui_modal_message(m);
 		if (e.which & MU_KEYBD) {
@@ -351,18 +351,15 @@ static short form_loop(short start)
 	return next;
 }
 
-static short d_do(short edit)
+/* the dialog opened (over the screen on TOS, in a window of the AES's on
+   MiNT and MagiC: dialog.h), run and put away; name: its window's title */
+static short d_do_named(const char *name, short edit)
 {
 	short x, y, w, h, r;
-	form_center(tree, &x, &y, &w, &h);
-	wind_update(BEG_UPDATE);
-	wind_update(3);			/* BEG_MCTRL: the dialog owns the mouse */
-	form_dial(FMD_START, x, y, w, h);
-	objc_draw(tree, 0, 8, x, y, w, h);
+	dlg_name(name);
+	dlg_open(tree, &x, &y, &w, &h);
 	r = form_loop(edit) & 0x7fff;
-	form_dial(FMD_FINISH, x, y, w, h);
-	wind_update(2);
-	wind_update(END_UPDATE);
+	dlg_close();
 	tree[r].ob_state &= ~SELECTED;
 	nlf = npw = 0;
 	return r;
@@ -444,7 +441,7 @@ int dlg_account(ACCOUNT *a)
 	(void)f_pass; (void)f_shost; (void)f_sport; (void)f_suser; (void)f_spass;
 	(void)f_imap;
 
-	r = d_do(f_name);
+	r = d_do_named("Account", f_name);
 	if (r == b_del) {
 		if (alert(2, "[2][Delete the account|\"%s\"?|(Its mail stays on the server.)][Delete|Cancel]", a->name) == 1)
 			return -1;
@@ -520,7 +517,7 @@ enum { T_KEEP, T_LOG, T_HEB, T_FALCON, T_DSP, T_COLOUR, T_PFILE, T_3D };
 #define NTICK 8
 static short tick_box[NTICK], tick_lbl[NTICK], tick_var[NTICK], nticks;
 static short page_of[DMAX], npages, cur_page, page_tab[7];
-static GRECT page_area;
+static short pages_obj;		/* the box the pages show in */
 
 static TEDINFO *d_ted(const char *text, short just, short color)
 {
@@ -556,11 +553,8 @@ static short d_tick(short x, short y, const char *label, short var)
 
 static void tick_draw(short k)
 {
-	OBJECT *o = &tree[tick_box[k]];
-	short x, y;
-	o->ob_spec = (long)(s_on[tick_var[k]] ? &tick_on_blk : &tick_off_blk);
-	objc_offset(tree, tick_box[k], &x, &y);
-	objc_draw(tree, 0, 8, x, y, o->ob_width, o->ob_height);
+	tree[tick_box[k]].ob_spec = (long)(s_on[tick_var[k]] ? &tick_on_blk : &tick_off_blk);
+	dlg_draw(tree, tick_box[k]);
 }
 
 /* field i in a thin frame */
@@ -625,13 +619,11 @@ static void show_page(short p, int draw)
 		((TEDINFO *)tree[page_tab[i]].ob_spec)->te_color = i == p ? 0x1071 : 0x1180;
 	}
 	if (draw) {
-		short x, y, k;
-		for (k = 1; k <= npages; k++) {
-			objc_offset(tree, page_tab[k], &x, &y);
-			objc_draw(tree, 0, 8, x - 2, y - 2, tree[page_tab[k]].ob_width + 4,
-				  tree[page_tab[k]].ob_height + 4);
-		}
-		objc_draw(tree, 0, 8, page_area.x, page_area.y, page_area.w, page_area.h);
+		short k;
+		for (k = 1; k <= npages; k++)
+			dlg_draw(tree, page_tab[k]);
+		if (pages_obj)
+			dlg_draw(tree, pages_obj);
 	}
 }
 
@@ -754,19 +746,9 @@ static void pdir_pick(void)
 static short settings_run(short pages_box)
 {
 	short x, y, w, h, r, k;
-	if (pages_box) {
-		objc_offset(tree, pages_box, &page_area.x, &page_area.y);
-		page_area.w = tree[pages_box].ob_width;
-		page_area.h = tree[pages_box].ob_height;
-	}
-	form_center(tree, &x, &y, &w, &h);
-	wind_update(BEG_UPDATE);
-	wind_update(3);
-	form_dial(FMD_START, x, y, w, h);
-	if (pages_box) {
-		objc_offset(tree, pages_box, &page_area.x, &page_area.y);
-	}
-	objc_draw(tree, 0, 8, x, y, w, h);
+	pages_obj = pages_box;
+	dlg_name("Settings");
+	dlg_open(tree, &x, &y, &w, &h);
 	for (;;) {
 		r = form_loop(first_edit()) & 0x7fff;
 		for (k = 0; k < nticks; k++)
@@ -794,22 +776,25 @@ static short settings_run(short pages_box)
 			tree[r].ob_state &= ~SELECTED;
 			pdir_pick();
 			ui_redraws();
-			objc_draw(tree, 0, 8, x, y, w, h);
+			dlg_draw(tree, 0);
 			continue;
 		}
 		if (r == zone_btn) {
 			/* the zone list over the settings, then the settings again */
 			tree[r].ob_state &= ~SELECTED;
 			zone_pick();
-			win_redraw_area(&pick_area);	/* what the list covered */
-			objc_draw(tree, 0, 8, x, y, w, h);
+			if (!dlg_in_window()) {
+				/* on TOS what the list covered, drawn again (in a
+				   window the AES asks for it) */
+				win_redraw_area(&pick_area);
+				dlg_draw(tree, 0);
+			}
 			continue;
 		}
 		break;
 	}
-	form_dial(FMD_FINISH, x, y, w, h);
-	wind_update(2);
-	wind_update(END_UPDATE);
+	dlg_close();
+	pages_obj = 0;
 	tree[r].ob_state &= ~SELECTED;
 	return r;
 }
@@ -1047,7 +1032,7 @@ int dlg_ask(const char *title, const char *label, char *buf, short cap)
 	d_button((len + 6 > 40 ? len + 6 : 40) - 24, 6, 10, "Cancel", EXIT);
 	b_ok = d_button((len + 6 > 40 ? len + 6 : 40) - 12, 6, 10, "OK", EXIT | DEFAULT);
 	d_end();
-	if (d_do(f) != b_ok || !field[0])
+	if (d_do_named(title, f) != b_ok || !field[0])
 		return 0;
 	str_copy(buf, field, (size_t)cap + 1);
 	return 1;
@@ -1066,7 +1051,7 @@ static short pick_w(const char *title, const char **items, short n, short lw)
 {
 	static char shown[PROWS][PW + 2], count[40];
 	short first = 0, cur = -1, row[PROWS], box, b_up, b_down, b_ok, b_cancel, f_count;
-	short x, y, w, h, bx, by, r, i, result = -1, tw = (short)strlen(title);
+	short x, y, w, h, r, i, result = -1, tw = (short)strlen(title);
 
 	if (pick_from > 0 && pick_from < n) {
 		cur = pick_from;
@@ -1123,21 +1108,16 @@ static short pick_w(const char *title, const char **items, short n, short lw)
 		tree[b_ok].ob_state = cur >= 0 ? 0 : DISABLED;
 		if (result == -1) {
 			/* first time round: open the dialog */
-			form_center(tree, &x, &y, &w, &h);
-			wind_update(BEG_UPDATE);
-			wind_update(3);
-			form_dial(FMD_START, x, y, w, h);
-			objc_draw(tree, 0, 8, x, y, w, h);
+			dlg_name(title);
+			dlg_open(tree, &x, &y, &w, &h);
 			result = -2;
 		} else {
 			/* only the list, the arrows, the count and OK change */
-			objc_offset(tree, box, &bx, &by);
-			objc_draw(tree, 0, 8, bx - 1, by - 1, tree[box].ob_width + 2, tree[box].ob_height + 2);
-			objc_draw(tree, b_up, 0, x, y, w, h);
-			objc_draw(tree, b_down, 0, x, y, w, h);
-			objc_offset(tree, f_count, &bx, &by);
-			objc_draw(tree, 0, 8, bx, by, tree[f_count].ob_width, tree[f_count].ob_height);
-			objc_draw(tree, b_ok, 0, x, y, w, h);
+			dlg_draw(tree, box);
+			dlg_draw(tree, b_up);
+			dlg_draw(tree, b_down);
+			dlg_draw(tree, f_count);
+			dlg_draw(tree, b_ok);
 		}
 		r = dlg_do(tree, 0, b_cancel);	/* Esc and Undo: Cancel (3.5) */
 		{
@@ -1175,9 +1155,8 @@ static short pick_w(const char *title, const char **items, short n, short lw)
 				break;
 		}
 	}
-	form_dial(FMD_FINISH, x, y, w, h);
-	wind_update(2);
-	wind_update(END_UPDATE);
+	dlg_area(&x, &y, &w, &h);	/* where it is now: it may have been moved */
+	dlg_close();
 	pick_area.x = x;
 	pick_area.y = y;
 	pick_area.w = w;
@@ -1345,5 +1324,5 @@ void dlg_keys(void)
 		d_text(3, 3 + i, lines[i]);
 	d_button(40, n + 4, 10, "OK", EXIT | DEFAULT);
 	d_end();
-	d_do(0);
+	d_do_named("Keys", 0);
 }

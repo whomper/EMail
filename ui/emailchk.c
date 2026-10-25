@@ -742,6 +742,7 @@ int main(void)
 	av_init("EMAILCHK");
 	net_init();
 	pf_idle = busy_idle;
+	dlg_title = "EMail check";	/* its alerts' and boxes' windows (MiNT, MagiC) */
 	tls_file_info = pf_info;
 #ifdef AES_PROFILE
 	newmail_stage = aes_profile_tag;	/* the stretches named by the check's stages */
