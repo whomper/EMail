@@ -15,6 +15,7 @@
 #include "imap.h"
 #include "charset.h"
 #include "util.h"
+#include "store.h"
 
 typedef unsigned char u8;
 
@@ -325,7 +326,7 @@ static IMAP *login_once(const char *host, unsigned short port, int sec, const ch
 			const char *pass, char *err, int errlen)
 {
 	IMAP *im = calloc(1, sizeof(IMAP));
-	int r;
+	int r, google;
 	if (!im) {
 		str_copy(err, "out of memory", errlen);
 		return 0;
@@ -353,6 +354,7 @@ static IMAP *login_once(const char *host, unsigned short port, int sec, const ch
 		return 0;
 	}
 	untagged(im, im->resp.s);	/* its capabilities, when it gives them */
+	google = google_said(im->resp.s);
 	if (!im->caps[0] && run(im, 0, 0, 0, "CAPABILITY") < 0) {
 		str_copy(err, im->err, errlen);
 		imap_logout(im);
@@ -427,7 +429,9 @@ static IMAP *login_once(const char *host, unsigned short port, int sec, const ch
 		r = run(im, 2, 0, 0, "LOGIN %s %s", qu, qp);
 	}
 	if (r <= 0) {
-		if (strstr(im->err, "AUTHENTICATIONFAILED"))
+		if (google || google_said(im->err))
+			str_copy(err, google_app_password, errlen);
+		else if (strstr(im->err, "AUTHENTICATIONFAILED"))
 			snprintf(err, errlen, "%s refused the user name or password", host);
 		else
 			snprintf(err, errlen, "login failed: %s", im->err);

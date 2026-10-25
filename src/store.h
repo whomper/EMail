@@ -167,6 +167,10 @@ unsigned short acct_port(ACCOUNT *a, int smtp);
 int acct_sec(ACCOUNT *a, int smtp);		/* SEC_* (conn.h) */
 /* fill in a provider's direct servers from the e-mail address; 1 if known */
 int acct_preset(ACCOUNT *a);
+/* a login Google refused: its servers known by what they said (a greeting,
+   the refusal), then the message that says Gmail takes an app password */
+int google_said(const char *s);
+extern const char google_app_password[];
 /* the login in use: the gateway's or, in Direct connection, the Direct connection's own.
    smtp: 0 incoming, 1 outgoing; NULL user: the server needs no login */
 const char *acct_user(ACCOUNT *a, int smtp);

@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include "pop3.h"
 #include "charset.h"
+#include "store.h"
 
 static int reply(POP3 *p)
 {
@@ -25,7 +26,7 @@ static POP3 *login_once(const char *host, unsigned short port, int sec, const ch
 			const char *pass, char *err, int errlen)
 {
 	POP3 *p = calloc(1, sizeof(POP3));
-	int r;
+	int r, google;
 	if (!p) {
 		str_copy(err, "out of memory", errlen);
 		return 0;
@@ -45,6 +46,7 @@ static POP3 *login_once(const char *host, unsigned short port, int sec, const ch
 		pop3_quit(p);
 		return 0;
 	}
+	google = google_said(p->line.s);	/* "+OK Gpop ready" */
 	if (sec == SEC_STARTTLS) {
 		conn_cmd(p->c, 0, "STLS");
 		if (reply(p) <= 0) {
@@ -79,6 +81,11 @@ static POP3 *login_once(const char *host, unsigned short port, int sec, const ch
 			free(b64);
 			r = reply(p);
 		}
+	}
+	if (r <= 0 && (google || google_said(p->err))) {
+		str_copy(err, google_app_password, errlen);
+		pop3_quit(p);
+		return 0;
 	}
 	if (r <= 0) {
 		snprintf(err, errlen, "login failed: %s", p->err);

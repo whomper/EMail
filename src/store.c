@@ -226,6 +226,20 @@ int acct_preset(ACCOUNT *a)
 	return 0;
 }
 
+/* Google's servers (Gmail, Google Workspace), as they say themselves,
+   straight or through the gateway: in their greetings ("* OK Gimap ready",
+   "+OK Gpop ready", "220 smtp.gmail.com ESMTP ... gsmtp") and refusals
+   ("... support.google.com/mail/?p=BadCredentials", "Application-specific
+   password required") */
+int google_said(const char *s)
+{
+	return s && (str_istr(s, "Gimap") || str_istr(s, "Gpop") || str_istr(s, "gsmtp") ||
+		     str_istr(s, "google.com") || str_istr(s, "Application-specific password"));
+}
+
+const char google_app_password[] =
+	"Gmail refused the password: it takes an app password from myaccount.google.com/apppasswords";
+
 void acct_dirs(ACCOUNT *a)
 {
 	char name[16];

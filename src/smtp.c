@@ -9,6 +9,7 @@
 #include <ctype.h>
 #include "smtp.h"
 #include "charset.h"
+#include "store.h"
 
 /* read a (multi-line) reply; returns the code, -1 on error */
 static int reply(SMTP *s, int collect)
@@ -60,7 +61,7 @@ static SMTP *open_once(const char *host, unsigned short port, int sec, const cha
 		       const char *user, const char *pass, char *err, int errlen)
 {
 	SMTP *s = calloc(1, sizeof(SMTP));
-	int code;
+	int code, google;
 	if (!s) {
 		str_copy(err, "out of memory", errlen);
 		return 0;
@@ -77,6 +78,7 @@ static SMTP *open_once(const char *host, unsigned short port, int sec, const cha
 		smtp_quit(s);
 		return 0;
 	}
+	google = google_said(s->line.s);	/* "220 smtp.gmail.com ESMTP ... gsmtp" */
 	conn_cmd(s->c, 0, "EHLO %s", helo);
 	code = reply(s, 1);
 	if (sec == SEC_STARTTLS) {
@@ -138,6 +140,11 @@ static SMTP *open_once(const char *host, unsigned short port, int sec, const cha
 				free(b64);
 				code = reply(s, 0);
 			}
+		}
+		if (code != 235 && (code == 534 || code == 535) && (google || google_said(s->err))) {
+			str_copy(err, google_app_password, errlen);
+			smtp_quit(s);
+			return 0;
 		}
 		if (code != 235) {
 			snprintf(err, errlen, "SMTP login failed: %s", s->err);

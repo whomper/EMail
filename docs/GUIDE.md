@@ -722,6 +722,13 @@ NVDI's colours. For EmuTOS,
   the About box that EMail runs in TT RAM, or use the gateway.
 - **"login failed"**: check user and password; Gmail, iCloud, Yahoo and
   Fastmail need an app password.
+- **"Gmail refused the password: it takes an app password"**: Gmail lets
+  programs like EMail in only with an app password, not your Google
+  password. Turn on 2-Step Verification in your Google Account, make an
+  app password at myaccount.google.com/apppasswords and type it in as
+  EMail's password (Options > Accounts > Edit). EMail says this whenever
+  Google's servers refuse a login, through the gateway too. With a work
+  or school account, its administrator may have turned app passwords off.
 - **"EMail can't write its key file"**: EMail keeps your passwords in
   EMAIL.INF encrypted, with a key it keeps in `EMAIL.KEY` next to it.
   When that file can't be written (a locked disk, a full one, a folder

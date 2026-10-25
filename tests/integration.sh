@@ -664,5 +664,60 @@ PY
   else FAIL=$((FAIL+1)); echo "FAIL password check in the log"; fi
   [ -s "$W/EMAIL/SEED.DAT" ] && { PASS=$((PASS+1)); echo "ok   random seed kept"; } || { FAIL=$((FAIL+1)); echo "FAIL no random seed"; }
 fi
+# Gmail refuses a normal Google password: EMail says it takes an app
+# password, known by what Google's servers say (the gateway passes it on
+# as it is); another server's refusal stays as it was
+G=$((IMAP + 700))
+python3 "$ROOT/tests/gmail_like.py" $G $((G + 1)) $((G + 2)) & GPID=$!
+python3 "$ROOT/tests/gmail_like.py" $((G + 3)) $((G + 4)) $((G + 5)) appspecific & GPID="$GPID $!"
+mkdir -p "$D/gmail"
+cat > "$D/gmail/EMAIL.INF" <<INF
+[account]
+name=Gmail IMAP
+email=dana@gmail.com
+in=imap
+host=127.0.0.1
+port=$G
+user=dana@gmail.com
+pass=my-google-password
+smtphost=127.0.0.1
+smtpport=$((G + 2))
+[account]
+name=Gmail POP
+email=dana@gmail.com
+in=pop3
+host=127.0.0.1
+port=$((G + 1))
+user=dana@gmail.com
+pass=my-google-password
+[account]
+name=Gmail 2-step
+email=dana@gmail.com
+in=imap
+host=127.0.0.1
+port=$((G + 3))
+user=dana@gmail.com
+pass=my-google-password
+[account]
+name=Not Gmail
+email=dana@test.local
+in=imap
+host=127.0.0.1
+port=$IMAP
+user=dana
+pass=not-the-password
+INF
+sleep 1
+grun() { ASAN_OPTIONS=detect_leaks=0 "$CLI" "$D/gmail" "$@" 2>&1; }
+APPPW="Gmail refused the password: it takes an app password from myaccount.google.com/apppasswords"
+expect "Gmail IMAP: the refusal says it takes an app password" "$APPPW" "$(grun check 1)"
+expect "Gmail POP3: the same" "$APPPW" "$(grun check 2)"
+expect "Gmail with 2-step verification (Application-specific password required): the same" "$APPPW" "$(grun check 3)"
+expect "Gmail SMTP: the same" "$APPPW" "$(grun send 1 "$W/msg.txt")"
+out=$(grun check 4)
+expect "another server's refusal stays as it was" "refused the user name or password" "$out"
+if grep -q "app password" <<<"$out"; then FAIL=$((FAIL+1)); echo "FAIL Gmail's message for another server"; else PASS=$((PASS+1)); echo "ok   ... and doesn't mention Gmail"; fi
+kill $GPID 2>/dev/null
+
 echo "$PASS passed, $FAIL failed"
 [ $FAIL -eq 0 ]
