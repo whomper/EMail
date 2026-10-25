@@ -83,7 +83,9 @@ These come from AERA-Atari's repo template and are the same in every app's CLAUD
   `make` with no warnings. When the GEM side changes,
   `tests/hatari/net_test.py`, `tests/hatari/stop_test.py` and
   `tests/hatari/disk_test.py` (each job's opens within its budget,
-  guidelines 6.5) in Hatari with EmuTOS; `emailchk_test.py` when the
+  guidelines 6.5) in Hatari with EmuTOS, and `tests/hatari/xaaes_test.py`
+  (FreeMiNT with XaAES, a multitasking AES: common's rig in
+  `common/tests/xaaes`, `make base` there once); `emailchk_test.py` when the
   accessory or `src/newmail.c` changes. With EContact: `econtact_test.py` (its latest release);
   the help file: `help_test.py` (EHypView's latest release).
 - `gateway/` is a read-only copy of
