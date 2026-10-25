@@ -535,9 +535,11 @@ static TEDINFO *d_ted(const char *text, short just, short color)
 }
 
 /* black band across the top, white title */
+static short band_obj;			/* the open dialog's band, 0 none */
+
 static void d_band(short w, const char *title)
 {
-	d_add(G_BOXTEXT, 0, 0, (long)d_ted(title, 0, 0x1071), 0, 0, w, 1);
+	band_obj = d_add(G_BOXTEXT, 0, 0, (long)d_ted(title, 0, 0x1071), 0, 0, w, 1);
 }
 
 static short d_tick(short x, short y, const char *label, short var)
@@ -748,6 +750,8 @@ static short settings_run(short pages_box)
 	short x, y, w, h, r, k;
 	pages_obj = pages_box;
 	dlg_name("Settings");
+	if (band_obj)
+		dlg_band(band_obj);	/* in a window its title says it (3.5) */
 	dlg_open(tree, &x, &y, &w, &h);
 	for (;;) {
 		r = form_loop(first_edit()) & 0x7fff;
@@ -794,7 +798,7 @@ static short settings_run(short pages_box)
 		break;
 	}
 	dlg_close();
-	pages_obj = 0;
+	pages_obj = band_obj = 0;
 	tree[r].ob_state &= ~SELECTED;
 	return r;
 }
