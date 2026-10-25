@@ -520,6 +520,18 @@ static void inf_line(char *line)
 
 #define STEP_LINES 4	/* about 5 ms a step on an 8 MHz ST */
 
+/* the next line is an [account]: its ACCOUNT (19 KB cleared) takes a
+   step of its own, 30 ms on an 8 MHz ST */
+int store_step_big(void)
+{
+	const char *p = rd_line;
+	if (!rd_buf || !p)
+		return 0;
+	while (*p == ' ' || *p == '\t' || *p == '\r')
+		p++;
+	return !strncasecmp(p, "[account]", 9);
+}
+
 int store_step(void)
 {
 	short n, i;
@@ -527,6 +539,8 @@ int store_step(void)
 		return 0;
 	for (n = 0; n < STEP_LINES && rd_line && *rd_line; n++) {
 		char *line = rd_line;
+		if (n && store_step_big())
+			break;		/* the account in a step of its own */
 		rd_line = strchr(line, '\n');
 		if (rd_line)
 			*rd_line++ = 0;
