@@ -167,6 +167,9 @@ unsigned short acct_port(ACCOUNT *a, int smtp);
 int acct_sec(ACCOUNT *a, int smtp);		/* SEC_* (conn.h) */
 /* fill in a provider's direct servers from the e-mail address; 1 if known */
 int acct_preset(ACCOUNT *a);
+/* IMAP or POP3 chosen: a provider's server filled in for the other one
+   becomes this one's (pop.gmail.com 995 for imap.gmail.com 993) */
+void acct_preset_kind(ACCOUNT *a);
 /* a login Google refused: its servers known by what they said (a greeting,
    the refusal), then the message that says Gmail takes an app password */
 int google_said(const char *s);

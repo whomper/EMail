@@ -458,6 +458,7 @@ int dlg_account(ACCOUNT *a)
 		a->dport = (unsigned short)atoi(port);
 		if (!a->dport)
 			a->dport = a->pop ? 995 : 993;
+		acct_preset_kind(a);	/* IMAP's server for POP3, or the other way */
 	} else {
 		str_copy(a->host, host, sizeof(a->host));
 		a->port = (unsigned short)atoi(port);

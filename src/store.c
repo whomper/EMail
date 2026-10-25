@@ -188,42 +188,70 @@ void acct_fill_logins(ACCOUNT *a)
 	}
 }
 
-/* the big providers' servers, for a Direct connection */
+/* the big providers' servers, for a Direct connection: IMAP on 993, POP3
+   on 995 (none: iCloud has no POP3), as each provider's help gives them */
 static const struct {
-	const char *domains, *in, *out;
-	unsigned short inport, outport;
+	const char *domains, *in, *pop, *out;
+	unsigned short outport;
 } presets[] = {
-	{ " gmail.com googlemail.com ", "imap.gmail.com", "smtp.gmail.com", 993, 465 },
-	{ " icloud.com me.com mac.com ", "imap.mail.me.com", "smtp.mail.me.com", 993, 587 },
-	{ " yahoo.com ymail.com ", "imap.mail.yahoo.com", "smtp.mail.yahoo.com", 993, 465 },
-	{ " gmx.net gmx.de gmx.com ", "imap.gmx.net", "mail.gmx.net", 993, 465 },
-	{ " web.de ", "imap.web.de", "smtp.web.de", 993, 587 },
-	{ " aol.com ", "imap.aol.com", "smtp.aol.com", 993, 465 },
-	{ " fastmail.com fastmail.fm ", "imap.fastmail.com", "smtp.fastmail.com", 993, 465 },
-	{ " zoho.com ", "imap.zoho.com", "smtp.zoho.com", 993, 465 },
+	{ " gmail.com googlemail.com ", "imap.gmail.com", "pop.gmail.com", "smtp.gmail.com", 465 },
+	{ " icloud.com me.com mac.com ", "imap.mail.me.com", 0, "smtp.mail.me.com", 587 },
+	{ " yahoo.com ymail.com ", "imap.mail.yahoo.com", "pop.mail.yahoo.com", "smtp.mail.yahoo.com", 465 },
+	{ " gmx.net gmx.de gmx.com ", "imap.gmx.net", "pop.gmx.net", "mail.gmx.net", 465 },
+	{ " web.de ", "imap.web.de", "pop3.web.de", "smtp.web.de", 587 },
+	{ " aol.com ", "imap.aol.com", "pop.aol.com", "smtp.aol.com", 465 },
+	{ " fastmail.com fastmail.fm ", "imap.fastmail.com", "pop.fastmail.com", "smtp.fastmail.com", 465 },
+	{ " zoho.com ", "imap.zoho.com", "pop.zoho.com", "smtp.zoho.com", 465 },
 };
 
-int acct_preset(ACCOUNT *a)
+/* the provider of the account's address, -1 none known */
+static int preset_of(ACCOUNT *a)
 {
 	const char *at = strrchr(a->email, '@');
 	char key[80];
 	unsigned i;
 	if (!at)
-		return 0;
+		return -1;
 	snprintf(key, sizeof(key), " %s ", at + 1);
 	for (i = 0; key[i]; i++)
 		key[i] = (char)tolower((unsigned char)key[i]);
-	for (i = 0; i < sizeof(presets) / sizeof(presets[0]); i++) {
-		if (!strstr(presets[i].domains, key))
-			continue;
-		str_copy(a->dhost, presets[i].in, sizeof(a->dhost));
-		a->dport = presets[i].inport;
-		str_copy(a->dsmtphost, presets[i].out, sizeof(a->dsmtphost));
-		a->dsmtpport = presets[i].outport;
-		a->dsec = a->dsmtpsec = 0;
-		return 1;
-	}
-	return 0;
+	for (i = 0; i < sizeof(presets) / sizeof(presets[0]); i++)
+		if (strstr(presets[i].domains, key))
+			return (int)i;
+	return -1;
+}
+
+/* the incoming server for IMAP or POP3 (a POP3 account was given the
+   IMAP server: a tester's TT, 25 Oct 2026); empty where the provider has
+   no POP3 */
+static void preset_in(ACCOUNT *a, int i)
+{
+	const char *in = a->pop ? presets[i].pop : presets[i].in;
+	str_copy(a->dhost, in ? in : "", sizeof(a->dhost));
+	a->dport = a->pop ? 995 : 993;
+	a->dsec = 0;
+}
+
+int acct_preset(ACCOUNT *a)
+{
+	int i = preset_of(a);
+	if (i < 0)
+		return 0;
+	preset_in(a, i);
+	str_copy(a->dsmtphost, presets[i].out, sizeof(a->dsmtphost));
+	a->dsmtpport = presets[i].outport;
+	a->dsmtpsec = 0;
+	return a->dhost[0] != 0;
+}
+
+void acct_preset_kind(ACCOUNT *a)
+{
+	int i = preset_of(a);
+	if (i < 0 || !a->dhost[0])
+		return;
+	if (!strcasecmp(a->dhost, presets[i].in) ||
+	    (presets[i].pop && !strcasecmp(a->dhost, presets[i].pop)))
+		preset_in(a, i);
 }
 
 /* Google's servers (Gmail, Google Workspace), as they say themselves,
@@ -567,8 +595,10 @@ int store_step(void)
 	if (!opt.tzname[0] || !tz_find(opt.tzname))
 		zone_detect();		/* written with the next save */
 	tls_tz_minutes = zone_offset_now();
-	for (i = 0; i < naccts; i++)
+	for (i = 0; i < naccts; i++) {
 		acct_fill_logins(accts[i]);
+		acct_preset_kind(accts[i]);	/* a POP3 account saved with IMAP's server */
+	}
 	return 0;
 }
 

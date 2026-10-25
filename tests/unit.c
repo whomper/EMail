@@ -497,6 +497,29 @@ static void t_inf(void)
 		      !strcmp(opt.signature, "Dana\nTel Aviv") && zone_offset_now() == 180,
 		      "read in %d steps as at once", steps + 1);
 	}
+	/* a provider's servers for a Direct connection, IMAP's or POP3's */
+	{
+		ACCOUNT g;
+		memset(&g, 0, sizeof(g));
+		str_copy(g.email, "Dana@Gmail.com", sizeof(g.email));
+		CHECK(acct_preset(&g) && !strcmp(g.dhost, "imap.gmail.com") && g.dport == 993 &&
+		      !strcmp(g.dsmtphost, "smtp.gmail.com") && g.dsmtpport == 465, "Gmail, IMAP: %s %u", g.dhost, g.dport);
+		g.pop = 1;
+		acct_preset_kind(&g);
+		CHECK(!strcmp(g.dhost, "pop.gmail.com") && g.dport == 995, "Gmail, POP3 chosen: %s %u", g.dhost, g.dport);
+		g.pop = 0;
+		acct_preset_kind(&g);
+		CHECK(!strcmp(g.dhost, "imap.gmail.com") && g.dport == 993, "and IMAP again: %s %u", g.dhost, g.dport);
+		str_copy(g.dhost, "mail.example.com", sizeof(g.dhost));
+		g.dport = 1993;
+		g.pop = 1;
+		acct_preset_kind(&g);
+		CHECK(!strcmp(g.dhost, "mail.example.com") && g.dport == 1993, "a server of one's own stays");
+		memset(&g, 0, sizeof(g));
+		str_copy(g.email, "dana@icloud.com", sizeof(g.email));
+		g.pop = 1;
+		CHECK(!acct_preset(&g) && !g.dhost[0], "iCloud has no POP3: left to fill in");
+	}
 	/* another key: the password is gone, and EMail says so */
 	{
 		char kf[120];
