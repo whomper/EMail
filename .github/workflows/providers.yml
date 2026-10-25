@@ -1,0 +1,28 @@
+name: Providers
+
+# EMail against the providers' own servers (tests/providers_probe.sh):
+# Gmail, iCloud, Yahoo, GMX, web.de, AOL, Fastmail and Zoho, IMAP, POP3 and
+# SMTP, Direct and through the gateway. Run by hand, Actions > Providers >
+# Run workflow, all of them or the ones named. It logs in as no one and
+# builds nothing that leaves the runner.
+on:
+  workflow_dispatch:
+    inputs:
+      providers:
+        description: "Providers (blank: all): gmail icloud yahoo gmx webde aol fastmail zoho"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  providers:
+    name: Direct connection and gateway to each provider
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the test program
+        run: make build/mail-cli
+      - name: The providers
+        run: tests/providers_probe.sh ${{ inputs.providers }}
