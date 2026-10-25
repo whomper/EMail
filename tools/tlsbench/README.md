@@ -10,6 +10,8 @@ time the expensive parts of a TLS handshake on the machine itself.
   Montgomery multiplication in 68030 assembly (`mont030.S`, `rsa030.c`),
   against BearSSL's i31: the same answers, and the times. `rsacheck`
   checks `rsa030.c` against BearSSL on the build machine.
+- `ECBENCHC.PRG`, `ECBENCHA.PRG`: RSA, P-256, P-384, ECDSA and X25519 with
+  BearSSL's `br_i31_montymul` in C and in 68030 assembly.
 - `TLSDSP.PRG`: Montgomery multiplication (the core of RSA and elliptic
   curves) on the DSP56001, for 2048-bit and 256-bit numbers. It checks the
   DSP's answers against values worked out in Python (`gen.py`).
@@ -67,3 +69,26 @@ assembly loop for the 68020 and up there. `mont030.S` is that loop:
 The same answers as BearSSL on every one. Gmail's chain on the TT: about
 11.6 s of RSA before, 1.5 s with it. Not for a 68060: its 64-bit
 `mulu.l` is emulated in software (060SP), so there BearSSL's C stays.
+
+## BearSSL's br_i31_montymul in 68030 assembly (ECBENCHC/ECBENCHA.PRG)
+
+RSA (i31), the prime curves (ec_prime_i31), ECDSA and X25519 (i31) all
+multiply with br_i31_montymul. `mont31_030.S` is its loop with `mulu.l`
+(31-bit words, as BearSSL keeps them), `i31_montmul_030.c` the function
+around it, in place of BearSSL's `src/int/i31_montmul.c`. Emulated TT
+(68030 32 MHz, TT RAM), the same checksum of the answers from both:
+
+| | BearSSL C | with mont31_030.S |
+|---|---|---|
+| RSA-2048 check, i31 | 1710 ms | 421 ms |
+| RSA-4096 check, i31 | 8165 ms | 1740 ms |
+| P-256 point multiply, i31 (m31: 2020 ms) | 4920 ms | 1520 ms |
+| ECDSA P-256 check, i31 (m31: 3805 ms) | 9865 ms | 2970 ms |
+| P-384 point multiply, i31 | 13265 ms | 3705 ms |
+| ECDSA P-384 check, i31 | 26995 ms | 7625 ms |
+| X25519, i31 (m31: 515 ms) | 2980 ms | 972 ms |
+
+For RSA, rsa030.c (252 and 995 ms) is faster still: it needn't be
+constant-time. For P-256 and P-384, i31 with mont31_030.S beats the m31
+code; X25519 stays fastest on m31. The ECDSA checks gain least: at 8 or
+12 words the C around each multiplication costs as much as it.

@@ -56,3 +56,16 @@ make -s -C "$M" build/libbearssl-host.a
 gcc -O2 -Wall -I$M/common/third_party/bearssl/inc -o "$W/rsacheck" "$H/rsacheck.c" "$H/rsa030.c" "$H/mont_ref.c" \
   "$M/build/libbearssl-host.a"
 "$W/rsacheck"
+
+# ECBENCHC.PRG and ECBENCHA.PRG: RSA, P-256, P-384, ECDSA and X25519 with
+# BearSSL's br_i31_montymul in C and in 68030 assembly (mont31_030.S,
+# i31_montmul_030.c in place of src/int/i31_montmul.c); the same
+# checksum of the answers from both
+$CC $CF -Wall -c -o "$W/ecbench.o" "$H/ecbench.c"
+$CC $CF -Wall -DASM030 -c -o "$W/ecbench_asm.o" "$H/ecbench.c"
+$CC $CF -Wall -I$B/src -c -o "$W/i31m.o" "$H/i31_montmul_030.c"
+m68k-linux-gnu-as -m68030 -o "$W/mont31_030.o" "$H/mont31_030.S"
+$CC $LF -o "$W/ecc.elf" $RT "$W/ecbench.o" "$W/libbearssl.a" -lgcc
+$CC $LF -o "$W/eca.elf" $RT "$W/ecbench_asm.o" "$W/i31m.o" "$W/mont31_030.o" "$W/libbearssl.a" -lgcc
+PRGFLAGS=7 python3 "$M/common/tools/elf2tos.py" "$W/ecc.elf" "$H/ECBENCHC.PRG"
+PRGFLAGS=7 python3 "$M/common/tools/elf2tos.py" "$W/eca.elf" "$H/ECBENCHA.PRG"
