@@ -390,6 +390,27 @@ int conn_cmd(CONN *c, int secret, const char *fmt, ...)
 	return ok;
 }
 
+/* a turn for the rest of the machine (an accessory's evnt_timer, the
+   program's window and Esc): while waiting for data, and every
+   CONN_SLICE_MS while data keeps coming, so a reply that trickles in
+   without a pause (a serial link, a slow server) doesn't hold the machine
+   until it is whole (EMail's accessory on an 8 MHz ST: 130-215 ms) */
+#define CONN_SLICE_MS 40
+static unsigned long idle_at;
+
+static void conn_idle(void)
+{
+	if (pf_idle)
+		pf_idle();
+	idle_at = pf_ms();
+}
+
+static void conn_turn(void)
+{
+	if (pf_idle && pf_ms() - idle_at >= CONN_SLICE_MS)
+		conn_idle();
+}
+
 /* make sure there is buffered data; 0 on timeout or close */
 static int fill(CONN *c)
 {
@@ -404,6 +425,7 @@ static int fill(CONN *c)
 			conn_bytes += r;
 			if (conn_tick)
 				conn_tick();
+			conn_turn();
 			return 1;
 		}
 		if (r < 0) {
@@ -419,8 +441,7 @@ static int fill(CONN *c)
 			str_copy(c->err, "timed out waiting for the server", sizeof(c->err));
 			return 0;
 		}
-		if (pf_idle)
-			pf_idle();
+		conn_idle();
 	}
 }
 
@@ -501,8 +522,7 @@ long conn_read(CONN *c, char *buf, long max)
 			str_copy(c->err, "timed out waiting for the server", sizeof(c->err));
 			return -1;
 		}
-		if (pf_idle)
-			pf_idle();
+		conn_idle();
 	}
 	k = c->len - c->pos;
 	if (k > max)
@@ -511,6 +531,7 @@ long conn_read(CONN *c, char *buf, long max)
 	c->pos += k;
 	if (conn_tick)
 		conn_tick();
+	conn_turn();
 	return k;
 }
 
