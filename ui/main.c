@@ -1692,7 +1692,7 @@ int main(void)
 		/* files or a mailto: given when EMail was started (dropped on
 		   its icon, a desktop's "open with"), the TOS way or the ARGV
 		   way of MiNT and MagiC: as a VA_START, in the main loop */
-		const char *c = cmd_line();
+		const char *c = av_command();
 		if (*c)
 			kept_start = strdup(c);
 	}
