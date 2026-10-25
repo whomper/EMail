@@ -557,6 +557,18 @@ void ui_redraws(void)
 	}
 }
 
+/* a message while the network works (busy_idle): a redraw now, as a
+   multitasking AES (MiNT with XaAES or MyAES, MagiC) shows what is behind
+   a window until it is drawn, and other programs go on moving their
+   windows meanwhile; everything else waits for the main loop */
+static void busy_msg(const short *msg)
+{
+	if (msg[0] == WM_REDRAW)
+		win_message((short *)msg);
+	else
+		ui_modal_message(msg);
+}
+
 static void av_start(const char *s)
 {
 	char path[200];
@@ -1614,6 +1626,7 @@ int main(void)
 	set_logging();
 	net_init();
 	pf_idle = busy_idle;
+	busy_message = busy_msg;
 	mail_status = status;
 	tls_note = status;
 	tls_file_info = pf_info;	/* CACERT.PEM's date and size in one look */
@@ -1639,6 +1652,11 @@ int main(void)
 	folders_build();
 	list_load();
 	reader_clear();
+	/* the whole window now, its pane bars and dividers too, not at the
+	   AES's first WM_REDRAW: that waits behind the welcome box or the
+	   first check, and meanwhile a multitasking AES shows the desktop
+	   through it */
+	win_redraw_all();
 
 	crash_offer("EMail", "next to EMAIL.PRG");
 	if (free_kb < 300)		/* say so now, not with a failed send or TLS later */
