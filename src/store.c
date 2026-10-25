@@ -518,7 +518,7 @@ static void inf_line(char *line)
 	}
 }
 
-#define STEP_LINES 8
+#define STEP_LINES 4	/* about 5 ms a step on an 8 MHz ST */
 
 int store_step(void)
 {
