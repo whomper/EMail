@@ -29,3 +29,6 @@ jobs:
       - name: How long each provider waits before the login
         if: always()
         run: tests/idle_probe.py 20 40 60
+      - name: What Yahoo's and AOL's POP3 servers answer to a refused login, and when
+        if: always()
+        run: tests/pop_timing.py 180

@@ -60,6 +60,8 @@ try() {  # try NAME WANT OUTPUT
     PASS=$((PASS+1)); echo "ok   $name  ($why)"; RES="$RES ok"
   else
     FAIL=$((FAIL+1)); echo "FAIL $name"; sed 's/^/     | /' <<<"$out" | head -8; RES="$RES FAIL"
+    # what was said, from EMail's protocol log (the password never is)
+    [ -f "$LOG" ] && tail -n 12 "$LOG" | sed 's/^/     log | /'
   fi
 }
 
@@ -91,6 +93,7 @@ while read -r name domain imap pop smtp sport; do
     account "$name IMAP" "$user" imap 192.168.1.2 143 587 "$imap" 993 1 "$smtp" "$sport" "$ssec"
     [ "$pop" != - ] && account "$name POP" "$user" pop3 192.168.1.2 110 587 "$pop" 995 1 "$smtp" "$sport" "$ssec"
   } > "$W/EMAIL.INF"
+  LOG=$W/EMAIL.LOG; rm -f "$LOG"
   try "$name, Direct, IMAP $imap:993" "$want" "$("$CLI" "$W" check 1 2>&1)"
   if [ "$pop" != - ]; then try "$name, Direct, POP3 $pop:995" "$want" "$("$CLI" "$W" check 2 2>&1)"; else RES="$RES -"; fi
   try "$name, Direct, SMTP $smtp:$sport" "$want" "$("$CLI" "$W" send 1 "$D/msg.txt" 2>&1)"
@@ -109,6 +112,7 @@ while read -r name domain imap pop smtp sport; do
     account "$name IMAP" "$user" imap 127.0.0.1 $pi $ps
     [ "$pop" != - ] && account "$name POP" "$user" pop3 127.0.0.1 $pp $ps
   } > "$G/EMAIL.INF"
+  LOG=$G/EMAIL.LOG
   try "$name, gateway, IMAP" "$want" "$("$CLI" "$G" check 1 2>&1)"
   if [ "$pop" != - ]; then try "$name, gateway, POP3" "$want" "$("$CLI" "$G" check 2 2>&1)"; else RES="$RES -"; fi
   try "$name, gateway, SMTP" "$want" "$("$CLI" "$G" send 1 "$D/msg.txt" 2>&1)"
