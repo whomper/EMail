@@ -12,13 +12,18 @@
 
 static int reply(POP3 *p)
 {
+	const char *s;
 	if (conn_getline(p->c, &p->line) < 0) {
 		str_copy(p->err, p->c->err, sizeof(p->err));
 		return -1;
 	}
-	if (!strncmp(p->line.s, "+OK", 3))
+	s = p->line.s;
+	if (!strncmp(s, "+OK", 3))
 		return 1;
-	str_copy(p->err, p->line.s[0] == '-' ? p->line.s + 4 : p->line.s, sizeof(p->err));
+	if (!strncmp(s, "-ERR", 4))
+		for (s += 4; *s == ' '; s++)
+			;
+	str_copy(p->err, s, sizeof(p->err));
 	return 0;
 }
 
@@ -67,9 +72,9 @@ static POP3 *login_once(const char *host, unsigned short port, int sec, const ch
 	if (r > 0) {
 		conn_cmd(p->c, 1, "PASS %s", pass);
 		r = reply(p);
-	}
-	if (r <= 0 && r == 0) {
-		/* some servers only take SASL PLAIN */
+	} else if (r == 0) {
+		/* some servers only take SASL PLAIN: they refuse USER. A refused
+		   PASS is the answer: GMX hangs up after it, Yahoo stops answering */
 		char raw[300], *b64;
 		long ul = strlen(user), pl = strlen(pass);
 		if (ul + pl + 2 <= (long)sizeof(raw)) {

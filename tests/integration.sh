@@ -731,5 +731,26 @@ expect "another server's refusal stays as it was" "refused the user name or pass
 if grep -q "app password" <<<"$out"; then FAIL=$((FAIL+1)); echo "FAIL Gmail's message for another server"; else PASS=$((PASS+1)); echo "ok   ... and doesn't mention Gmail"; fi
 kill $GPID 2>/dev/null
 
+# a refused PASS is the answer: GMX hangs up after it, Yahoo stops
+# answering; only a server that refuses USER is tried with AUTH PLAIN
+S=$((IMAP + 710))
+python3 "$ROOT/tests/pop_strict.py" $S $((S + 1)) $((S + 2)) & SPID=$!
+mkdir -p "$D/strict"
+for n in 0 1 2; do
+  printf '[account]\r\nname=Strict %d\r\nemail=dana@test.local\r\nin=pop3\r\nhost=127.0.0.1\r\nport=%d\r\nuser=dana\r\npass=wrong\r\n' \
+    $n $((S + n))
+done > "$D/strict/EMAIL.INF"
+sleep 1
+srun() { ASAN_OPTIONS=detect_leaks=0 timeout 60 "$CLI" "$D/strict" "$@" 2>&1; }
+t0=$SECONDS; out=$(srun check 1)
+expect "POP3 server that hangs up after a refused PASS: the refusal (GMX)" "login failed: authentication failed" "$out"
+t1=$SECONDS; out=$(srun check 2)
+expect "POP3 server that stops answering after it: the refusal (Yahoo)" "login failed: authentication failed" "$out"
+t2=$SECONDS
+if [ $((t2 - t0)) -lt 10 ]; then PASS=$((PASS+1)); echo "ok   ... at once ($((t1 - t0)) s, $((t2 - t1)) s)"
+else FAIL=$((FAIL+1)); echo "FAIL refusals took $((t1 - t0)) s and $((t2 - t1)) s"; fi
+expect "POP3 server that refuses USER: AUTH PLAIN tried" "login failed: AUTH PLAIN refused too" "$(srun check 3)"
+kill $SPID 2>/dev/null
+
 echo "$PASS passed, $FAIL failed"
 [ $FAIL -eq 0 ]
