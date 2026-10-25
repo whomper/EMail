@@ -27,13 +27,18 @@ accessory loads TLS.OVL into its own memory and does TLS itself. That
 memory is taken only in TT RAM (Falcon, TT; not Falcon-4, where such an
 account is left unchecked and the check says why).
 
+With "pop3", the account is POP3 (Dovecot's, port 10110), the accessory's
+own POP3 path: new is what EMail hasn't downloaded (UIDL.DAT), so the
+Inbox starts empty, and the message read on the phone counts too (POP3
+has no flags): 3 new where IMAP finds 2, then 4 where it finds 3.
+
 With "trace", Hatari writes its GEMDOS and AES trace (trace1.txt, trace2.txt)
 and acc_trace.py checks the accessory against them: no file of its open
 across an event call, no GEMDOS memory taken after its first one (the
 guidelines, 2.2). CHK_ACC names another build of the accessory to test,
 such as an AES_PROFILE one (its stretches go to hatari.log as AESGAP).
 
-    emailchk_test.py WORKDIR [MACHINE] [direct] [trace]
+    emailchk_test.py WORKDIR [MACHINE] [direct] [pop3] [trace]
 """
 import imaplib
 import os
@@ -53,6 +58,8 @@ IMAP, SMTP = 10143, 10025
 work, machine, more = rig.cli("Falcon")
 direct = "direct" in more
 trace = "trace" in more
+pop = "pop3" in more
+NEW2, NEW3 = (3, 4) if pop else (2, 3)
 
 
 def traced(n):
@@ -86,7 +93,7 @@ for k, v in (("@RUN@", run_dir), ("@DIR@", srv), ("@IMAP@", str(IMAP)), ("@POP3@
     conf = conf.replace(k, v)
 with open(os.path.join(srv, "dovecot.conf"), "w") as f:
     f.write(conf)
-for m in sorted(os.listdir(os.path.join(ROOT, "tests", "mail"))):
+for m in [] if pop else sorted(os.listdir(os.path.join(ROOT, "tests", "mail"))):
     shutil.copy(os.path.join(ROOT, "tests", "mail", m), os.path.join(MD, "new", m))
 subprocess.run(["chown", "-R", "nobody:", os.path.join(srv, "home")], check=True)
 rig.servers_ready(work, IMAP, SMTP, 10110, IMAPS)
@@ -110,10 +117,10 @@ with open(os.path.join(em, "EMAIL.INF"), "w", newline="") as f:
     # tz=0 for a Direct connection: the certificate's dates against the
     # emulator's clock, this computer's (UTC)
     f.write("[options]\r\ntz=%d\r\ncheck=1\r\nlog=1\r\nfalcon=%d\r\n[account]\r\nname=Dana\r\nfullname=Dana Falcon\r\n"
-            "email=dana@test.local\r\nin=imap\r\nhost=127.0.0.1\r\nport=%d\r\nuser=dana\r\n"
+            "email=dana@test.local\r\nin=%s\r\nhost=127.0.0.1\r\nport=%d\r\nuser=dana\r\n"
             "pass=secret\r\nsmtphost=127.0.0.1\r\nsmtpport=%d\r\n"
             "dhost=127.0.0.1\r\ndport=%d\r\ndsec=1\r\n"
-            % (0 if direct else 180, direct, IMAP, SMTP, IMAPS))
+            % (0 if direct else 180, direct, "pop3" if pop else "imap", 10110 if pop else IMAP, SMTP, IMAPS))
 with open(os.path.join(hd, "EMAILCHK.INF"), "w", newline="") as f:
     f.write("FOLDER=C:\\\r\nSTART=now\r\n")
 
@@ -182,7 +189,7 @@ try:
     # 2. mail comes: found at the next check (a minute), and told
     deliver(("()", "First news"), ("(\\Seen)", "Read on the phone"), ("()", "Second news"))
     line = wait_check(2, 150)
-    check("the next check finds the two unread", re.search(r": 2 new, fresh$", line) is not None, line)
+    check("the next check finds the %d new" % NEW2, re.search(r": %d new, fresh$" % NEW2, line) is not None, line)
     time.sleep(3)
     r.shot("c2-told")
     check("... and the server's flags are as they were", unseen() == before + 2, "%d unread" % unseen())
@@ -191,10 +198,10 @@ try:
 
     # 3. nothing more: not told again; one more: told
     line = wait_check(3, 150)
-    check("checked again with nothing more: not told again", re.search(r": 2 new$", line) is not None, line)
+    check("checked again with nothing more: not told again", re.search(r": %d new$" % NEW2, line) is not None, line)
     deliver(("()", "Third news"))
     line = wait_check(4, 150)
-    check("one more: told again, 3 new", re.search(r": 3 new, fresh$", line) is not None, line)
+    check("one more: told again, %d new" % NEW3, re.search(r": %d new, fresh$" % NEW3, line) is not None, line)
     time.sleep(3)
     r.shot("c3-told-again")
     r.key(K["ESC"])
@@ -218,7 +225,7 @@ try:
     line = wait_check(n + 1, 60)
     time.sleep(2)
     r.shot("c6-check-now")
-    check("Check now checks at once, and tells", len(checks()) == n + 1 and ": 3 new" in line, line)
+    check("Check now checks at once, and tells", len(checks()) == n + 1 and ": %d new" % NEW3 in line, line)
     r.key(K["RETURN"])
     time.sleep(2)
 finally:
