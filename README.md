@@ -75,11 +75,27 @@ one is there on its own, and all of them together in `EMAIL-x.y.zip`.
    To update: `cd ~/AERA-Gateway && ./update-pi.sh`. To check: `gateway/aera-gateway status`.
 3. Start EMail and fill in your account in **Options > Accounts**: the Pi's IP address (`PI_IP`;
    `aera-gateway` prints it) as the server, port 143 for IMAP (110 for POP3) and 587 for SMTP, and your
-   login (Gmail, iCloud, Yahoo and Fastmail need an app password).
+   login: for Gmail, iCloud, Yahoo and Fastmail an app password (below).
 4. Optionally, copy `EMAILCHK.ACC` to the root of the boot drive (`C:\`) and restart: open **EMail
    check** from the Desk menu once and show it `EMAIL.PRG`. From then on it tells you when new mail has
    come while EMail isn't running (under MagiC, MiNT or an AV desktop such as Thing, it offers to open EMail).
 5. Press **Help** in EMail for the [user guide](docs/GUIDE.md); it describes everything else.
+
+### App passwords (Gmail, iCloud, Yahoo, Fastmail)
+
+These services refuse the password you use on their website when a program like EMail logs in. Make an
+**app password** on the service's website, once, and type it into EMail's Password field, for the
+incoming and the outgoing mail, in place of your normal password. Your normal password stays as it is,
+and you can delete the app password there at any time.
+
+| Service | First | Where to make it | User in EMail |
+|---------|-------|------------------|---------------|
+| Gmail | 2-Step Verification on | https://myaccount.google.com/apppasswords (16 letters: type them without the spaces) | your Gmail address |
+| iCloud | two-factor authentication | https://account.apple.com, Sign-In and Security, App-Specific Passwords ([Apple's help](https://support.apple.com/en-us/102654)) | incoming: the name before @icloud.com (or the whole address); outgoing: the whole address |
+| Yahoo | | Account Security, Create app password under "External connections" ([Yahoo's help](https://help.yahoo.com/kb/SLN15241.html)) | your Yahoo address |
+| Fastmail | not the Basic plan | Settings, Privacy & Security, Manage app passwords and access ([Fastmail's help](https://www.fastmail.help/hc/en-us/articles/360058752854)) | your Fastmail address |
+
+The user guide's [App passwords](docs/GUIDE.md#app-passwords-gmail-icloud-yahoo-fastmail) has the steps for each.
 
 On a Falcon or TT with 4 MB you can skip the Pi: copy `TLS.OVL`, `CACERT.PEM` and `ROOTS.DAT` next to
 `EMAIL.PRG` and switch on **Options > Direct connection**. EMail fills in the servers for the big providers.

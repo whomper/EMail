@@ -147,7 +147,7 @@ Options > Accounts > New, or the dialog EMail shows at first start:
 | E-mail         | your address                                                     |
 | Incoming mail  | IMAP (folders stay on the server) or POP3 (mail comes to the Atari) |
 | Server, Port   | through the gateway: the Pi's IP and 143 (IMAP) or 110 (POP3), as for a server without TLS |
-| User, Password | your login (Gmail, iCloud, Yahoo, Fastmail: an app password)     |
+| User, Password | your login; Gmail, iCloud, Yahoo, Fastmail: an app password, see [App passwords](#app-passwords-gmail-icloud-yahoo-fastmail) |
 | POP3: leave mail on the server | keep a copy on the server after downloading    |
 | Outgoing       | the Pi's IP and 587 through the gateway; leave User empty to use the incoming login, or type `-` for a server that needs none |
 | Passwords      | shown as `*`; click the eye beside the field to see what you typed |
@@ -158,6 +158,67 @@ key EMail makes the first time, in `EMAIL.KEY`: someone who reads or copies
 EMAIL.INF alone can't read them, but whoever has both files can, so keep
 EMAIL.KEY to yourself. Lose EMAIL.KEY (or start with a new one) and EMail asks
 you to type the passwords again.
+
+## App passwords (Gmail, iCloud, Yahoo, Fastmail)
+
+Gmail, iCloud, Yahoo and Fastmail don't let a program like EMail in with
+the password you use on their website: they refuse it, and EMail says the
+login failed (for Gmail: "Gmail refused the password"). Instead you make
+an **app password** on the service's website, once, on a computer or a
+phone, and type it into EMail in place of your normal password: in
+Options > Accounts, as the Password of the incoming mail and of the
+outgoing mail (or leave the outgoing User empty, and EMail uses the
+incoming login for both). It is the same through the Pi gateway and with
+a Direct connection. Your normal password stays as it is, and you can
+delete the app password on the same page at any time; EMail then can't
+log in until you give it a new one.
+
+**Gmail (Google)**
+
+- First, 2-Step Verification must be on: in your Google Account, Security
+  & sign-in, under "How you sign in to Google", Turn on 2-Step
+  Verification.
+- Make the app password at https://myaccount.google.com/apppasswords and
+  follow the steps there. Google shows it as 16 letters in four groups:
+  type the 16 letters without the spaces.
+- User: your Gmail address.
+- The page isn't offered when your account uses only security keys for
+  2-Step Verification, has Advanced Protection, or belongs to a work,
+  school or other organisation (its administrator decides).
+- Changing your Google password deletes your app passwords: make a new one.
+- Google's help: https://support.google.com/accounts/answer/185833
+
+**iCloud (Apple)**
+
+- First, your Apple Account needs two-factor authentication.
+- Sign in at https://account.apple.com, choose App-Specific Passwords in
+  Sign-In and Security, and generate one, following the steps.
+- User, incoming mail: usually the name of your iCloud address, without
+  @icloud.com (if EMail can't log in with that, the whole address).
+  Outgoing mail: the whole address, typed in the outgoing User. The same
+  app-specific password for both.
+- Changing or resetting your Apple Account password revokes all your
+  app-specific passwords: make a new one.
+- Apple's help: https://support.apple.com/en-us/102654, and its settings
+  for mail programs: https://support.apple.com/en-us/102525
+
+**Yahoo**
+
+- Sign in to Yahoo's Account Security page, click Create app password
+  under "External connections" and follow the steps.
+- User: your Yahoo address.
+- An app password goes on working when you change your Yahoo password:
+  delete it on the same page to stop it.
+- Yahoo's help: https://help.yahoo.com/kb/SLN15241.html
+
+**Fastmail**
+
+- Not with the Basic plan, which has no IMAP or SMTP.
+- In Fastmail's settings, Privacy & Security, Connected apps & API
+  tokens: Manage app passwords and access, New app password, and Generate
+  password (Mail, Contacts & Calendars, the default, includes mail).
+- User: your whole Fastmail address.
+- Fastmail's help: https://www.fastmail.help/hc/en-us/articles/360058752854
 
 ## Direct connection
 
@@ -721,14 +782,15 @@ NVDI's colours. For EmuTOS,
   time zone. **"not enough memory"**: close other programs, check in
   the About box that EMail runs in TT RAM, or use the gateway.
 - **"login failed"**: check user and password; Gmail, iCloud, Yahoo and
-  Fastmail need an app password.
+  Fastmail need an app password (see [App passwords](#app-passwords-gmail-icloud-yahoo-fastmail)).
 - **"Gmail refused the password: it takes an app password"**: Gmail lets
   programs like EMail in only with an app password, not your Google
   password. Turn on 2-Step Verification in your Google Account, make an
   app password at myaccount.google.com/apppasswords and type it in as
-  EMail's password (Options > Accounts > Edit). EMail says this whenever
-  Google's servers refuse a login, through the gateway too. With a work
-  or school account, its administrator may have turned app passwords off.
+  EMail's password (Options > Accounts > Edit); [App passwords](#app-passwords-gmail-icloud-yahoo-fastmail)
+  has the steps. EMail says this whenever Google's servers refuse a
+  login, through the gateway too. With a work or school account, its
+  administrator may have turned app passwords off.
 - **"EMail can't write its key file"**: EMail keeps your passwords in
   EMAIL.INF encrypted, with a key it keeps in `EMAIL.KEY` next to it.
   When that file can't be written (a locked disk, a full one, a folder
