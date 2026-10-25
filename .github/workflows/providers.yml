@@ -26,3 +26,6 @@ jobs:
         run: make build/mail-cli
       - name: The providers
         run: tests/providers_probe.sh ${{ inputs.providers }}
+      - name: How long each provider waits before the login
+        if: always()
+        run: tests/idle_probe.py 20 40 60
