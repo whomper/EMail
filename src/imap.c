@@ -217,15 +217,15 @@ static int read_response(IMAP *im)
 	}
 }
 
-static void note_caps(IMAP *im, const char *s)
+/* the capabilities after the word CAPABILITY, up to the ']' of a
+   response code or the end of the line */
+static void note_caps(IMAP *im, const char *p)
 {
-	const char *p = str_istr(s, "CAPABILITY ");
 	long i = 1;
-	if (!p)
-		return;
-	p += 11;
+	if (*p == ' ')
+		p++;
 	im->caps[0] = ' ';
-	while (*p && *p != ']' && i < (long)sizeof(im->caps) - 2)
+	while (*p && *p != ']' && *p != '\r' && i < (long)sizeof(im->caps) - 2)
 		im->caps[i++] = (char)toupper((u8)*p++);
 	im->caps[i++] = ' ';
 	im->caps[i] = 0;
@@ -238,31 +238,49 @@ int imap_has(IMAP *im, const char *cap)
 	return strstr(im->caps, k) != 0;
 }
 
-/* generic untagged data every command may bring */
+/* p starts with the word w, whole */
+static int word_is(const char *p, const char *w)
+{
+	long n = strlen(w);
+	return !strncasecmp(p, w, n) && (p[n] == ' ' || p[n] == ']' || !p[n] || p[n] == '\r');
+}
+
+/* what EMail takes from a server's line, where IMAP puts it: the word
+   after "* " or the tag ("CAPABILITY", "3 EXISTS"), or the response code
+   in brackets after a status ("OK [UIDNEXT 42]"). Read in place, not
+   searched for along the line: on an 8 MHz ST, a 400-byte CAPABILITY
+   line searched five times took 70 ms, longer than an accessory may
+   keep the machine (the guidelines, 2.2) */
 static void untagged(IMAP *im, const char *s)
 {
-	const char *p;
-	/* only the first line: after it may come a whole message (a
-	   literal), and searching a megabyte four times takes seconds */
-	char *cr = strchr((char *)s, '\r');
-	if (cr)
-		*cr = 0;
-	if (str_istr(s, "CAPABILITY "))
-		note_caps(im, s);
-	if ((p = str_istr(s, "[UIDVALIDITY ")))
-		im->uidvalidity = strtoul(p + 13, 0, 10);
-	if ((p = str_istr(s, "[UIDNEXT ")))
-		im->uidnext = strtoul(p + 9, 0, 10);
-	if (str_istr(s, "[READ-ONLY]"))
-		im->readonly = 1;
-	if (isdigit((u8)s[2])) {
+	const char *w = strchr(s, ' '), *c;
+	if (!w)
+		return;
+	w++;
+	if (word_is(w, "CAPABILITY")) {
+		note_caps(im, w + 10);
+		return;
+	}
+	if (isdigit((u8)*w)) {
 		char *e;
-		unsigned long n = strtoul(s + 2, &e, 10);
+		unsigned long n = strtoul(w, &e, 10);
 		if (!strncasecmp(e, " EXISTS", 7))
 			im->exists = n;
+		return;
 	}
-	if (cr)
-		*cr = '\r';
+	for (c = w; *c && *c != ' ' && *c != '\r'; c++)
+		;			/* OK, NO, BAD, PREAUTH, BYE */
+	if (c[0] != ' ' || c[1] != '[')
+		return;
+	c += 2;
+	if (word_is(c, "CAPABILITY"))
+		note_caps(im, c + 10);
+	else if (!strncasecmp(c, "UIDVALIDITY ", 12))
+		im->uidvalidity = strtoul(c + 12, 0, 10);
+	else if (!strncasecmp(c, "UIDNEXT ", 8))
+		im->uidnext = strtoul(c + 8, 0, 10);
+	else if (!strncasecmp(c, "READ-ONLY]", 10))
+		im->readonly = 1;
 }
 
 typedef void (*UNTAGGED)(IMAP *im, void *ud, const char *s, long n);
@@ -334,7 +352,7 @@ static IMAP *login_once(const char *host, unsigned short port, int sec, const ch
 		imap_logout(im);
 		return 0;
 	}
-	note_caps(im, im->resp.s);
+	untagged(im, im->resp.s);	/* its capabilities, when it gives them */
 	if (!im->caps[0] && run(im, 0, 0, 0, "CAPABILITY") < 0) {
 		str_copy(err, im->err, errlen);
 		imap_logout(im);
