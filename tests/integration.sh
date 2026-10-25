@@ -628,6 +628,18 @@ PY
   expect "unknown authority refused, in words" "isn't signed by any authority in CACERT.PEM" "$out"
   cp "$W/CACERT.keep" "$W/CACERT.PEM"
 
+  # the right authority, the wrong name: 127.0.0.1 against localhost's
+  # certificate (TLS.OVL 1.1 checks the chain after the handshake, the
+  # name too, before anything is sent)
+  cp "$W/EMAIL.INF" "$W/EMAIL.INF.keep"
+  sed -i "0,/^dhost=localhost/s//dhost=127.0.0.1/" "$W/EMAIL.INF"
+  out=$(run folders 1)
+  expect "a certificate for another name refused, in words" "a different server name" "$out"
+  grep -q "^[0-9:.]* TLS -- the server's [0-9]* certificates\?, [0-9]* bytes: kept, to be checked after the handshake" "$W/EMAIL.LOG" \
+    && { PASS=$((PASS+1)); echo "ok   the chain kept during the handshake, checked after it"; } \
+    || { FAIL=$((FAIL+1)); echo "FAIL the chain not checked after the handshake"; }
+  cp "$W/EMAIL.INF.keep" "$W/EMAIL.INF"
+
   # a server with only an ECDSA certificate: refused for RSA-only, then accepted
   openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:prime256v1 -nodes -days 2 -subj /CN=localhost \
     -addext subjectAltName=DNS:localhost -keyout "$D/eck.pem" -out "$D/ecc.pem" 2>/dev/null
