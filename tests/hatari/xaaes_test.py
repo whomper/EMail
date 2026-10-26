@@ -55,10 +55,12 @@ def run(name, steps, copy=()):
 
 
 def undrawn(shot):
-    """the desktop's pixels inside EMail's window (below the menu bar)"""
+    """the desktop's pixels inside EMail's window (below the menu bar); not
+    the strip at the left a fulled window leaves, its work area on 8
+    pixels across (wind_x8: the family's, 26 Oct 2026)"""
     im = Image.open(shot).convert("RGB")
     w, h = im.size
-    return sum(1 for x in range(w) for y in range(40, h) if im.getpixel((x, y)) == CYAN)
+    return sum(1 for x in range(8, w) for y in range(40, h) if im.getpixel((x, y)) == CYAN)
 
 
 # 1. the first start: the welcome box comes at once

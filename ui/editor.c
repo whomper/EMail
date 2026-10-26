@@ -450,7 +450,7 @@ static const char *const eb_tip[NEB] = {
 
 static void eb_layout(WIN *w)
 {
-	short x = w->work.x + 4, i, bw;
+	short x = TEXT_X(w->work.x), i, bw;
 	w->head_h = ch + 8;
 	eb_narrow = w->work.w < 52 * cw;
 	for (i = 0; i < NEB; i++) {
@@ -550,7 +550,7 @@ int editor_tip(short mx, short my, char *out, int size)
 	/* a recipient shown by name: its address */
 	if (on_rect(&w_editor.work, mx, my) && my >= w_editor.work.y + w_editor.head_h) {
 		long line = w_editor.top + (my - w_editor.work.y - w_editor.head_h) / ch;
-		short cols = w_editor.work.w / cw - 1, col = (mx - w_editor.work.x - cw / 2) / cw;
+		short cols = TEXT_COLS(w_editor.work.w), col = (mx - TEXT_X(w_editor.work.x)) / cw;
 		if (line < nl && addr_line(line) && (line != cy || rcpt_cursor(line, cols) >= 0)) {
 			RCPT r[MAXRCPT];
 			const char *colon = memchr(ln[line].s, ':', ln[line].n);
@@ -591,7 +591,7 @@ static int plain_line(const ELINE *l)
 static void draw(WIN *w, GRECT *clip)
 {
 	long i, rows = win_rows(w) + 1, he = header_end(), first, last;
-	short cols = w->work.w / cw - 1, x0 = w->work.x + cw / 2, y0;
+	short cols = TEXT_COLS(w->work.w), x0 = TEXT_X(w->work.x), y0;
 	eb_layout(w);
 	fill(clip, 0);
 	draw_bar(w, clip);
@@ -712,7 +712,7 @@ static void wrap_current(void)
 static void changed_cols(long line, short col)
 {
 	GRECT a;
-	short x0 = w_editor.work.x + cw / 2;
+	short x0 = TEXT_X(w_editor.work.x);
 	if (!dirty) {
 		dirty = 1;
 		set_title();
@@ -728,7 +728,7 @@ static void insert_char(char c)
 {
 	ELINE *l = &ln[cy];
 	long was = nl;
-	short cols = w_editor.work.w / cw - 1;
+	short cols = TEXT_COLS(w_editor.work.w);
 	if (!grow_line(l, l->n + 1))
 		return;
 	memmove(l->s + cx + 1, l->s + cx, l->n - cx + 1);
@@ -1275,7 +1275,7 @@ static void resized(WIN *w)
 static void click(WIN *w, short mx, short my, short clicks, short kstate)
 {
 	long line;
-	short col = (mx - w->work.x - cw / 2) / cw, cols = w->work.w / cw - 1;
+	short col = (mx - TEXT_X(w->work.x)) / cw, cols = TEXT_COLS(w->work.w);
 	(void)clicks;
 	(void)kstate;
 	eb_layout(w);

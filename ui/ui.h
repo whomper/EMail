@@ -40,6 +40,15 @@ struct WIN {
 
 /* screen and font */
 extern short vdi_h, cw, ch, scr_w, scr_h, desk_x, desk_y, desk_w, desk_h, planes;
+
+/* text starts about 8 pixels in from a pane's or window's edge, on a
+   byte, where the system font is drawn fastest (Erez, 26 Oct 2026; the
+   guidelines' Speed): TEXT_X, the multiple of 8 nearest to 8 pixels in;
+   exactly 8 in a work area on 8 (wind_x8: EMail's windows); the same
+   room at the right. Columns are cw apart from there */
+#define MARGIN 8
+#define TEXT_X(x) ((short)(((x) + MARGIN + 3) & ~7))
+#define TEXT_COLS(w) ((short)(((w) - 2 * MARGIN - 3) / cw))
 extern short gl_wchar, gl_hchar;	/* the AES's system font cell (menus, dialogs) */
 extern short ap_id;
 

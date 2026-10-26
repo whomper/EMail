@@ -113,7 +113,7 @@ static short quote_depth(const char *s, long n)
 /* lay the message out for the current window width */
 static void layout(void)
 {
-	short width = w_reader.work.w / cw - 1;
+	short width = TEXT_COLS(w_reader.work.w);
 	long hl = head ? strlen(head) : 0, max, *br, nb, i;
 	const char *p;
 	free_layout();
@@ -296,7 +296,7 @@ static void make_body(void)
 /* the link under the mouse: its place in links[], or -1 */
 static long link_at(short mx, short my)
 {
-	short cols = w_reader.work.w / cw - 1, x0 = w_reader.work.x + cw / 2, idx;
+	short cols = TEXT_COLS(w_reader.work.w), x0 = TEXT_X(w_reader.work.x), idx;
 	long i, at, k;
 	LINE *l;
 	if (!cur_msg || !body || mx < x0 || my < w_reader.work.y)
@@ -514,7 +514,7 @@ int reader_tip(short mx, short my, char *out, int size)
 	i = w_reader.top + (my - w_reader.work.y) / ch;
 	if (i < 0 || i >= nlines || lines[i].kind != L_HEAD)
 		return 0;
-	col = (mx - w_reader.work.x - cw / 2) / cw;
+	col = (mx - TEXT_X(w_reader.work.x)) / cw;
 	if (col < 0 || col >= lines[i].n)
 		return 0;
 	for (k = 0; k < ntips; k++) {
@@ -605,7 +605,7 @@ show:
 static void draw(WIN *w, GRECT *clip)
 {
 	long i, rows = win_rows(w) + 1, first, last;
-	short cols = w->work.w / cw - 1, x0 = w->work.x + cw / 2;
+	short cols = TEXT_COLS(w->work.w), x0 = TEXT_X(w->work.x);
 	fill(clip, 0);
 	if (!cur_msg && selection > 1) {
 		static const char *how[] = {

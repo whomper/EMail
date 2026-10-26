@@ -95,6 +95,37 @@ static void set_pane(WIN *w, short x, short y, short wd, short ht)
 	w->line_h = ch;
 }
 
+/* a window's place with its work area on a multiple of 8 across
+   (common's wind_x8), kept on the screen: text in it on a byte */
+static void place_x8(short kind, GRECT *r)
+{
+	/* at the screen's left edge 7 pixels right: a strip of the desktop
+	   shows, as in the family's other programs (the hub, 26 Oct 2026) */
+	r->x = wind_x8(icon_kind(kind), r->x, r->y, r->w, r->h);
+	if (r->x + r->w > desk_x + desk_w)
+		r->w = desk_x + desk_w - r->x;
+}
+
+/* WM_MOVED's or WM_SIZED's place (msg[4..7]) the same way */
+static void msg_x8(short kind, short *msg)
+{
+	GRECT r;
+	r.x = msg[4];
+	r.y = msg[5];
+	r.w = msg[6];
+	r.h = msg[7];
+	place_x8(kind, &r);
+	msg[4] = r.x;
+	msg[6] = r.w;
+}
+
+/* the full place, as WM_FULLED gives it */
+static void full_x8(short h, short kind, GRECT *f)
+{
+	wind_get(h, WF_FULLXYWH, &f->x, &f->y, &f->w, &f->h);
+	place_x8(kind, f);
+}
+
 /* place the panes in the main window from opt.pane_w / pane_h */
 static void layout(void)
 {
@@ -109,6 +140,10 @@ static void layout(void)
 		fw = mwork.w - minw - DIV;
 	if (fw < minw)
 		fw = minw;
+	/* the list and the message start on 8 pixels too */
+	fw = ((fw + DIV + 7) & ~7) - DIV;
+	if (fw > mwork.w - minw - DIV)
+		fw -= 8;
 	if (lh > mwork.h - minh - DIV)
 		lh = mwork.h - minh - DIV;
 	if (lh < minh)
@@ -177,8 +212,8 @@ static void bar_of(WIN *w, PANEBAR *b)
 static void draw_header(WIN *w)
 {
 	GRECT h;
-	short dark = (w == focus), cols = w->box.w / cw - 1;
-	short il = (short)strlen(w->info), tl = (short)strlen(w->title);
+	short dark = (w == focus), cols = TEXT_COLS(w->box.w);
+	short il = (short)strlen(w->info), tl = (short)strlen(w->title), ix;
 	h.x = w->box.x;
 	h.y = w->box.y;
 	h.w = w->box.w;
@@ -186,13 +221,14 @@ static void draw_header(WIN *w)
 	fill(&h, dark ? pen[P_HEAD] : pen[P_PANEL]);
 	if (il > cols - tl - 3)
 		il = 0;			/* a hint shows whole, two cells clear, or not at all */
-	text_at(h.x + cw / 2, h.y + 2, w->title, tl, cols, TX_BOLD | TX_LTR | (dark ? TX_INVERSE : 0));
+	text_at(TEXT_X(h.x), h.y + 2, w->title, tl, cols, TX_BOLD | TX_LTR | (dark ? TX_INVERSE : 0));
 	if (il > 0) {
+		/* at the right, on a byte */
+		ix = (TEXT_X(h.x) + (cols - il) * cw) & ~7;
 		if (dark || !colour)
-			text_at(h.x + w->box.w - (il + 1) * cw, h.y + 2, w->info, il, il,
-				TX_LTR | (dark ? TX_INVERSE : TX_LIGHT));
+			text_at(ix, h.y + 2, w->info, il, il, TX_LTR | (dark ? TX_INVERSE : TX_LIGHT));
 		else
-			text_pen_at(pen[P_DIM], h.x + w->box.w - (il + 1) * cw, h.y + 2, w->info, il, il, TX_LTR);
+			text_pen_at(pen[P_DIM], ix, h.y + 2, w->info, il, il, TX_LTR);
 	}
 	hline(h.x, h.x + h.w - 1, h.y + h.h - 1);
 }
@@ -515,7 +551,15 @@ void main_open(void)
 	}
 	wind_set_str(main_h, WF_NAME, " EMail ");
 	wind_set_str(main_h, WF_INFO, main_info);
-	wind_open(main_h, x, y, wd, ht);
+	{
+		GRECT p;
+		p.x = x;
+		p.y = y;
+		p.w = wd;
+		p.h = ht;
+		place_x8(MAINKIND, &p);
+		wind_open(main_h, p.x, p.y, p.w, p.h);
+	}
 	get_main_work();
 	save_main_place();
 	layout();
@@ -568,6 +612,7 @@ void win_open(WIN *w)
 	}
 	wind_set_str(w->h, WF_NAME, w->title);
 	wind_set_str(w->h, WF_INFO, w->info);
+	place_x8(EDKIND, &w->place);
 	wind_open(w->h, w->place.x, w->place.y, w->place.w, w->place.h);
 	wind_get(w->h, WF_WORKXYWH, &w->work.x, &w->work.y, &w->work.w, &w->work.h);
 	win_sliders(w);
@@ -1005,7 +1050,7 @@ static void main_message(short *msg)
 		if (main_iconified)
 			break;
 		wind_get(main_h, WF_CURRXYWH, &c.x, &c.y, &c.w, &c.h);
-		wind_get(main_h, WF_FULLXYWH, &f.x, &f.y, &f.w, &f.h);
+		full_x8(main_h, MAINKIND, &f);
 		if (c.x == f.x && c.y == f.y && c.w == f.w && c.h == f.h) {
 			wind_get(main_h, WF_PREVXYWH, &p.x, &p.y, &p.w, &p.h);
 			wind_set(main_h, WF_CURRXYWH, p.x, p.y, p.w, p.h);
@@ -1028,6 +1073,7 @@ static void main_message(short *msg)
 			msg[6] = 40 * cw;
 		if (msg[7] < 12 * ch)
 			msg[7] = 12 * ch;
+		msg_x8(MAINKIND, msg);
 		wind_set(main_h, WF_CURRXYWH, msg[4], msg[5], msg[6], msg[7]);
 		get_main_work();
 		save_main_place();
@@ -1103,7 +1149,7 @@ void win_message(short *msg)
 		if (w->iconified)
 			break;
 		wind_get(w->h, WF_CURRXYWH, &c.x, &c.y, &c.w, &c.h);
-		wind_get(w->h, WF_FULLXYWH, &f.x, &f.y, &f.w, &f.h);
+		full_x8(w->h, EDKIND, &f);
 		if (c.x == f.x && c.y == f.y && c.w == f.w && c.h == f.h) {
 			wind_get(w->h, WF_PREVXYWH, &p.x, &p.y, &p.w, &p.h);
 			wind_set(w->h, WF_CURRXYWH, p.x, p.y, p.w, p.h);
@@ -1128,6 +1174,7 @@ void win_message(short *msg)
 			msg[6] = 12 * cw;
 		if (msg[7] < 6 * ch)
 			msg[7] = 6 * ch;
+		msg_x8(EDKIND, msg);
 		wind_set(w->h, WF_CURRXYWH, msg[4], msg[5], msg[6], msg[7]);
 		wind_get(w->h, WF_WORKXYWH, &w->work.x, &w->work.y, &w->work.w, &w->work.h);
 		if (w == &w_editor) {

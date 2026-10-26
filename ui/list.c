@@ -2,7 +2,7 @@
  * Copyright (C) 2026 AERA | Erez Yaary */
 /*
  * list.c - the message list window (the GFA Troll's "headers" window):
- * newest first, unread in bold, flag/attachment marks, and the From (or
+ * newest first, unread with a dot (and blue), flag/attachment marks, and the From (or
  * To, in Sent and Outbox) and Subject columns laid out right to left
  * when they are Hebrew.
  */
@@ -317,9 +317,16 @@ void list_after_remove(void)
 
 static short wide;	/* room for the size column */
 
-/* the marks column: ! (flagged) and @ (attachments), then a space.
-   Unread messages are bold. */
-#define MK 3
+/* column k's place from the text's start: on 8 pixels (the system
+   font's columns are; a GDOS font's are rounded up to them) */
+#define COL8(k) ((short)(((k) * cw + 7) & ~7))
+
+/* the marks column: a dot (unread), ! (flagged) and @ (attachments),
+   then a space. An unread message's row is blue where there is colour,
+   with the dot; on monochrome the dot alone. Not bold: bold text is
+   drawn at a third of the speed (Erez, 26 Oct 2026) */
+#define MK 4
+#define DOT '\xF9'
 
 static void columns(short cols, short *c_from, short *c_subj, short *c_date)
 {
@@ -349,9 +356,10 @@ static void size_str(long n, char *out)
 
 static void draw(WIN *w, GRECT *clip)
 {
-	short cols = w->work.w / cw, c_from, c_subj, c_date;
+	short cols = TEXT_COLS(w->work.w), c_from, c_subj, c_date;
 	long i, rows = win_rows(w) + 1, first, last;
-	short x0 = w->work.x + 2, y0 = w->work.y + w->head_h;
+	short x0 = TEXT_X(w->work.x), y0 = w->work.y + w->head_h;
+	short xf, xs, xd, xz;		/* the columns, on 8-pixel steps */
 	GRECT r;
 	fresh();
 	/* only the rows the area meets: a row drawn again (a click, a mark)
@@ -359,6 +367,10 @@ static void draw(WIN *w, GRECT *clip)
 	first = clip->y > y0 ? w->top + (clip->y - y0) / ch : w->top;
 	last = clip->y + clip->h > y0 ? w->top + (clip->y + clip->h - 1 - y0) / ch : w->top - 1;
 	columns(cols, &c_from, &c_subj, &c_date);
+	xf = x0 + COL8(MK);
+	xs = x0 + COL8(MK + 1 + c_from);
+	xd = x0 + COL8(MK + 1 + c_from + c_subj);
+	xz = x0 + COL8(cols - 5);
 	/* each row fills its own background as it is drawn: a list drawn
 	   again changes row by row, and is never white first */
 	if (!cur_folder || !nview) {
@@ -384,9 +396,9 @@ static void draw(WIN *w, GRECT *clip)
 	if (clip->y < y0) {
 		const char *who = show_to() ? "To" : "From";
 		text_pen = pen[P_DIM];
-		text_at(x0 + MK * cw, w->work.y + 1, who, strlen(who), c_from, TX_BOLD);
-		text_at(x0 + (MK + 1 + c_from) * cw, w->work.y + 1, "Subject", 7, c_subj, TX_BOLD);
-		text_at(x0 + (MK + 1 + c_from + c_subj) * cw, w->work.y + 1, "Date", 4, c_date, TX_BOLD);
+		text_at(xf, w->work.y + 1, who, strlen(who), c_from, TX_BOLD);
+		text_at(xs, w->work.y + 1, "Subject", 7, c_subj, TX_BOLD);
+		text_at(xd, w->work.y + 1, "Date", 4, c_date, TX_BOLD);
 		text_pen = 1;
 		hline(w->work.x, w->work.x + w->work.w - 1, w->work.y + w->head_h - 2);
 	}
@@ -411,7 +423,7 @@ static void draw(WIN *w, GRECT *clip)
 		r.w = w->work.w;
 		r.h = ch;
 		fill(&r, sel == nview ? pen[P_SEL] : 0);
-		text_at(x0 + MK * cw, y, t, strlen(t), cols - MK, TX_BOLD | (sel == nview ? TX_INVERSE : 0));
+		text_at(xf, y, t, strlen(t), cols - MK, TX_BOLD | (sel == nview ? TX_INVERSE : 0));
 	}
 	for (i = first; i < nview && i < w->top + rows && i <= last; i++) {
 		HDR *h = &cur_folder->h[view[i]];
@@ -419,6 +431,7 @@ static void draw(WIN *w, GRECT *clip)
 		int lit = nmarks ? marked(i) : i == sel;
 		short fl = lit ? TX_INVERSE : 0;
 		char marks[4], date[24], size[8];
+		short blue = !lit && !(h->flags & MF_SEEN) && pen[P_ACCENT] != 1;
 		const char *who = show_to() ? h->to : h->from;
 		char name[64];
 		r.x = w->work.x;
@@ -426,18 +439,26 @@ static void draw(WIN *w, GRECT *clip)
 		r.w = w->work.w;
 		r.h = ch;
 		fill(&r, lit ? pen[P_SEL] : 0);
-		if (!(h->flags & MF_SEEN))
-			fl |= TX_BOLD;
-		/* fixed places: ! flagged, @ attachments */
-		marks[0] = (h->flags & MF_FLAGGED) ? '!' : ' ';
-		marks[1] = (h->flags & MF_ATTACH) ? '@' : ' ';
-		marks[2] = 0;
+		/* fixed places: the dot unread, ! flagged, @ attachments */
+		marks[0] = (h->flags & MF_SEEN) ? ' ' : DOT;
+		marks[1] = (h->flags & MF_FLAGGED) ? '!' : ' ';
+		marks[2] = (h->flags & MF_ATTACH) ? '@' : ' ';
+		marks[3] = 0;
 		if (colour && !lit) {
-			text_pen_at(pen[P_FLAG], x0, y, marks, 1, 1, TX_BOLD);
-			text_pen_at(pen[P_DIM], x0 + cw, y, marks + 1, 1, 1, 0);
-		} else {
-			text_at(x0, y, marks, 2, 2, fl & ~TX_BOLD);
+			if (marks[0] != ' ')
+				text_pen_at(pen[P_ACCENT], x0, y, marks, 1, 1, 0);
+			if (marks[1] != ' ')
+				text_pen_at(pen[P_FLAG], x0 + cw, y, marks + 1, 1, 1, TX_BOLD);
+			if (marks[2] != ' ')
+				text_pen_at(pen[P_DIM], x0 + 2 * cw, y, marks + 2, 1, 1, 0);
+		} else if (marks[0] != ' ' || marks[1] != ' ' || marks[2] != ' ') {
+			if (blue)	/* four colours: the dot in blue as the row */
+				text_pen = pen[P_ACCENT];
+			text_at(x0, y, marks, 3, 3, fl);
+			text_pen = 1;
 		}
+		if (blue)
+			text_pen = pen[P_ACCENT];
 		/* "Name <a@b>" shows as the name EContact has for a@b, else as
 		   Name, else as a@b */
 		{
@@ -452,15 +473,16 @@ static void draw(WIN *w, GRECT *clip)
 			else if (!name[0])
 				str_copy(name, mail, sizeof(name));
 		}
-		text_at(x0 + MK * cw, y, name, strlen(name), c_from, fl | TX_RIGHT);
-		text_at(x0 + (MK + 1 + c_from) * cw, y, h->subject, strlen(h->subject), c_subj - 1, fl | TX_RIGHT);
+		text_at(xf, y, name, strlen(name), c_from, fl | TX_RIGHT);
+		text_at(xs, y, h->subject, strlen(h->subject), c_subj - 1, fl | TX_RIGHT);
 		date_str(h->date, date, sizeof(date), 1);
-		/* dates and sizes in grey, so who and what stand out */
-		text_pen = lit ? 1 : pen[P_DIM];
-		text_at(x0 + (MK + 1 + c_from + c_subj) * cw, y, date, strlen(date), c_date, fl & ~TX_BOLD);
+		/* dates and sizes in grey, so who and what stand out; an
+		   unread message's in blue, as the rest of its row */
+		text_pen = lit ? 1 : blue ? pen[P_ACCENT] : pen[P_DIM];
+		text_at(xd, y, date, strlen(date), c_date, fl);
 		if (wide) {
 			size_str(h->size, size);
-			text_at(x0 + (cols - 6) * cw, y, size, strlen(size), 5, fl & ~TX_BOLD);
+			text_at(xz, y, size, strlen(size), 5, fl);
 		}
 		text_pen = 1;
 	}
@@ -525,7 +547,7 @@ static void select_row(long i, int open)
 		win_redraw_lines(&w_list, old, 1);
 	win_ensure_visible(&w_list, sel);
 	/* its row drawn once, after the message is shown: reading marks it
-	   read, and an unread (bold) row is the dearest to draw (an ST: 100 ms) */
+	   read, and its look changes */
 	reader_show(&cur_folder->h[view[i]]);
 	win_redraw_lines(&w_list, sel, 1);
 	list_titles();

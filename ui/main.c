@@ -1108,7 +1108,7 @@ static void tip_show(void)
 	n = (short)strlen(text);
 	if (n > 60)
 		n = 60;
-	r.w = (n + 2) * cw;
+	r.w = n * cw + 2 * MARGIN;
 	r.h = ch + 6;
 	r.x = hover_x + cw;
 	r.y = hover_y + ch + 2;
@@ -1117,6 +1117,7 @@ static void tip_show(void)
 		r.x = hover_x - r.w - cw / 2;
 	if (r.x < desk_x)
 		r.x = desk_x;
+	r.x &= ~7;		/* its text on a byte */
 	if (r.y + r.h > desk_y + desk_h)
 		r.y = hover_y - r.h - 2;
 	if (r.y < desk_y)
@@ -1132,7 +1133,7 @@ static void tip_show(void)
 	clip_on(&scr);
 	fill(&r, 0);
 	frame(&r, 1);
-	text_at(r.x + cw, r.y + 3, text, n, n, TX_LTR);
+	text_at(r.x + MARGIN, r.y + 3, text, n, n, TX_LTR);
 	graf_mouse(M_ON, 0);
 	wind_update(END_UPDATE);
 	tip_on = 1;

@@ -115,7 +115,7 @@ void folders_build(void)
 static void draw(WIN *w, GRECT *clip)
 {
 	long i, rows = win_rows(w) + 1;
-	short cols = w->work.w / cw;
+	short cols = TEXT_COLS(w->work.w), x0 = TEXT_X(w->work.x);
 	GRECT r;
 	/* each row fills its own background as it is drawn, so the pane
 	   drawn again changes row by row and is never white first */
@@ -136,7 +136,7 @@ static void draw(WIN *w, GRECT *clip)
 		r.h = ch;
 		fill(&r, i == sel ? pen[P_SEL] : 0);
 		if (!e->fi) {
-			text_at(w->work.x + 2, y, e->a->name, strlen(e->a->name), cols, flags | TX_BOLD);
+			text_at(x0, y, e->a->name, strlen(e->a->name), cols, flags | TX_BOLD);
 			continue;
 		}
 		{
@@ -148,12 +148,12 @@ static void draw(WIN *w, GRECT *clip)
 			else if (e->fi->role == FR_OUTBOX && e->fi->total > 0)
 				snprintf(cnt, sizeof(cnt), " %s", num(e->fi->total));
 			room -= (short)strlen(cnt) + 1;
-			text_at(w->work.x + 2 + ind * cw, y, e->fi->disp, strlen(e->fi->disp), room,
+			text_at(x0 + ind * cw, y, e->fi->disp, strlen(e->fi->disp), room,
 				flags | (e->fi->noselect ? TX_LIGHT : 0));
 			/* the unread count in the accent colour, like a badge */
 			if (cnt[0]) {
 				text_pen = flags ? 1 : pen[P_ACCENT];
-				text_at(w->work.x + (cols - 1 - (short)strlen(cnt)) * cw, y, cnt, strlen(cnt), 8,
+				text_at(x0 + (cols - (short)strlen(cnt)) * cw, y, cnt, strlen(cnt), 8,
 					flags | TX_BOLD);
 				text_pen = 1;
 			}
