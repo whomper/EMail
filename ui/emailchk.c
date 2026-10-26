@@ -557,8 +557,7 @@ static void check(int asked)
 	if (!direct_room()) {
 		/* a Direct connection with no room for TLS.OVL: said from the
 		   Desk menu, not checked */
-		str_copy(last_err, "no memory for a Direct connection here: HEAPKB= in EMAILCHK.INF",
-			 sizeof(last_err));
+		str_copy(last_err, "a Direct connection needs more memory", sizeof(last_err));
 		naccts_skip = 1;
 	}
 	for (i = 0; i < naccts && !naccts_skip; i++) {
@@ -608,7 +607,11 @@ static void check(int asked)
 		return;
 	pf_idle();		/* a turn for the others between the check and its box */
 	if (!total) {
-		if (last_err[0])
+		if (naccts_skip)	/* what it is, and what to do (Erez, 26 Oct 2026) */
+			alert(1, "[3][Direct connections need 230 KB|more than EMail check takes|"
+				 "from ST RAM. Use the gateway,|or put HEAPKB=300 in|"
+				 "C:\\EMAILCHK.INF and restart.][ OK ]");
+		else if (last_err[0])
 			alert(1, "[3][%s][ OK ]", last_err);
 		else
 			alert(1, "[1][No new mail.][ OK ]");

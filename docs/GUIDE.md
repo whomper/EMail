@@ -517,8 +517,10 @@ TT RAM (a TT, or a Falcon with fast RAM on an accelerator), where there
 is plenty. With ST RAM only, it would come out of the memory your
 programs need (on a 4 MB Falcon with NVDI and the other accessories,
 EMail itself wouldn't fit), so there it leaves Direct connection
-accounts unchecked and says why from the Desk menu, unless you give it
-the memory: `HEAPKB=300` in `C:\EMAILCHK.INF`.
+accounts unchecked; Check now in its box says so, and the two ways out:
+check through the gateway (Options > Direct connection off), or give
+it the memory: `HEAPKB=300` in `C:\EMAILCHK.INF`, then restart the
+Atari.
 
 It reads EMail's own settings, so there is nothing to set up twice: the
 accounts and passwords in `EMAIL.INF`, the Direct connection or the
