@@ -12,9 +12,46 @@
 
 short text_pen = 1;		/* the colour of text that isn't inverted */
 
+/* the VDI attributes last set here, so that a row's texts and fills
+   don't set them again at each call: 25 calls for a row of the list on
+   a Falcon at 16 MHz. Forgotten as each pane starts drawing (clip_on),
+   and by code that sets them itself (attr_forget) */
+static short a_wr = -1, a_tcol = -1, a_tfx = -1, a_fcol = -1, a_lcol = -1, a_fill;
+
+void attr_forget(void)
+{
+	a_wr = a_tcol = a_tfx = a_fcol = a_lcol = -1;
+	a_fill = 0;
+}
+
+static void wr_mode(short m)
+{
+	if (m != a_wr)
+		vswr_mode(vdi_h, a_wr = m);
+}
+
+static void text_col(short c)
+{
+	if (c != a_tcol)
+		vst_color(vdi_h, a_tcol = c);
+}
+
+static void text_fx(short fx)
+{
+	if (fx != a_tfx)
+		vst_effects(vdi_h, a_tfx = fx);
+}
+
+static void line_colour(short c)
+{
+	if (c != a_lcol)
+		vsl_color(vdi_h, a_lcol = c);
+}
+
 void clip_on(GRECT *r)
 {
 	short pxy[4];
+	attr_forget();
 	pxy[0] = r->x;
 	pxy[1] = r->y;
 	pxy[2] = r->x + r->w - 1;
@@ -40,10 +77,14 @@ void fill(GRECT *r, short color)
 	pxy[1] = r->y;
 	pxy[2] = r->x + r->w - 1;
 	pxy[3] = r->y + r->h - 1;
-	vsf_interior(vdi_h, 1);
-	vsf_color(vdi_h, color);
-	vsf_perimeter(vdi_h, 0);
-	vswr_mode(vdi_h, 1);
+	if (!a_fill) {		/* solid, no border: all of ours */
+		vsf_interior(vdi_h, 1);
+		vsf_perimeter(vdi_h, 0);
+		a_fill = 1;
+	}
+	if (color != a_fcol)
+		vsf_color(vdi_h, a_fcol = color);
+	wr_mode(1);
 	vr_recfl(vdi_h, pxy);
 }
 
@@ -54,8 +95,8 @@ void hline(short x1, short x2, short y)
 	pxy[1] = y;
 	pxy[2] = x2;
 	pxy[3] = y;
-	vswr_mode(vdi_h, 1);
-	vsl_color(vdi_h, pen[P_LINE]);
+	wr_mode(1);
+	line_colour(pen[P_LINE]);
 	v_pline(vdi_h, 2, pxy);
 }
 
@@ -80,8 +121,8 @@ void line_col(short x1, short y1, short x2, short y2, short color)
 	p[1] = y1;
 	p[2] = x2;
 	p[3] = y2;
-	vswr_mode(vdi_h, 1);
-	vsl_color(vdi_h, color);
+	wr_mode(1);
+	line_colour(color);
 	v_pline(vdi_h, 2, p);
 }
 
@@ -92,8 +133,8 @@ void frame(GRECT *r, short color)
 	p[1] = p[3] = p[9] = r->y;
 	p[2] = p[4] = r->x + r->w - 1;
 	p[5] = p[7] = r->y + r->h - 1;
-	vswr_mode(vdi_h, 1);
-	vsl_color(vdi_h, color);
+	wr_mode(1);
+	line_colour(color);
 	v_pline(vdi_h, 5, p);
 }
 
@@ -202,12 +243,11 @@ static void visual_at(short x, short y, const char *out, short n, short flags, s
 	char m[BIDI_MAX];
 	short i, effects = ((flags & TX_BOLD) ? 1 : (flags & TX_LIGHT) ? 2 : 0) | fx;
 	if (heb_mode != HM_MAP && has_heb(out, n)) {
-		vswr_mode(vdi_h, 2);
-		vst_color(vdi_h, (flags & TX_INVERSE) ? 0 : text_pen);
-		vst_effects(vdi_h, effects);
+		wr_mode(2);
+		text_col((flags & TX_INVERSE) ? 0 : text_pen);
+		text_fx(effects);
 		runs_at(x, y, out, n);
-		if (effects)
-			vst_effects(vdi_h, 0);
+		text_fx(0);	/* off again: others draw text plainly (fontsel's sample) */
 		return;
 	}
 	if (opt.hebfont != HEB_ATARI && has_heb(out, n)) {
@@ -215,15 +255,14 @@ static void visual_at(short x, short y, const char *out, short n, short flags, s
 		out = m;
 		heb_font_map(m, n, opt.hebfont);
 	}
-	vswr_mode(vdi_h, 2);
-	vst_color(vdi_h, (flags & TX_INVERSE) ? 0 : text_pen);
-	vst_effects(vdi_h, effects);
+	wr_mode(2);
+	text_col((flags & TX_INVERSE) ? 0 : text_pen);
+	text_fx(effects);
 	for (i = 0; i < n; i += 120) {
 		short k = n - i > 120 ? 120 : (short)(n - i);
 		cells_at(x + i * cw, y, out + i, k);
 	}
-	if (effects)
-		vst_effects(vdi_h, 0);
+	text_fx(0);
 }
 
 void text_at(short x, short y, const char *s, long n, short cols, short flags)

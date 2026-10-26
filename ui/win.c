@@ -213,6 +213,7 @@ static void draw_divider(GRECT *r)
 	p[2] = r->x + r->w - 1;
 	p[3] = r->y + r->h - 1;
 	vswr_mode(vdi_h, 1);
+	attr_forget();
 	vr_recfl(vdi_h, p);
 }
 
@@ -810,6 +811,7 @@ static void divider_drag(int vertical)
 		graf_mouse(M_ON, 0);
 	}
 	vswr_mode(vdi_h, 1);
+	attr_forget();
 	graf_mouse(ARROW, 0);
 	hover_shape = ARROW;
 	wind_update(2);

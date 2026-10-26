@@ -100,6 +100,7 @@ extern short text_pen;		/* the colour of text (theme.h pens); set, draw, set bac
 #define text_pen_at(p, x, y, s, n, cols, fl) \
 	do { text_pen = (p); text_at(x, y, s, n, cols, fl); text_pen = 1; } while (0)
 void clip_on(GRECT *r);
+void attr_forget(void);	/* the VDI attributes were set outside draw.c */
 void clip_off(void);
 void *st_ram(long n);		/* a bitmap's room in ST RAM, for the blitter (n <= 512) */
 /* draw up to cols characters of Atari text at x,y (logical order in) */

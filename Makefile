@@ -139,6 +139,17 @@ $(OBJDIR)/trace/EMAIL.PRG: FORCE
 	$(MAKE) OBJDIR=$(OBJDIR)/trace TRACECF=-DDRAW_TRACE $(OBJDIR)/trace/mail.elf
 	PRGFLAGS=7 python3 common/tools/elf2tos.py $(OBJDIR)/trace/mail.elf $@
 
+# EMail and EMail check saying how long they kept the AES waiting
+# (-DAES_PROFILE=20: each stretch of 20 ms or more as "AESGAP <ms> ms",
+# the start as "AESSTART"), for tests/hatari/speed.py (never released)
+$(OBJDIR)/speed/EMAIL.PRG: FORCE
+	$(MAKE) OBJDIR=$(OBJDIR)/speed TRACECF=-DAES_PROFILE=20 $(OBJDIR)/speed/mail.elf
+	PRGFLAGS=7 python3 common/tools/elf2tos.py $(OBJDIR)/speed/mail.elf $@
+$(OBJDIR)/speed/EMAILCHK.ACC: FORCE
+	$(MAKE) OBJDIR=$(OBJDIR)/speed/chk TRACECF="-ffunction-sections -fdata-sections -DAES_PROFILE=20" \
+		$(OBJDIR)/speed/chk/emailchk.elf
+	PRGFLAGS=7 python3 common/tools/elf2tos.py $(OBJDIR)/speed/chk/emailchk.elf $@
+
 # EMail crashing on purpose with F1 to F5 (-DCRASH_TEST), for
 # common/tests/crash/app_crash.py (never released)
 $(OBJDIR)/crashtest/EMAIL.PRG: FORCE

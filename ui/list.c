@@ -679,6 +679,7 @@ static int drag_messages(long i, short mx, short my)
 	if (target)
 		xor_rect(&lit, 1);
 	vswr_mode(vdi_h, 1);
+	attr_forget();
 	graf_mouse(ARROW, 0);
 	wind_update(2);
 	wind_update(END_UPDATE);

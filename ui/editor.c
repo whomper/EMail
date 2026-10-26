@@ -520,6 +520,7 @@ static void bar_click(short mx, short my)
 		vsf_color(vdi_h, 1);
 		vr_recfl(vdi_h, p);
 		vswr_mode(vdi_h, 1);
+		attr_forget();
 		graf_mouse(M_ON, 0);
 		wind_update(END_UPDATE);
 		evnt_timer_(80);
@@ -576,14 +577,29 @@ void editor_names_came(void)
 	win_redraw_lines(&w_editor, 0, he >= 0 ? he : nl);
 }
 
+/* a line with no character from 0x80 up: left to right, a character to
+   a column, so part of it can be drawn on its own */
+static int plain_line(const ELINE *l)
+{
+	short k;
+	for (k = 0; k < l->n; k++)
+		if ((unsigned char)l->s[k] >= 0x80)
+			return 0;
+	return 1;
+}
+
 static void draw(WIN *w, GRECT *clip)
 {
-	long i, rows = win_rows(w) + 1, he = header_end();
-	short cols = w->work.w / cw - 1, x0 = w->work.x + cw / 2;
+	long i, rows = win_rows(w) + 1, he = header_end(), first, last;
+	short cols = w->work.w / cw - 1, x0 = w->work.x + cw / 2, y0;
 	eb_layout(w);
 	fill(clip, 0);
 	draw_bar(w, clip);
-	for (i = w->top; i < nl && i < w->top + rows; i++) {
+	/* only the lines the area meets (a key: its line, or less) */
+	y0 = w->work.y + w->head_h;
+	first = clip->y > y0 ? w->top + (clip->y - y0) / ch : w->top;
+	last = clip->y + clip->h > y0 ? w->top + (clip->y + clip->h - 1 - y0) / ch : w->top - 1;
+	for (i = first; i < nl && i < w->top + rows && i <= last; i++) {
 		ELINE *l = &ln[i];
 		short y = w->work.y + w->head_h + (short)((i - w->top) * ch), hoff = 0;
 		if (i == cy && cx > cols - 2)
@@ -608,7 +624,12 @@ static void draw(WIN *w, GRECT *clip)
 		} else if (i == he) {
 			hline(w->work.x, w->work.x + w->work.w - 1, y + ch / 2);
 		} else {
-			text_at(x0, y, l->s + hoff, l->n - hoff, cols,
+			/* a plain line from the area's first column (a key typed
+			   at its end: the new character, not the line) */
+			short c1 = clip->x > x0 && plain_line(l) ? (clip->x - x0) / cw : 0;
+			if (c1 > l->n - hoff)
+				c1 = l->n - hoff;
+			text_at(x0 + c1 * cw, y, l->s + hoff + c1, l->n - hoff - c1, cols - c1,
 				TX_RIGHT | ((l->n && l->s[0] == '>') ? TX_LIGHT : 0));
 		}
 		if (i == cy && w->h > 0 && win_is_top(w)) {
@@ -624,6 +645,7 @@ static void draw(WIN *w, GRECT *clip)
 			vsf_color(vdi_h, 1);
 			vr_recfl(vdi_h, pxy);
 			vswr_mode(vdi_h, 1);
+			attr_forget();
 		}
 	}
 }
@@ -684,9 +706,29 @@ static void wrap_current(void)
 	changed(cy - 1, -1);
 }
 
+/* line's columns from col on drawn again (and the cursor, a column
+   before): a key typed in a plain body line draws what moved, not the
+   line (Erez's video, 26 Oct 2026: every key drew the whole sentence) */
+static void changed_cols(long line, short col)
+{
+	GRECT a;
+	short x0 = w_editor.work.x + cw / 2;
+	if (!dirty) {
+		dirty = 1;
+		set_title();
+	}
+	a.x = x0 + (col > 0 ? col - 1 : 0) * cw;
+	a.y = w_editor.work.y + w_editor.head_h + (short)((line - w_editor.top) * ch);
+	a.w = w_editor.work.x + w_editor.work.w - a.x;
+	a.h = ch;
+	win_redraw(&w_editor, &a);
+}
+
 static void insert_char(char c)
 {
 	ELINE *l = &ln[cy];
+	long was = nl;
+	short cols = w_editor.work.w / cw - 1;
 	if (!grow_line(l, l->n + 1))
 		return;
 	memmove(l->s + cx + 1, l->s + cx, l->n - cx + 1);
@@ -694,7 +736,11 @@ static void insert_char(char c)
 	l->n++;
 	if (in_body(cy) && l->n > opt.wrap && c != ' ')
 		wrap_current();
-	changed(cy, 1);
+	if (nl == was && in_body(cy) && cx < cols - 2 && plain_line(&ln[cy]) &&
+	    cy >= w_editor.top && cy < w_editor.top + win_rows(&w_editor))
+		changed_cols(cy, cx - 1);
+	else
+		changed(cy, 1);
 	win_ensure_visible(&w_editor, cy);
 }
 
