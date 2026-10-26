@@ -9,6 +9,7 @@
 #include "ui.h"
 #include "theme.h"
 #include "bidi.h"
+#include "text.h"
 
 short text_pen = 1;		/* the colour of text that isn't inverted */
 
@@ -36,7 +37,7 @@ static void text_col(short c)
 		vst_color(vdi_h, a_tcol = c);
 }
 
-static void text_fx(short fx)
+static void text_effects(short fx)
 {
 	if (fx != a_tfx)
 		vst_effects(vdi_h, a_tfx = fx);
@@ -48,24 +49,29 @@ static void line_colour(short c)
 		vsl_color(vdi_h, a_lcol = c);
 }
 
+/* the last rectangle filled, when it was white (pen 0): bold and
+   underline are drawn onto plain text there by text_fx, a third of what
+   vst_effects costs TOS (common/ui/text.h) */
+static GRECT white;
+static int white_set;
+
 void clip_on(GRECT *r)
 {
 	short pxy[4];
 	attr_forget();
+	white_set = 0;
 	pxy[0] = r->x;
 	pxy[1] = r->y;
 	pxy[2] = r->x + r->w - 1;
 	pxy[3] = r->y + r->h - 1;
-	vs_clip(vdi_h, 1, pxy);
+	text_clip(vdi_h, pxy);
 }
 
 /* no clipping: the whole screen (the shared popup and About box) */
 void clip_off(void)
 {
-	short pxy[4] = { 0, 0, 0, 0 };
-	pxy[2] = scr_w - 1;
-	pxy[3] = scr_h - 1;
-	vs_clip(vdi_h, 0, pxy);
+	white_set = 0;
+	text_noclip(vdi_h);
 }
 
 void fill(GRECT *r, short color)
@@ -86,6 +92,8 @@ void fill(GRECT *r, short color)
 		vsf_color(vdi_h, a_fcol = color);
 	wr_mode(1);
 	vr_recfl(vdi_h, pxy);
+	white = *r;
+	white_set = !color;
 }
 
 void hline(short x1, short x2, short y)
@@ -190,7 +198,7 @@ static void cells_at(short x, short y, const char *s, short n)
 {
 	short k;
 	if (cells_now == FC_RUNS || n == 1) {
-		v_gtext_n(vdi_h, x, y, s, n);
+		text_n(vdi_h, x, y, s, n);
 		return;
 	}
 	if (cells_now == FC_JUSTIFY) {
@@ -248,13 +256,14 @@ static void visual_at(short x, short y, const char *out, short n, short flags, s
 {
 	char m[BIDI_MAX];
 	short i, effects = ((flags & TX_BOLD) ? 1 : (flags & TX_LIGHT) ? 2 : 0) | fx;
+	short col = (flags & TX_INVERSE) ? 0 : text_pen;
 	if (heb_mode != HM_MAP && has_heb(out, n)) {
 		wr_mode(2);
-		text_col((flags & TX_INVERSE) ? 0 : text_pen);
-		text_fx(effects);
+		text_col(col);
+		text_effects(effects);
 		cells_now = (effects & 1) ? font_cells_bold : font_cells;
 		runs_at(x, y, out, n);
-		text_fx(0);	/* off again: others draw text plainly (fontsel's sample) */
+		text_effects(0);	/* off again: others draw text plainly (fontsel's sample) */
 		return;
 	}
 	if (opt.hebfont != HEB_ATARI && has_heb(out, n)) {
@@ -263,14 +272,26 @@ static void visual_at(short x, short y, const char *out, short n, short flags, s
 		heb_font_map(m, n, opt.hebfont);
 	}
 	wr_mode(2);
-	text_col((flags & TX_INVERSE) ? 0 : text_pen);
-	text_fx(effects);
+	text_col(col);
+	/* on white, in the window's text: transparent there is TOS's
+	   MD_REPLACE, so bold and underline go on afterwards */
+	if (effects && !(flags & TX_INVERSE) && white_set && x >= white.x && y >= white.y &&
+	    x + n * cw < white.x + white.w && y + ch <= white.y + white.h && text_fx_fast(effects, 1)) {
+		text_effects(0);
+		text_n(vdi_h, x, y, out, n);
+		text_fx(vdi_h, x, y, out, n, effects, col);
+		a_wr = -1;	/* text_fx sets its own */
+		if (effects & 8)
+			a_lcol = col;
+		return;
+	}
+	text_effects(effects);
 	cells_now = (effects & 1) ? font_cells_bold : font_cells;
 	for (i = 0; i < n; i += 120) {
 		short k = n - i > 120 ? 120 : (short)(n - i);
 		cells_at(x + i * cw, y, out + i, k);
 	}
-	text_fx(0);
+	text_effects(0);
 }
 
 void text_at(short x, short y, const char *s, long n, short cols, short flags)
