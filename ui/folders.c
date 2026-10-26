@@ -266,7 +266,7 @@ static void rclick(WIN *w, short mx, short my)
 		const char *lab[] = { "Check mail", "New message", "Edit account...", "-", "Refresh folder list" };
 		r = popup(mx, my, lab, 5);
 		if (r >= 0)
-			win_redraw_all();	/* not the menu's ghost while it works */
+			win_redraw_area(&popup_area);	/* not the menu's ghost while it works */
 		if (r == 0) {
 			long n;
 			char server[160];
@@ -301,7 +301,7 @@ static void rclick(WIN *w, short mx, short my)
 		lab[7] = can_delete ? "Delete folder..." : "~Delete folder...";
 		r = popup(mx, my, lab, 8);
 		if (r >= 0)
-			win_redraw_all();
+			win_redraw_area(&popup_area);
 		switch (r) {
 		case 0:
 			folders_select(a, fi);

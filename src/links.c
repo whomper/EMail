@@ -50,6 +50,9 @@ int link_next(const char *s, long n, long from, long *at, long *len)
 	for (i = from; i < n; i++) {
 		short k;
 		long e, pre;
+		char c = (char)(s[i] | 0x20);
+		if (c != 'h' && c != 'm' && c != 'w')
+			continue;	/* not the start of any scheme: most of the text */
 		/* an address starts a word: not "xhttp://" or "a.www." (after a
 		   hyphen it does: Hebrew's "\xC3-www.atari.org", "at ...") */
 		if (i > 0 && (alnum((unsigned char)s[i - 1]) || s[i - 1] == '.' || s[i - 1] == '/' ||

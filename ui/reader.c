@@ -78,11 +78,13 @@ static void forget(void)
 
 void reader_clear(void)
 {
+	int blank = !cur_msg && !selection;
 	forget();
 	win_title(&w_reader, "Message");
 	win_info(&w_reader, "");
 	win_sliders(&w_reader);
-	win_redraw(&w_reader, 0);
+	if (!blank)		/* "No message selected" already: not drawn again */
+		win_redraw(&w_reader, 0);
 }
 
 static void add_line(const char *s, long n, short kind, short attach, short label)
@@ -174,33 +176,49 @@ static void resized(WIN *w)
 }
 
 /* the text with its tabs as spaces; the links on it (lk, in its order)
-   moved with it into to[] */
+   moved with it into to[]. One allocation and no call a character: a
+   Falcon at 16 MHz took 445 ms for 6.5 KB a character at a time */
 static char *expand_tabs(const char *s, long n, long *outlen, const MLINK *lk, short nl, MLINK *to)
 {
-	SBUF b;
-	long i, col = 0;
+	long i, o = 0, col = 0, tabs = 0;
 	short a = 0, e = 0;
-	sb_init(&b);
+	char *b;
+	for (i = 0; i < n; i++)
+		tabs += s[i] == '\t';
+	b = malloc(n + tabs * 7 + 1);
+	if (!b)
+		return 0;
+	if (!tabs) {		/* most mail: the text as it is, the links where they are */
+		memcpy(b, s, n);
+		b[n] = 0;
+		for (a = 0; a < nl; a++) {
+			to[a].at = lk[a].at;
+			to[a].n = lk[a].n;
+		}
+		*outlen = n;
+		return b;
+	}
 	for (i = 0; i <= n; i++) {
 		for (; a < nl && lk[a].at <= i; a++) {
-			to[a].at = b.len;
+			to[a].at = o;
 			to[a].n = 0;
 		}
 		for (; e < a && lk[e].at + lk[e].n <= i; e++)
-			to[e].n = b.len - to[e].at;
+			to[e].n = o - to[e].at;
 		if (i == n)
 			break;
 		if (s[i] == '\t') {
 			do
-				sb_addc(&b, ' ');
+				b[o++] = ' ';
 			while (++col % 8);
 		} else {
-			sb_addc(&b, s[i]);
+			b[o++] = s[i];
 			col = s[i] == '\n' ? 0 : col + 1;
 		}
 	}
-	*outlen = b.len;
-	return sb_steal(&b);
+	b[o] = 0;
+	*outlen = o;
+	return b;
 }
 
 int reader_missing;
@@ -211,6 +229,27 @@ static int cmp_link(const void *a, const void *b)
 	return d < 0 ? -1 : d > 0;
 }
 
+#ifdef DRAW_TRACE
+/* the test build: how long showing a message took, by its steps
+   ("SHOW fetch 120 parse 40 body 10 layout 30", ms) */
+static unsigned long show_t[8];
+#define show_mark(k) (show_t[k] = pf_ms())
+static void show_trace(void)
+{
+	char t[90];
+	snprintf(t, sizeof(t), "SHOW fetch %ld parse %ld body %ld layout %ld lines %ld head %ld",
+		 (long)(show_t[1] - show_t[0]), (long)(show_t[2] - show_t[1]),
+		 (long)(show_t[3] - show_t[2]), (long)(show_t[4] - show_t[3]), nlines,
+		 (long)(show_t[5] - show_t[2]));
+	pf_debug(t);
+	snprintf(t, sizeof(t), "BODY tabs %ld links %ld", (long)(show_t[6] - show_t[5]), (long)(show_t[3] - show_t[7]));
+	pf_debug(t);
+}
+#else
+#define show_mark(k) ((void)0)
+#define show_trace() ((void)0)
+#endif
+
 /* body and its links: the HTML's, then the addresses written in the
    text that aren't on one of them, in the text's order */
 static void make_body(void)
@@ -220,6 +259,7 @@ static void make_body(void)
 	MLINK *to = malloc(cap * sizeof(MLINK));
 	nlinks = 0;
 	body = expand_tabs(cur_msg->text, cur_msg->textlen, &bodylen, cur_msg->links, to ? nh : 0, to);
+	show_mark(6);
 	if (!to || !body) {
 		free(to);
 		return;
@@ -228,6 +268,7 @@ static void make_body(void)
 		if (to[k].n > 0 && (to[k].url = strdup(cur_msg->links[k].url)) != 0)
 			to[nlinks++] = to[k];
 	nh = (short)nlinks;
+	show_mark(7);
 	while (link_next(body, bodylen, from, &at, &n) && nlinks < MIME_MAXLINKS * 2) {
 		short on = 0;
 		from = at + n;
@@ -486,17 +527,20 @@ int reader_tip(short mx, short my, char *out, int size)
 	return 0;
 }
 
+
 void reader_show(HDR *h)
 {
 	long len;
 	char *raw;
 	if (!cur_folder || !h)
 		return;
+	show_mark(0);
 	busy(1);
 	status("Opening the message...");
 	mail_err[0] = 0;
 	raw = mail_fetch(cur_folder, h, &len);
 	busy(0);
+	show_mark(1);
 	reader_missing = 0;
 	if (!raw && mail_unreachable) {
 		MSG *m = missing_note(h, cur_folder->acct);
@@ -518,6 +562,7 @@ void reader_show(HDR *h)
 	cur_rawlen = len;
 	cur_uid = h->uid;
 	cur_msg = mime_parse(raw, len);
+	show_mark(2);
 	if (!cur_msg) {
 		status("");
 		alert(1, "[1][Not enough memory to show|this message.][ OK ]");
@@ -526,7 +571,9 @@ void reader_show(HDR *h)
 show:
 	head_date = h->date;
 	make_head();
+	show_mark(5);
 	make_body();
+	show_mark(3);
 	{
 		char t[100];
 		snprintf(t, sizeof(t), "%.90s", cur_msg->subject[0] ? cur_msg->subject : "(no subject)");
@@ -549,13 +596,15 @@ show:
 	busy(1);
 	layout();
 	busy(0);
+	show_mark(4);
+	show_trace();
 	status("");
 	win_redraw(&w_reader, 0);
 }
 
 static void draw(WIN *w, GRECT *clip)
 {
-	long i, rows = win_rows(w) + 1;
+	long i, rows = win_rows(w) + 1, first, last;
 	short cols = w->work.w / cw - 1, x0 = w->work.x + cw / 2;
 	fill(clip, 0);
 	if (!cur_msg && selection > 1) {
@@ -576,7 +625,11 @@ static void draw(WIN *w, GRECT *clip)
 		text_at(x0, w->work.y + ch, "No message selected.", 20, cols, TX_LIGHT);
 		return;
 	}
-	for (i = w->top; i < nlines && i < w->top + rows; i++) {
+	/* only the lines the area meets: after a scroll's copy, the new
+	   line; under a closed menu, the lines it covered */
+	first = clip->y > w->work.y ? w->top + (clip->y - w->work.y) / ch : w->top;
+	last = w->top + (clip->y + clip->h - 1 - w->work.y) / ch;
+	for (i = first; i < nlines && i < w->top + rows && i <= last; i++) {
 		LINE *l = &lines[i];
 		short y = w->work.y + (short)((i - w->top) * ch);
 		switch (l->kind) {

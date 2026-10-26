@@ -23,6 +23,7 @@
 #include "util.h"
 #include "bidi.h"
 #include "iconify.h"
+#include "../src/plat.h"
 #include "panebar.h"
 
 WIN w_folders, w_list, w_reader, w_editor;
@@ -218,21 +219,37 @@ static void draw_divider(GRECT *r)
 /* everything of the main window inside clip (already set as VDI clip) */
 #ifdef DRAW_TRACE
 #include <stdio.h>
-#include "../src/plat.h"
-/* a test build (tests/hatari/scroll_test.py) says on the emulator's
-   console what each pane drew, and the heap's bytes in use and most
-   (libc.c): "DRAW list y h heap 123456 200000" */
+/* a test build (tests/hatari/scroll_test.py, redraw_test.py) says on
+   the emulator's console what each pane drew, the heap's bytes in use
+   and most (libc.c), and how long the drawing took: "DRAW list y h heap
+   123456 200000 ms 40"; and each new top row: "TOP reader 25" */
 extern long heap_use, heap_peak;
-static void trace(const char *what, WIN *w, GRECT *r)
+static unsigned long trace_t0;
+static const char *trace_name(WIN *w)
 {
-	char t[80];
-	snprintf(t, sizeof(t), "%s %s %d %d heap %ld %ld", what,
-		 w == &w_folders ? "folders" : w == &w_list ? "list" : "reader", r->y - w->work.y, r->h,
-		 heap_use, heap_peak);
+	return w == &w_folders ? "folders" : w == &w_list ? "list" : w == &w_reader ? "reader" : "window";
+}
+static void trace_ms(const char *what, WIN *w, GRECT *r, long ms)
+{
+	char t[90];
+	snprintf(t, sizeof(t), "%s %s %d %d heap %ld %ld ms %ld", what, trace_name(w), r->y - w->work.y, r->h,
+		 heap_use, heap_peak, ms);
+	pf_debug(t);
+}
+#define trace(what, w, r) trace_ms(what, w, r, 0)
+#define trace_begin() (trace_t0 = pf_ms())
+#define trace_end(what, w, r) trace_ms(what, w, r, (long)(pf_ms() - trace_t0))
+static void trace_top(WIN *w)
+{
+	char t[40];
+	snprintf(t, sizeof(t), "TOP %s %ld", trace_name(w), w->top);
 	pf_debug(t);
 }
 #else
 #define trace(what, w, r) ((void)0)
+#define trace_begin() ((void)0)
+#define trace_end(what, w, r) ((void)0)
+#define trace_top(w) ((void)0)
 #endif
 
 static void draw_main(GRECT *clip)
@@ -252,10 +269,11 @@ static void draw_main(GRECT *clip)
 			draw_header(w);
 		r = w->work;
 		if (intersect(clip, &r) && w->draw) {
-			trace("DRAW", w, &r);
+			trace_begin();
 			clip_on(&r);
 			w->draw(w, &r);
 			clip_on(clip);
+			trace_end("DRAW", w, &r);
 		}
 		r = sb_rect(w);
 		if (r.w > 0 && intersect(clip, &r)) {
@@ -681,6 +699,7 @@ void win_scroll_to(WIN *w, long top)
 	if (top == w->top)
 		return;
 	w->top = top;
+	trace_top(w);
 	if (w->pane && w != &w_reader) {
 		/* only the slider's old and new places (all of the bar took an
 		   8 MHz ST 70 ms) */
@@ -889,18 +908,28 @@ int win_mouse(short mx, short my, short button, short clicks, short kstate)
    pane through the main window's) */
 static void slider_message(WIN *w, short *msg)
 {
+	/* TOS 4's AES sends an arrow or page again while it still counts
+	   the button down: a click of 0.12 s on a Falcon turned two pages
+	   (Erez, 26 Oct 2026). One that comes soon after the last, with the
+	   button already up, is that press's echo; held, it repeats */
+	static unsigned long arrowed_at;
 	long rows = win_rows(w), max = w->total - rows;
+	short mx, my, mb, ks;
 	if (msg[0] == WM_VSLID) {
 		if (max > 0)
 			win_scroll_to(w, (long)msg[4] * max / 1000);
 		return;
 	}
+	graf_mkstate(&mx, &my, &mb, &ks);
+	if (!(mb & 1) && arrowed_at && pf_ms() - arrowed_at < 250)
+		return;
 	switch (msg[4]) {
 	case 0: win_scroll_to(w, w->top - rows); break;
 	case 1: win_scroll_to(w, w->top + rows); break;
 	case 2: win_scroll_to(w, w->top - 1); break;
 	case 3: win_scroll_to(w, w->top + 1); break;
 	}
+	arrowed_at = pf_ms();
 }
 
 void main_closed(void);

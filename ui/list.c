@@ -283,12 +283,14 @@ void list_select_uid(unsigned long uid)
 
 /* after the current message was deleted or moved: nothing chosen, so
    no message is opened (and perhaps downloaded) unasked */
+/* after messages went (Delete, Move): the list drawn once; the reader
+   is its callers' to clear, before (Erez's video, 26 Oct 2026: the list
+   and the reader each drawn two and three times for one Delete) */
 void list_after_remove(void)
 {
 	sel_uid = 0;
+	shown_valid = 0;
 	list_refresh();
-	win_redraw(&w_list, 0);
-	reader_clear();
 	folders_build();
 }
 
@@ -327,10 +329,14 @@ static void size_str(long n, char *out)
 static void draw(WIN *w, GRECT *clip)
 {
 	short cols = w->work.w / cw, c_from, c_subj, c_date;
-	long i, rows = win_rows(w) + 1;
-	short x0 = w->work.x + 2;
+	long i, rows = win_rows(w) + 1, first, last;
+	short x0 = w->work.x + 2, y0 = w->work.y + w->head_h;
 	GRECT r;
 	fresh();
+	/* only the rows the area meets: a row drawn again (a click, a mark)
+	   draws one row, not the list (a Falcon at 16 MHz: 90 ms a time) */
+	first = clip->y > y0 ? w->top + (clip->y - y0) / ch : w->top;
+	last = clip->y + clip->h > y0 ? w->top + (clip->y + clip->h - 1 - y0) / ch : w->top - 1;
 	columns(cols, &c_from, &c_subj, &c_date);
 	/* each row fills its own background as it is drawn: a list drawn
 	   again changes row by row, and is never white first */
@@ -354,7 +360,7 @@ static void draw(WIN *w, GRECT *clip)
 	}
 
 	/* column titles */
-	{
+	if (clip->y < y0) {
 		const char *who = show_to() ? "To" : "From";
 		text_pen = pen[P_DIM];
 		text_at(x0 + MK * cw, w->work.y + 1, who, strlen(who), c_from, TX_BOLD);
@@ -386,7 +392,7 @@ static void draw(WIN *w, GRECT *clip)
 		fill(&r, sel == nview ? pen[P_SEL] : 0);
 		text_at(x0 + MK * cw, y, t, strlen(t), cols - MK, TX_BOLD | (sel == nview ? TX_INVERSE : 0));
 	}
-	for (i = w->top; i < nview && i < w->top + rows; i++) {
+	for (i = first; i < nview && i < w->top + rows && i <= last; i++) {
 		HDR *h = &cur_folder->h[view[i]];
 		short y = w->work.y + w->head_h + (short)((i - w->top) * ch);
 		int lit = nmarks ? marked(i) : i == sel;
@@ -730,7 +736,7 @@ void message_menu(short mx, short my, int with_open)
 			l[5] = "~Download again";
 		r = popup(mx, my, l, 8);
 		if (r >= 0 && bcmd[r]) {
-			win_redraw_all();	/* not the menu's ghost while it works */
+			win_redraw_area(&popup_area);	/* not the menu's ghost while it works */
 			ui_command(bcmd[r]);
 		}
 		return;
@@ -775,7 +781,7 @@ void message_menu(short mx, short my, int with_open)
 		else
 			reader_show(h);
 	} else if (cmd[r]) {
-		win_redraw_all();
+		win_redraw_area(&popup_area);
 		ui_command(cmd[r]);
 	}
 }
