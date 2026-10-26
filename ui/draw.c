@@ -182,13 +182,19 @@ static int is_heb(unsigned char c)
 	return c >= 0xC2 && c <= 0xDC;
 }
 
-/* a run of characters, in their cells: the system font in one call; a
-   GDOS font one character to a cell (font_cells), spaces left out */
+/* a run of characters, in their cells (font_cells): in one call, made
+   to fill them, or one character to a cell, spaces left out */
+static short cells_now = FC_RUNS;	/* font_cells or font_cells_bold, by the effects set */
+
 static void cells_at(short x, short y, const char *s, short n)
 {
 	short k;
-	if (!font_cells) {
+	if (cells_now == FC_RUNS || n == 1) {
 		v_gtext_n(vdi_h, x, y, s, n);
+		return;
+	}
+	if (cells_now == FC_JUSTIFY) {
+		v_justified_n(vdi_h, x, y, s, n, n * cw, 0, 1);
 		return;
 	}
 	for (k = 0; k < n; k++)
@@ -246,6 +252,7 @@ static void visual_at(short x, short y, const char *out, short n, short flags, s
 		wr_mode(2);
 		text_col((flags & TX_INVERSE) ? 0 : text_pen);
 		text_fx(effects);
+		cells_now = (effects & 1) ? font_cells_bold : font_cells;
 		runs_at(x, y, out, n);
 		text_fx(0);	/* off again: others draw text plainly (fontsel's sample) */
 		return;
@@ -258,6 +265,7 @@ static void visual_at(short x, short y, const char *out, short n, short flags, s
 	wr_mode(2);
 	text_col((flags & TX_INVERSE) ? 0 : text_pen);
 	text_fx(effects);
+	cells_now = (effects & 1) ? font_cells_bold : font_cells;
 	for (i = 0; i < n; i += 120) {
 		short k = n - i > 120 ? 120 : (short)(n - i);
 		cells_at(x + i * cw, y, out + i, k);

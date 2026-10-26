@@ -35,7 +35,7 @@ static short cur_id = 1, cur_pt, probed_id = -1;
 /* a GDOS font's advance needn't be its cell: a vector font's is
    fractional and its bold is wider, so a run of text drifts out of its
    columns (draw.c then puts each character in its own cell) */
-short font_cells;
+short font_cells, font_cells_bold;
 
 /* Unicode of the Hebrew letters in the Atari order (0xC2-0xDC), less 0x5D0 */
 static const unsigned char heb_uni[27] = {
@@ -90,6 +90,46 @@ static void probe_hebrew(short id)
 	probed_why = heb_why;
 }
 
+/* how the GDOS font now set draws a run (FC_*): a run drawn a character
+   to a cell is a VDI call a character, some 2,000 a page of a message
+   (a Falcon at 16 MHz, Erez's video of 26 Oct 2026: a second a page) */
+static short mode_of(short width, short n, int mono)
+{
+	if (width == n * cw)
+		return FC_RUNS;
+	/* monospaced, within a pixel of a cell a character (a vector font's
+	   fractional advance, or its bold a pixel wider): made to fit */
+	if (mono && width > n * (cw - 1) && width <= n * (cw + 1))
+		return FC_JUSTIFY;
+	return FC_CELLS;
+}
+
+static void cells_mode(void)
+{
+	static const char probe[] = "MiWl.0_|@#mwIj1;:,'AZaz09([{x})]";
+	short n = (short)(sizeof(probe) - 1), plain, bold, k, wm;
+	int mono;
+	plain = vqt_extent_n(vdi_h, probe, n);
+	vst_effects(vdi_h, 1);
+	bold = vqt_extent_n(vdi_h, probe, n);
+	vst_effects(vdi_h, 0);
+	wm = vqt_width(vdi_h, 'M');
+	for (k = 0; k < n && vqt_width(vdi_h, (unsigned char)probe[k]) == wm; k++)
+		;
+	mono = k == n;
+	font_cells = mode_of(plain, n, mono);
+	/* bold only where the plain font keeps to its cells */
+	font_cells_bold = font_cells == FC_CELLS ? FC_CELLS : mode_of(bold, n, mono);
+#ifdef DRAW_TRACE
+	{
+		char t[90];
+		snprintf(t, sizeof(t), "FONT cell %d %d run %d bold %d of %d mono %d: modes %d %d", cw, ch, plain,
+			 bold, n * cw, mono, font_cells, font_cells_bold);
+		pf_debug(t);
+	}
+#endif
+}
+
 /* set the font; cw/ch become its cell size. 0 if it isn't there */
 static int set_font(short id, short pt)
 {
@@ -108,9 +148,12 @@ static int set_font(short id, short pt)
 	}
 	if (w < 4 || h < 6)
 		return 0;
-	font_cells = id != 1;
 	cw = w;
 	ch = h;
+	if (id == 1)
+		font_cells = font_cells_bold = FC_RUNS;
+	else
+		cells_mode();
 	vst_alignment(vdi_h, 0, 5);
 	cur_id = id;
 	cur_pt = pt;

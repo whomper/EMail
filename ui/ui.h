@@ -215,7 +215,11 @@ void font_apply(void);		/* opt.font_id/pt -> cw, ch */
 void font_sys_push(void);	/* the system font, for a popup or the About box */
 void font_sys_pop(void);	/* back to the window's font */
 void font_reselect(void);	/* the text font again, after drawing in another */
-extern short font_cells;	/* 1: a GDOS font, drawn a character to a cell */
+extern short font_cells, font_cells_bold;	/* how a GDOS font's runs are drawn, plain and bold: */
+#define FC_RUNS 0		/* in one call (the system font; a GDOS font a cell wide to the pixel) */
+#define FC_CELLS 1		/* a character to a cell (a proportional font) */
+#define FC_JUSTIFY 2		/* in one call, made to fill their cells (a monospaced font of a
+				   fractional width: a vector font's) */
 /* how the text font gets its Hebrew letters */
 #define HM_MAP     0		/* where opt.hebfont says (system and bitmap fonts) */
 #define HM_UNICODE 1		/* a vector font's own, found by Unicode (NVDI) */
