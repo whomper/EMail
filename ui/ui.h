@@ -140,6 +140,8 @@ void list_load(void);			/* (re)read cur_folder into the list */
 void list_refresh(void);
 void list_titles(void);
 HDR *list_current(void);
+int list_show_waiting(void);		/* a message to show at the next turns (a key moved to it) */
+void list_show_later(int all);		/* its next step, or all of them */
 /* several messages selected */
 long list_marked(void);				/* how many (0: just the current one) */
 unsigned long *list_targets(long *n);	/* their UIDs, malloc'ed; or the current one */
@@ -150,6 +152,9 @@ void list_select_uid(unsigned long uid);
 void list_after_remove(void);
 
 void reader_show(HDR *h);		/* load and show a message */
+int reader_show_begin(HDR *h);		/* reader_show in two steps: read and parse it, */
+void reader_show_end(void);		/* lay it out and draw it */
+int reader_half(void);			/* begun, not ended */
 void reader_clear(void);
 extern MSG *cur_msg;
 extern char *cur_raw;

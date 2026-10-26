@@ -512,6 +512,24 @@ static void load_more(void)
 	folders_build();
 }
 
+/* the selected message shown, and its row drawn as it now looks */
+static void show_sel(void)
+{
+	reader_show(&cur_folder->h[view[sel]]);
+	win_redraw_lines(&w_list, sel, 1);
+	list_titles();
+	folders_build();	/* draws only the rows that changed */
+}
+
+/* Up, Down and Home move the selection at once and show the message in
+   the next turns, a step a turn: read and parse it; lay it out and draw
+   it with its row; the list's titles and the folders' counts. Keys
+   typed or repeated meanwhile move on without each message on the way
+   being shown (an ST takes 300 ms and more a message, a key 50) */
+static int later;
+static unsigned long show_uid;	/* the message to show */
+static short show_step;		/* its next step, 1-3; 0: none */
+
 static void select_row(long i, int open)
 {
 	long old = sel;
@@ -546,14 +564,54 @@ static void select_row(long i, int open)
 	if (old != sel)
 		win_redraw_lines(&w_list, old, 1);
 	win_ensure_visible(&w_list, sel);
+	if (later) {
+		/* a key: the row now, the message in the next turns, when no
+		   other key is waiting (main.c, list_show_later) */
+		later = 0;
+		win_redraw_lines(&w_list, sel, 1);
+		show_uid = sel_uid;
+		if (cur_msg && !reader_missing && cur_uid == sel_uid)
+			show_step = reader_half() ? 2 : show_step ? 3 : 0;
+		else
+			show_step = 1;
+		return;
+	}
+	show_step = 0;
 	/* its row drawn once, after the message is shown: reading marks it
 	   read, and its look changes */
-	reader_show(&cur_folder->h[view[i]]);
-	win_redraw_lines(&w_list, sel, 1);
-	list_titles();
-	folders_build();	/* draws only the rows that changed */
+	show_sel();
 	if (open)
 		win_focus(&w_reader);
+}
+
+/* the message waiting to be shown: it is, unless the selection moved
+   from it or the list was made again */
+int list_show_waiting(void)
+{
+	return show_step != 0;
+}
+
+void list_show_later(int all)
+{
+	if (!cur_folder || sel < 0 || sel >= nview || cur_folder->h[view[sel]].uid != show_uid) {
+		show_step = 0;	/* the list was made again: nothing waits */
+		return;
+	}
+	if (show_step == 1) {
+		show_step = reader_show_begin(&cur_folder->h[view[sel]]) ? 2 : 0;
+		if (!all || !show_step)
+			return;
+	}
+	if (show_step == 2) {
+		reader_show_end();
+		win_redraw_lines(&w_list, sel, 1);
+		show_step = 3;
+		if (!all)
+			return;
+	}
+	show_step = 0;
+	list_titles();
+	folders_build();
 }
 
 /* Shift+click: this one in or out of the selection; Control+click: all
@@ -853,13 +911,19 @@ static int key(WIN *w, short kstate, short k)
 	fresh();
 	switch (scan) {
 	case 0x48:	/* up (shift: page) */
+		later = 1;
 		select_row(sel < 0 ? 0 : sel - ((kstate & 3) ? rows : 1), 0);
+		later = 0;
 		return 1;
 	case 0x50:	/* down */
+		later = 1;
 		select_row(sel < 0 ? 0 : sel + ((kstate & 3) ? rows : 1), 0);
+		later = 0;
 		return 1;
 	case 0x47:	/* Clr/Home: first, shift: last */
+		later = 1;
 		select_row((kstate & 3) ? nview - 1 : 0, 0);
+		later = 0;
 		return 1;
 	case 0x1c:	/* Return: read it (or load more, on that row) */
 	case 0x72:

@@ -52,12 +52,14 @@ static void free_layout(void)
 }
 
 static long selection;		/* several messages selected: how many */
+static int half;		/* parsed, its head and body made, not yet laid out and drawn */
 
 /* the message shown is forgotten, not drawn: reader_show draws the next
    once it is laid out, so the pane doesn't go blank meanwhile (Erez's
    video, 20 Oct 2026: "No message selected" for the layout's time) */
 static void forget(void)
 {
+	half = 0;
 	reader_missing = 0;
 	selection = 0;
 	free_layout();
@@ -569,12 +571,19 @@ int reader_tip(short mx, short my, char *out, int size)
 }
 
 
-void reader_show(HDR *h)
+int reader_half(void)
+{
+	return half;
+}
+
+/* showing a message in two steps, a turn between them (list.c): read
+   and parse it, then lay it out and draw it */
+int reader_show_begin(HDR *h)
 {
 	long len;
 	char *raw;
 	if (!cur_folder || !h)
-		return;
+		return 0;
 	show_mark(0);
 	busy(1);
 	status("Opening the message...");
@@ -596,7 +605,7 @@ void reader_show(HDR *h)
 	if (!raw) {
 		status("");
 		alert(1, "[1][%s][ OK ]", mail_err[0] ? mail_err : "Can't read this message.");
-		return;
+		return 0;
 	}
 	forget();
 	cur_raw = raw;
@@ -607,7 +616,7 @@ void reader_show(HDR *h)
 	if (!cur_msg) {
 		status("");
 		alert(1, "[1][Not enough memory to show|this message.][ OK ]");
-		return;
+		return 0;
 	}
 show:
 	head_date = h->date;
@@ -615,6 +624,15 @@ show:
 	show_mark(5);
 	make_body();
 	show_mark(3);
+	half = 1;
+	return 1;
+}
+
+void reader_show_end(void)
+{
+	if (!half)
+		return;
+	half = 0;
 	{
 		/* the pane's header: kept, and drawn with the pane below, not
 		   twice before it (40 ms an ST) */
@@ -643,6 +661,12 @@ show:
 	show_trace();
 	status("");
 	win_redraw(&w_reader, 0);
+}
+
+void reader_show(HDR *h)
+{
+	if (reader_show_begin(h))
+		reader_show_end();
 }
 
 static void draw(WIN *w, GRECT *clip)

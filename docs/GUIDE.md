@@ -331,8 +331,10 @@ with the dark header has the keyboard: click a pane, or press Tab to
 move on. The main window's own place and size, the dividers, the
 editor's place and the font are all kept in `EMAIL.INF` for next time.
 
-Click a message to read it. Up and Down move through the list; Return
-moves the keyboard to the message. In the message pane Space and
+Click a message to read it. Up and Down move through the list, and the
+message comes up once you stop: held down, they go through the list
+without opening each message on the way. Return moves the keyboard to
+the message. In the message pane Space and
 Backspace page down and up. Closing the main window quits EMail.
 
 Where the AES can iconify windows (MultiTOS, MagiC, XaAES, N.AES), the
