@@ -282,6 +282,10 @@ short vqt_font_format(short h, short index);	/* 1 bitmap, 2 Speedo, 4 TrueType, 
 short vst_font(short h, short id);
 short vst_point(short h, short point, short *cw, short *ch);
 short vqt_width(short h, short c);	/* cell width of character c */
+short vqt_extent_n(short h, const char *s, short n);	/* width n characters draw, effects in force */
+/* n characters drawn to len pixels wide, the gaps between characters
+   (char_space 1) and words (word_space 1) stretched or shrunk to fit */
+void v_justified_n(short h, short x, short y, const char *s, short n, short len, short word_space, short char_space);
 void v_hide_c(short h);
 void v_show_c(short h, short reset);
 

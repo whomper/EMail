@@ -813,6 +813,20 @@ short vqt_width(short h, short c)
 	return ptsout[0];
 }
 
+/* how wide n characters draw, the effects in force with them */
+short vqt_extent_n(short h, const char *s, short n)
+{
+	short i;
+	if (n > 127)
+		n = 127;
+	if (n <= 0)
+		return 0;
+	for (i = 0; i < n; i++)
+		vintin[i] = (u8)s[i];
+	vdi(116, 0, n, h);
+	return ptsout[2] - ptsout[0];
+}
+
 /* NVDI 5: a character's index in another mapping (0 the font's own
  * index, 1 the Atari character set, 2 Unicode); -1 when the font hasn't
  * got it or the VDI can't say */
@@ -916,6 +930,32 @@ static void gdp_box(short sub, short h, const short *pxy)
 }
 
 void v_bar(short h, const short *pxy) { gdp_box(1, h, pxy); }
+
+/* GDP 10: n characters drawn to a width of len, the room between the
+   characters (char_space 1) and the words (word_space 1) made to fit */
+void v_justified_n(short h, short x, short y, const char *s, short n, short len, short word_space, short char_space)
+{
+	short i;
+	if (n > 125)
+		n = 125;
+	if (n <= 0)
+		return;
+	vintin[0] = word_space;
+	vintin[1] = char_space;
+	for (i = 0; i < n; i++)
+		vintin[2 + i] = (u8)s[i];
+	ptsin[0] = x;
+	ptsin[1] = y;
+	ptsin[2] = len;
+	ptsin[3] = 0;
+	contrl[0] = 11;
+	contrl[1] = 2;
+	contrl[3] = n + 2;
+	contrl[5] = 10;
+	contrl[6] = h;
+	__asm__ volatile("move.l %0,%%d1\n\tmove.w #115,%%d0\n\ttrap #2"
+		: : "r"((long)vdipb) : "d0", "d1", "d2", "a0", "a1", "a2", "memory", "cc");
+}
 void v_rbox(short h, const short *pxy) { gdp_box(8, h, pxy); }
 void v_rfbox(short h, const short *pxy) { gdp_box(9, h, pxy); }
 

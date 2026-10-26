@@ -10,6 +10,7 @@
  * with '\x08' (the Atari check mark) checked ones.
  */
 #include <string.h>
+#include <stdlib.h>
 #include "gemui.h"
 #include "popup.h"
 
@@ -106,6 +107,60 @@ static short mouse(short *mx, short *my)
 }
 
 GRECT popup_area;
+short popup_put_back;
+
+/* what the popup covers, kept to be put back as it closes: no redraw of
+   the windows under it (EMail on a Falcon at 16 MHz drew its three panes
+   again for every menu, Erez's video of 26 Oct 2026). Without the memory,
+   the AES is asked to redraw it, as before */
+static MFDB under;
+
+static void keep_under(const GRECT *a)
+{
+	MFDB scr;
+	short pxy[8];
+	long size;
+	memset(&under, 0, sizeof(under));
+	memset(&scr, 0, sizeof(scr));
+	under.fd_w = (a->w + 15) & ~15;
+	under.fd_h = a->h;
+	under.fd_wdwidth = under.fd_w / 16;
+	under.fd_nplanes = planes;
+	size = (long)under.fd_wdwidth * 2 * a->h * planes;
+	under.fd_addr = malloc(size);
+	if (!under.fd_addr)
+		return;
+	pxy[0] = a->x;
+	pxy[1] = a->y;
+	pxy[2] = a->x + a->w - 1;
+	pxy[3] = a->y + a->h - 1;
+	pxy[4] = 0;
+	pxy[5] = 0;
+	pxy[6] = a->w - 1;
+	pxy[7] = a->h - 1;
+	vro_cpyfm(vdi_h, 3, pxy, &scr, &under);
+}
+
+static int put_under(const GRECT *a)
+{
+	MFDB scr;
+	short pxy[8];
+	if (!under.fd_addr)
+		return 0;
+	memset(&scr, 0, sizeof(scr));
+	pxy[0] = 0;
+	pxy[1] = 0;
+	pxy[2] = a->w - 1;
+	pxy[3] = a->h - 1;
+	pxy[4] = a->x;
+	pxy[5] = a->y;
+	pxy[6] = a->x + a->w - 1;
+	pxy[7] = a->y + a->h - 1;
+	vro_cpyfm(vdi_h, 3, pxy, &under, &scr);
+	free(under.fd_addr);
+	under.fd_addr = 0;
+	return 1;
+}
 
 short popup(short x, short y, const char *const *lab, short n)
 {
@@ -157,6 +212,7 @@ short popup_alt(short x, short y, short alt_y, const char *const *lab, short n)
 	clipr[2] = scr_w - 1;
 	clipr[3] = scr_h - 1;
 	vs_clip(vdi_h, 1, clipr);
+	keep_under(&popup_area);
 	shadow.x = x + 2;
 	shadow.y = y + 2;
 	shadow.w = pw + 1;
@@ -225,12 +281,17 @@ short popup_alt(short x, short y, short alt_y, const char *const *lab, short n)
 			break;
 		}
 	}
+	graf_mouse(M_OFF, 0);
+	vs_clip(vdi_h, 1, clipr);
+	popup_put_back = put_under(&popup_area);
 	vs_clip(vdi_h, 0, clipr);
+	graf_mouse(M_ON, 0);
 	wind_update(2);			/* END_MCTRL */
 	wind_update(END_UPDATE);
 	while (mouse(&mx, &my))
 		evnt_timer_(10);
-	form_dial(FMD_FINISH, x, y, pw + 3, bh + 3);
+	if (!popup_put_back)
+		form_dial(FMD_FINISH, x, y, pw + 3, bh + 3);
 	font_sys_pop();
 	return res;
 }
