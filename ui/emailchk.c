@@ -723,6 +723,21 @@ static void acc_memory(void)
 	}
 }
 
+/* CACERT.PEM read for TLS.OVL a piece at a time, the file opened and
+   closed round each: TLS.OVL 1.8 gives the others turns as it reads,
+   and an accessory keeps no file open across them (the guidelines 2.2) */
+static long read_at(const char *path, long off, void *buf, long n)
+{
+	long got = -1;
+	int f = pf_open(path, PF_READ);
+	if (f < 0)
+		return -1;
+	if (pf_seek(f, off) == off)
+		got = pf_read(f, buf, n);
+	pf_close(f);
+	return got;
+}
+
 int main(void)
 {
 	short msg[8];
@@ -747,6 +762,7 @@ int main(void)
 	pf_idle = busy_idle;
 	dlg_title = "EMail check";	/* its alerts' and boxes' windows (MiNT, MagiC) */
 	tls_file_info = pf_info;
+	tls_read_at = read_at;
 #ifdef AES_PROFILE
 	newmail_stage = aes_profile_tag;	/* the stretches named by the check's stages */
 #endif
