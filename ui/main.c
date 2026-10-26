@@ -1844,6 +1844,16 @@ int main(void)
 			status(m);
 			mail_disconnect(accts[d]);
 		}
+	{
+		/* where this Atari kept the user waiting longest (common's
+		   aes_slowest; the guidelines' Speed): one line in the log */
+		char t[200];
+		const char *sl = aes_slowest();
+		if (*sl) {
+			snprintf(t, sizeof(t), "the longest waits this session: %s", sl);
+			conn_log("EMail", " -- ", t, (long)strlen(t));
+		}
+	}
 	conn_log_flush();
 	if (cur_folder)
 		fold_close(cur_folder);
