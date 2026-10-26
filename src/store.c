@@ -516,6 +516,7 @@ int store_begin(const char *workdir)
 	   seed with the mail */
 	path_join(conn_cacert, sizeof(conn_cacert), workdir, "CACERT.PEM");
 	path_join(tls_seed_path, sizeof(tls_seed_path), mail_dir, "SEED.DAT");
+	path_join(tls_sigs_path, sizeof(tls_sigs_path), mail_dir, "SIGS.DAT");
 	path_join(tls_roots_cache, sizeof(tls_roots_cache), workdir, "ROOTS.DAT");
 
 	startoffline_given = offline_inf = 0;

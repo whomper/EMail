@@ -62,6 +62,8 @@ C:\EMAIL\EMAIL.REF     its page names, for ST-Guide's reference list (optional)
 C:\EMAIL\EMAIL\         your mail: one folder per account, one per mailbox,
                         each with its messages in one file (MESSAGES.DAT)
 C:\EMAIL\EMAIL\SEED.DAT  randomness kept for a Direct connection's encryption
+C:\EMAIL\EMAIL\SIGS.DAT  certificates' signatures already checked, so a Direct
+                        connection doesn't check them again (slow on a 68030)
 ```
 
 Start it. The first time, EMail asks for your account.
