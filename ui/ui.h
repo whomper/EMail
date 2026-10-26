@@ -79,6 +79,7 @@ void win_hover(short mx, short my);
 void win_focus(WIN *w);
 void win_relayout(void);			/* after a font change */
 void win_redraw_all(void);
+extern int win_skip_open_redraw;	/* main.c: the first whole-window WM_REDRAW is left */
 void win_redraw_area(GRECT *area);	/* now, under a dialog that closed */
 extern short main_h;
 extern short main_iconified;		/* shown as the icon */

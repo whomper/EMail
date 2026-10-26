@@ -936,6 +936,12 @@ static void slider_message(WIN *w, short *msg)
 
 void main_closed(void);
 
+/* the AES's first WM_REDRAW, for the window as it opened, when EMail has
+   drawn all of it since and shown nothing over it (main.c): left, as the
+   start's fourth drawing of every pane (a stock Falcon: 210 ms, an ST:
+   a second). Only as the first event: a later one is drawn */
+int win_skip_open_redraw;
+
 static void main_message(short *msg)
 {
 	GRECT r;
@@ -945,6 +951,11 @@ static void main_message(short *msg)
 		r.y = msg[5];
 		r.w = msg[6];
 		r.h = msg[7];
+		if (win_skip_open_redraw && r.x <= mwork.x && r.y <= mwork.y &&
+		    r.x + r.w >= mwork.x + mwork.w && r.y + r.h >= mwork.y + mwork.h) {
+			win_skip_open_redraw = 0;
+			break;
+		}
 		if (main_iconified)
 			icon_window(main_h, &r);
 		else

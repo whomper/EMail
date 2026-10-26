@@ -112,6 +112,7 @@ typedef struct {
 	unsigned long date;	/* seconds since 1970, UTC */
 	char *from, *subject, *to;
 	long off, plen;		/* the body's record in MESSAGES.DAT; off -1: none */
+	short inidx;		/* from..to are in the folder's index (idx), not their own block */
 } HDR;
 
 #define PACK_HEAD 10		/* a record: "EM", the UID, the length, the message */
@@ -135,6 +136,7 @@ typedef struct {
 	char *pend;		/* bodies waiting to be appended (pf_bulk) */
 	long pend_len, pend_cap;
 	short bulk;		/* a local folder's job that flushes itself (POP) */
+	char *idx;		/* INDEX.DAT as read: the headers' strings, while open */
 } FOLDER;
 
 extern OPTIONS opt;
@@ -207,6 +209,7 @@ HDR *fold_get(FOLDER *f, unsigned long uid);
 void fold_remove(FOLDER *f, unsigned long uid);	/* also its cached body */
 void fold_clear(FOLDER *f);
 void hdr_set(HDR *h, const char *from, const char *subject, const char *to);
+void hdr_free(HDR *h);	/* its strings (one block: hdr_set's) */
 void fold_count(FOLDER *f);		/* local folders: updates fi->total / unread */
 /* fill a header from the raw header block of a message */
 void hdr_from_raw(HDR *h, const char *raw, long len);

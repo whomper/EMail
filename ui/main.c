@@ -273,6 +273,8 @@ void refind_current(const char *server)
 
 static int quiet_check;		/* the timed check: errors on the status line */
 
+static int check_alerted;	/* cmd_check_all showed an alert */
+
 void cmd_check_all(void)
 {
 	short i;
@@ -280,6 +282,7 @@ void cmd_check_all(void)
 	char server[160], errs[200] = "";
 	str_copy(server, cur_finfo ? cur_finfo->server : "", sizeof(server));
 	if (opt.offline) {
+		check_alerted = 1;
 		alert(1, "[1][EMail is working offline.|Switch it off in the Options|menu to check mail.][ OK ]");
 		return;
 	}
@@ -301,8 +304,10 @@ void cmd_check_all(void)
 		list_refresh();
 	}
 	last_check = pf_ms();
-	if (errs[0] && !quiet_check)
+	if (errs[0] && !quiet_check) {
+		check_alerted = 1;
 		alert(1, "[1][%s][ OK ]", errs);
+	}
 	if (errs[0]) {
 		status(errs);
 	} else {
@@ -1551,11 +1556,24 @@ static void crash_quit(const char *what)
 	appl_exit();
 }
 
+#ifdef DRAW_TRACE
+/* the test build: when the start's steps ended ("START store 420", ms) */
+static void start_mark(const char *what)
+{
+	char t[60];
+	snprintf(t, sizeof(t), "START %s %lu", what, pf_ms());
+	pf_debug(t);
+}
+#else
+#define start_mark(what) ((void)0)
+#endif
+
 int main(void)
 {
 	short work_in_dummy, work_out[57], msg[8], d;
 	char dir[200];
 	long free_kb;
+	int quiet;		/* nothing shown over the window as EMail started */
 	AEVENT ev;
 
 	{
@@ -1575,6 +1593,7 @@ int main(void)
 			conn_bufsize = 4096;
 	}
 	ap_id = appl_init();
+	start_mark("appl_init");
 	if (ap_id < 0)
 		return 1;
 	vdi_h = graf_handle(&gl_wchar, &gl_hchar, &d, &d);
@@ -1621,6 +1640,7 @@ int main(void)
 	secret_warn = warn_plain;	/* before anything is saved */
 	falcon_usable = get_cookie(0x5F435055L) >= 20;	/* _CPU: TLS.OVL needs a 68020 */
 	store_init(dir);
+	start_mark("store");
 	dlg_3d_on = opt.dialogs3d;	/* before the first dialog (5.6) */
 	path_join(tls_ovl_path, sizeof(tls_ovl_path), dir, "TLS.OVL");	/* beside CACERT.PEM */
 	crash_install(dir, "EMail", mail_version);
@@ -1647,6 +1667,7 @@ int main(void)
 	tls_file_info = pf_info;	/* CACERT.PEM's date and size in one look */
 	for (d = 0; d < naccts; d++)
 		folders_load(accts[d]);
+	start_mark("folders_load");
 
 	folders_init();
 	list_init();
@@ -1663,15 +1684,20 @@ int main(void)
 	menu_update();
 	graf_mouse(ARROW, 0);
 
+	quiet = !crash_previous() && free_kb >= 300 && naccts && !store_lost_passwords;
+	start_mark("menu");
 	main_open();
+	start_mark("main_open");
 	folders_build();
 	list_load();
 	reader_clear();
+	start_mark("panes");
 	/* the whole window now, its pane bars and dividers too, not at the
 	   AES's first WM_REDRAW: that waits behind the welcome box or the
 	   first check, and meanwhile a multitasking AES shows the desktop
 	   through it */
 	win_redraw_all();
+	start_mark("drawn");
 
 	crash_offer("EMail", "next to EMAIL.PRG");
 	if (free_kb < 300)		/* say so now, not with a failed send or TLS later */
@@ -1694,7 +1720,11 @@ int main(void)
 		if (in)
 			folders_select(accts[0], in);
 	}
+	start_mark("inbox");
 	last_check = pf_ms();
+	/* all of the window is drawn and nothing was shown over it: the
+	   AES's redraw for its opening is the start's fourth of every pane */
+	win_skip_open_redraw = quiet && !check_alerted;
 	evnt_set_m1(1, 0, 0, 1, 1);
 	{
 		/* files or a mailto: given when EMail was started (dropped on
@@ -1797,6 +1827,7 @@ int main(void)
 			quiet_check = 0;
 		}
 		people_poll();		/* the names asked for while drawing go out */
+		win_skip_open_redraw = 0;	/* the first event only */
 	}
 
 	if (mail_flags_pending(cur_folder)) {

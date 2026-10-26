@@ -206,6 +206,29 @@ void list_refresh(void)
 	win_redraw(&w_list, 0);
 }
 
+/* the view newest first. The index is in UID order, and a mailbox's
+   dates mostly follow: from the UIDs reversed, an insertion sort is a
+   compare or two a message (qsort's 9,000 compares for 500 took most of
+   the 185 ms on a stock Falcon); one far out of order, and qsort */
+static void sort_view(void)
+{
+	long i, j, budget = nview * 8;
+	for (i = 0; i < nview; i++)
+		view[i] = nview - 1 - i;
+	for (i = 1; i < nview; i++) {
+		long v = view[i];
+		for (j = i; j > 0 && cmp_date(&view[j - 1], &v) > 0; j--) {
+			view[j] = view[j - 1];
+			if (--budget < 0) {
+				view[j - 1] = v;	/* every index once again, for qsort */
+				qsort(view, nview, sizeof(long), cmp_date);
+				return;
+			}
+		}
+		view[j] = v;
+	}
+}
+
 static void build_view(void)
 {
 	long i;
@@ -218,10 +241,8 @@ static void build_view(void)
 	if (cur_folder && cur_folder->n) {
 		view = malloc(cur_folder->n * sizeof(long));
 		if (view) {
-			for (i = 0; i < cur_folder->n; i++)
-				view[i] = i;
 			nview = cur_folder->n;
-			qsort(view, nview, sizeof(long), cmp_date);
+			sort_view();
 			/* a big local folder lists a page at a time too */
 			if (cur_finfo->local && nview > shown)
 				nview = shown;
@@ -502,15 +523,11 @@ static void select_row(long i, int open)
 	sel_uid = cur_folder->h[view[i]].uid;
 	if (old != sel)
 		win_redraw_lines(&w_list, old, 1);
-	win_redraw_lines(&w_list, sel, 1);
 	win_ensure_visible(&w_list, sel);
-	{
-		unsigned short was = cur_folder->h[view[i]].flags;
-		reader_show(&cur_folder->h[view[i]]);
-		/* reading may have marked it read: then the row, the counts */
-		if (cur_folder->h[view[i]].flags != was)
-			win_redraw_lines(&w_list, sel, 1);
-	}
+	/* its row drawn once, after the message is shown: reading marks it
+	   read, and an unread (bold) row is the dearest to draw (an ST: 100 ms) */
+	reader_show(&cur_folder->h[view[i]]);
+	win_redraw_lines(&w_list, sel, 1);
 	list_titles();
 	folders_build();	/* draws only the rows that changed */
 	if (open)

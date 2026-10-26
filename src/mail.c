@@ -1337,9 +1337,7 @@ static int send_all(ACCOUNT *a, const char *raw, long len, int *sent, int *mine)
 		memset(&t, 0, sizeof(t));
 		hdr_from_raw(&t, raw, len);
 		r = send_raw(a, s, raw, len, t.subject ? t.subject : "", ++k, nsend, &saved);
-		free(t.from);
-		free(t.subject);
-		free(t.to);
+		hdr_free(&t);
 		if (r > 0) {
 			*mine = 1;
 			(*sent)++;

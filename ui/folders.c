@@ -190,7 +190,7 @@ FINFO *folders_drop_target(short mx, short my, GRECT *row)
 
 void folders_select(ACCOUNT *a, FINFO *fi)
 {
-	long newmsgs, i;
+	long newmsgs, i, was = sel;
 	if (!fi || fi->noselect)
 		return;
 	if (cur_folder) {
@@ -202,7 +202,12 @@ void folders_select(ACCOUNT *a, FINFO *fi)
 	for (i = 0; i < nent; i++)
 		if (ent[i].fi == fi)
 			sel = i;
-	win_redraw(&w_folders, 0);
+	/* the rows the highlight left and came to, not the pane (an ST: 100 ms) */
+	if (was != sel) {
+		if (was >= 0)
+			win_redraw_lines(&w_folders, was, 1);
+		win_redraw_lines(&w_folders, sel, 1);
+	}
 	reader_clear();
 	/* show what we have at once, then bring it up to date */
 	cur_folder = fold_open(a, fi);
@@ -217,7 +222,7 @@ void folders_select(ACCOUNT *a, FINFO *fi)
 		busy(0);
 		fold_done(cur_folder);	/* it worked on cur_folder itself: saved once */
 		list_load();
-		win_redraw(&w_folders, 0);
+		folders_build();	/* the rows whose counts changed */
 	}
 	menu_update();
 }
