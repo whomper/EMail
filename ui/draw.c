@@ -141,13 +141,17 @@ static int is_heb(unsigned char c)
 	return c >= 0xC2 && c <= 0xDC;
 }
 
-/* a run of characters, in their cells: the system font in one call; a
-   GDOS font one character to a cell (font_cells), spaces left out */
+/* a run of characters, in their cells (font_cells): in one call, made
+   to fill them, or one character to a cell, spaces left out */
 static void cells_at(short x, short y, const char *s, short n)
 {
 	short k;
-	if (!font_cells) {
+	if (font_cells == FC_RUNS || n == 1) {
 		v_gtext_n(vdi_h, x, y, s, n);
+		return;
+	}
+	if (font_cells == FC_JUSTIFY) {
+		v_justified_n(vdi_h, x, y, s, n, n * cw, 0, 1);
 		return;
 	}
 	for (k = 0; k < n; k++)

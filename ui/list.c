@@ -736,7 +736,8 @@ void message_menu(short mx, short my, int with_open)
 			l[5] = "~Download again";
 		r = popup(mx, my, l, 8);
 		if (r >= 0 && bcmd[r]) {
-			win_redraw_area(&popup_area);	/* not the menu's ghost while it works */
+			if (!popup_put_back)	/* not the menu's ghost while it works */
+				win_redraw_area(&popup_area);
 			ui_command(bcmd[r]);
 		}
 		return;
@@ -781,7 +782,8 @@ void message_menu(short mx, short my, int with_open)
 		else
 			reader_show(h);
 	} else if (cmd[r]) {
-		win_redraw_area(&popup_area);
+		if (!popup_put_back)
+			win_redraw_area(&popup_area);
 		ui_command(cmd[r]);
 	}
 }

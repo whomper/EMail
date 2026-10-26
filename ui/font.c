@@ -90,6 +90,36 @@ static void probe_hebrew(short id)
 	probed_why = heb_why;
 }
 
+/* how the GDOS font now set draws a run (FC_*): a run drawn a character
+   to a cell is a VDI call a character, some 2,000 a page of a message
+   (a Falcon at 16 MHz, Erez's video of 26 Oct 2026: a second a page) */
+static short cells_mode(void)
+{
+	static const char probe[] = "MiWl.0_|@#mwIj1;:,'AZaz09([{x})]";
+	short n = (short)(sizeof(probe) - 1), plain, bold, k, wi, wm;
+	plain = vqt_extent_n(vdi_h, probe, n);
+	vst_effects(vdi_h, 1);
+	bold = vqt_extent_n(vdi_h, probe, n);
+	vst_effects(vdi_h, 0);
+#ifdef DRAW_TRACE
+	{
+		char t[80];
+		snprintf(t, sizeof(t), "FONT cell %d %d run %d bold %d of %d", cw, ch, plain, bold, n * cw);
+		pf_debug(t);
+	}
+#endif
+	if (plain == n * cw && bold == n * cw)
+		return FC_RUNS;
+	/* monospaced, a fraction of a pixel off a cell a character */
+	wi = vqt_width(vdi_h, 'i');
+	wm = vqt_width(vdi_h, 'M');
+	for (k = 0; k < n && vqt_width(vdi_h, (unsigned char)probe[k]) == wm; k++)
+		;
+	if (k == n && wi == wm && plain > (n - 1) * cw && plain <= n * cw)
+		return FC_JUSTIFY;
+	return FC_CELLS;
+}
+
 /* set the font; cw/ch become its cell size. 0 if it isn't there */
 static int set_font(short id, short pt)
 {
@@ -108,9 +138,9 @@ static int set_font(short id, short pt)
 	}
 	if (w < 4 || h < 6)
 		return 0;
-	font_cells = id != 1;
 	cw = w;
 	ch = h;
+	font_cells = id == 1 ? FC_RUNS : cells_mode();
 	vst_alignment(vdi_h, 0, 5);
 	cur_id = id;
 	cur_pt = pt;
