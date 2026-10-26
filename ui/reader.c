@@ -36,6 +36,7 @@ typedef struct {
 
 static char *head;		/* header lines, \n separated */
 static char *body;		/* text with tabs expanded */
+static int body_own;		/* body is a copy (else cur_msg's text, no tab in it) */
 static long bodylen;
 static LINE *lines;
 static long nlines;
@@ -66,8 +67,10 @@ static void forget(void)
 	cur_raw = 0;
 	free(head);
 	head = 0;
-	free(body);
+	if (body_own)
+		free(body);
 	body = 0;
+	body_own = 0;
 	while (nlinks > 0)
 		free(links[--nlinks].url);
 	free(links);
@@ -87,17 +90,68 @@ void reader_clear(void)
 		win_redraw(&w_reader, 0);
 }
 
-static void add_line(const char *s, long n, short kind, short attach, short label)
+#ifdef DRAW_TRACE
+/* the test build: how long showing a message took, by its steps
+   ("SHOW fetch 120 parse 40 body 10 layout 30", ms) */
+static unsigned long show_t[12];
+#define show_mark(k) (show_t[k] = pf_ms())
+static void show_trace(void)
 {
-	LINE *l = &lines[nlines++];
+	char t[90];
+	snprintf(t, sizeof(t), "SHOW fetch %ld parse %ld body %ld layout %ld lines %ld head %ld",
+		 (long)(show_t[1] - show_t[0]), (long)(show_t[2] - show_t[1]),
+		 (long)(show_t[3] - show_t[2]), (long)(show_t[4] - show_t[3]), nlines,
+		 (long)(show_t[5] - show_t[2]));
+	pf_debug(t);
+	snprintf(t, sizeof(t), "BODY tabs %ld links %ld", (long)(show_t[6] - show_t[5]), (long)(show_t[3] - show_t[7]));
+	pf_debug(t);
+	snprintf(t, sizeof(t), "LAYOUT title %ld head %ld wrap %ld lines %ld sliders %ld",
+		 (long)(show_t[8] - show_t[3]), (long)(show_t[9] - show_t[8]), (long)(show_t[10] - show_t[9]),
+		 (long)(show_t[11] - show_t[10]), (long)(show_t[4] - show_t[11]));
+	pf_debug(t);
+}
+#else
+#define show_mark(k) ((void)0)
+#define show_trace() ((void)0)
+#endif
+
+/* the body has a character outside ASCII: else no line of it is
+   right to left, and none is looked at for Hebrew */
+static int body_high;
+
+/* a byte from 0x80 in s[0..n), four at a time */
+static int any_high(const char *s, long n)
+{
+	typedef unsigned long __attribute__((may_alias)) ul;
+	if (((long)s & 1) && n > 0) {
+		if ((unsigned char)*s++ >= 0x80)
+			return 1;
+		n--;
+	}
+	for (; n >= 4; s += 4, n -= 4)
+		if (*(const ul *)s & 0x80808080UL)
+			return 1;
+	while (n-- > 0)
+		if ((unsigned char)*s++ >= 0x80)
+			return 1;
+	return 0;
+}
+
+/* the next line laid out: lines[] is filled through a pointer, not by
+   an index (a LINE is 22 bytes: a multiplication the 68000 does in
+   software) */
+static LINE *add_line(const char *s, long n, short kind, short attach, short label)
+{
+	LINE *l = lines + nlines++;
 	l->s = s;
 	l->n = n;
 	l->kind = kind;
 	l->attach = attach;
 	l->label = label;
-	l->rtl = kind == L_BODY ? line_rtl(s, n) : 0;
+	l->rtl = kind == L_BODY && body_high ? line_rtl(s, n) : 0;
 	l->quote = 0;
 	l->link = 0;
+	return l;
 }
 
 /* how deep a line is quoted: the '>' at its start, spaces between them */
@@ -145,26 +199,31 @@ static void layout(void)
 	for (i = 0; i < cur_msg->nparts; i++)
 		add_line(cur_msg->parts[i].name, strlen(cur_msg->parts[i].name), L_ATTACH, (short)i, 0);
 	add_line("", 0, L_RULE, 0, 0);
+	show_mark(9);
 	nb = wrap_text(body, bodylen, width, br, max - nlines - 2);
+	show_mark(10);
+	body_high = any_high(body, bodylen);
 	{
 		short depth = 0;
 		long lk = 0;
 		for (i = 0; i < nb; i++) {
-			long s = br[i], end = i + 1 < nb ? br[i + 1] : bodylen;
+			long s = br[i], next = i + 1 < nb ? br[i + 1] : bodylen, end = next;
+			LINE *l;
 			/* a line of the text starts here, or this is the rest of
 			   one wrapped: it keeps the depth (and colour) of its start */
 			if (s == 0 || body[s - 1] == '\n')
-				depth = quote_depth(body + s, (i + 1 < nb ? br[i + 1] : bodylen) - s);
+				depth = body[s] == '>' || body[s] == ' ' ? quote_depth(body + s, next - s) : 0;
 			while (end > s && (body[end - 1] == '\n' || body[end - 1] == ' '))
 				end--;
-			add_line(body + s, end - s, L_BODY, 0, 0);
-			lines[nlines - 1].quote = depth;
+			l = add_line(body + s, end - s, L_BODY, 0, 0);
+			l->quote = depth;
 			while (lk < nlinks && links[lk].at + links[lk].n <= s)
 				lk++;
-			lines[nlines - 1].link = lk;
+			l->link = lk;
 		}
 	}
 	free(br);
+	show_mark(11);
 	w_reader.total = nlines;
 	win_sliders(&w_reader);
 }
@@ -182,22 +241,24 @@ static char *expand_tabs(const char *s, long n, long *outlen, const MLINK *lk, s
 {
 	long i, o = 0, col = 0, tabs = 0;
 	short a = 0, e = 0;
+	const char *t;
 	char *b;
-	for (i = 0; i < n; i++)
-		tabs += s[i] == '\t';
-	b = malloc(n + tabs * 7 + 1);
-	if (!b)
-		return 0;
-	if (!tabs) {		/* most mail: the text as it is, the links where they are */
-		memcpy(b, s, n);
-		b[n] = 0;
+	if ((t = memchr(s, '\t', n)) == 0) {
+		/* most mail: the text itself, the links where they are */
 		for (a = 0; a < nl; a++) {
 			to[a].at = lk[a].at;
 			to[a].n = lk[a].n;
 		}
 		*outlen = n;
-		return b;
+		body_own = 0;
+		return (char *)s;
 	}
+	for (i = t - s; i < n; i++)
+		tabs += s[i] == '\t';
+	b = malloc(n + tabs * 7 + 1);
+	if (!b)
+		return 0;
+	body_own = 1;
 	for (i = 0; i <= n; i++) {
 		for (; a < nl && lk[a].at <= i; a++) {
 			to[a].at = o;
@@ -229,26 +290,6 @@ static int cmp_link(const void *a, const void *b)
 	return d < 0 ? -1 : d > 0;
 }
 
-#ifdef DRAW_TRACE
-/* the test build: how long showing a message took, by its steps
-   ("SHOW fetch 120 parse 40 body 10 layout 30", ms) */
-static unsigned long show_t[8];
-#define show_mark(k) (show_t[k] = pf_ms())
-static void show_trace(void)
-{
-	char t[90];
-	snprintf(t, sizeof(t), "SHOW fetch %ld parse %ld body %ld layout %ld lines %ld head %ld",
-		 (long)(show_t[1] - show_t[0]), (long)(show_t[2] - show_t[1]),
-		 (long)(show_t[3] - show_t[2]), (long)(show_t[4] - show_t[3]), nlines,
-		 (long)(show_t[5] - show_t[2]));
-	pf_debug(t);
-	snprintf(t, sizeof(t), "BODY tabs %ld links %ld", (long)(show_t[6] - show_t[5]), (long)(show_t[3] - show_t[7]));
-	pf_debug(t);
-}
-#else
-#define show_mark(k) ((void)0)
-#define show_trace() ((void)0)
-#endif
 
 /* body and its links: the HTML's, then the addresses written in the
    text that aren't on one of them, in the text's order */
@@ -575,24 +616,26 @@ show:
 	make_body();
 	show_mark(3);
 	{
-		char t[100];
-		snprintf(t, sizeof(t), "%.90s", cur_msg->subject[0] ? cur_msg->subject : "(no subject)");
-		win_title(&w_reader, t);
+		/* the pane's header: kept, and drawn with the pane below, not
+		   twice before it (40 ms an ST) */
+		const char *info = "";
 		short k, invite = 0;
+		snprintf(w_reader.title, sizeof(w_reader.title), "%.90s",
+			 cur_msg->subject[0] ? cur_msg->subject : "(no subject)");
 		for (k = 0; k < cur_msg->nparts; k++)
 			invite |= mime_is_calendar(&cur_msg->parts[k]);
 		if (invite)
-			win_info(&w_reader, "double-click the invitation for ECal");
+			info = "double-click the invitation for ECal";
 		else if (cur_msg->nparts)
-			win_info(&w_reader, "click an attachment to save it");
+			info = "click an attachment to save it";
 		else if (nlinks)
-			win_info(&w_reader, "click a link to open it");
+			info = "click a link to open it";
 		else if (cur_msg->html)
-			win_info(&w_reader, "HTML shown as text");
-		else
-			win_info(&w_reader, "");
+			info = "HTML shown as text";
+		str_copy(w_reader.info, info, sizeof(w_reader.info));
 	}
 	w_reader.top = 0;
+	show_mark(8);
 	busy(1);
 	layout();
 	busy(0);

@@ -440,8 +440,15 @@ void win_sliders(WIN *w)
 		size = 30;
 	if (pos > 1000)
 		pos = 1000;
-	wind_set(h, WF_VSLSIZE, (short)size, 0, 0, 0);
-	wind_set(h, WF_VSLIDE, (short)pos, 0, 0, 0);
+	/* set only when it moves: TOS draws the bar again at each wind_set,
+	   55 ms an ST (TOS 1.04) */
+	{
+		short now, d;
+		if (!wind_get(h, WF_VSLSIZE, &now, &d, &d, &d) || now != size)
+			wind_set(h, WF_VSLSIZE, (short)size, 0, 0, 0);
+		if (!wind_get(h, WF_VSLIDE, &now, &d, &d, &d) || now != pos)
+			wind_set(h, WF_VSLIDE, (short)pos, 0, 0, 0);
+	}
 }
 
 /* GEM draws titles as stored: lay Hebrew out right to left first */

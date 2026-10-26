@@ -44,49 +44,65 @@ static long count(const char *s, long n, char c)
 	return m;
 }
 
+/* the next ':' or '.' in s[i..n), or n: where a scheme ends ("http:",
+   "https:", "mailto:", "www."). Found by memchr, which an ST runs some
+   ten times faster than a C loop over every character */
+static long next_mark(const char *s, long n, long i, long *colon, long *dot)
+{
+	const char *p;
+	if (*colon < i)
+		*colon = (p = memchr(s + i, ':', n - i)) != 0 ? p - s : n;
+	if (*dot < i)
+		*dot = (p = memchr(s + i, '.', n - i)) != 0 ? p - s : n;
+	return *colon < *dot ? *colon : *dot;
+}
+
 int link_next(const char *s, long n, long from, long *at, long *len)
 {
-	long i;
-	for (i = from; i < n; i++) {
-		short k;
-		long e, pre;
-		char c = (char)(s[i] | 0x20);
-		if (c != 'h' && c != 'm' && c != 'w')
-			continue;	/* not the start of any scheme: most of the text */
-		/* an address starts a word: not "xhttp://" or "a.www." (after a
-		   hyphen it does: Hebrew's "\xC3-www.atari.org", "at ...") */
-		if (i > 0 && (alnum((unsigned char)s[i - 1]) || s[i - 1] == '.' || s[i - 1] == '/' ||
-			      s[i - 1] == '@' || s[i - 1] == '_'))
-			continue;
-		for (k = 0; k < 4 && !starts(s + i, n - i, schemes[k]); k++)
-			;
-		if (k == 4)
-			continue;
-		pre = (long)strlen(schemes[k]);
-		for (e = i + pre; e < n && url_char((unsigned char)s[e]); e++)
-			;
-		/* the sentence's own marks after it are not the address's; a
-		   bracket closing one opened in it is ("..._(Atari)") */
-		while (e > i + pre) {
-			char c = s[e - 1];
-			if (c == '.' || c == ',' || c == ';' || c == ':' || c == '!' || c == '?' || c == '\'' ||
-			    c == '*')
-				e--;
-			else if ((c == ')' && count(s + i, e - i, '(') < count(s + i, e - i, ')')) ||
-				 (c == ']' && count(s + i, e - i, '[') < count(s + i, e - i, ']')) ||
-				 (c == '}' && count(s + i, e - i, '{') < count(s + i, e - i, '}')))
-				e--;
-			else
-				break;
+	long j, colon = -1, dot = -1;
+	/* each ':' and '.': the scheme that would end there */
+	for (j = next_mark(s, n, from, &colon, &dot); j < n; j = next_mark(s, n, j + 1, &colon, &dot)) {
+		short k, k0, k1;
+		long i, e, pre;
+		if (s[j] == '.') {
+			k0 = k1 = 3;		/* "www." */
+		} else {
+			k0 = 0;			/* "http:", "https:", "mailto:" */
+			k1 = 2;
 		}
-		/* "www." needs a name after it; the others something */
-		if (e - i <= pre || (k == 3 && !alnum((unsigned char)s[i + pre]))) {
-			i += pre - 1;
-			continue;
+		for (k = k0; k <= k1; k++) {
+			pre = (long)strlen(schemes[k]);
+			i = j - (long)(strchr(schemes[k], s[j]) - schemes[k]);
+			if (i < from || !starts(s + i, n - i, schemes[k]))
+				continue;
+			/* an address starts a word: not "xhttp://" or "a.www." (after
+			   a hyphen it does: Hebrew's "\xC3-www.atari.org", "at ...") */
+			if (i > 0 && (alnum((unsigned char)s[i - 1]) || s[i - 1] == '.' || s[i - 1] == '/' ||
+				      s[i - 1] == '@' || s[i - 1] == '_'))
+				continue;
+			for (e = i + pre; e < n && url_char((unsigned char)s[e]); e++)
+				;
+			/* the sentence's own marks after it are not the address's; a
+			   bracket closing one opened in it is ("..._(Atari)") */
+			while (e > i + pre) {
+				char c = s[e - 1];
+				if (c == '.' || c == ',' || c == ';' || c == ':' || c == '!' || c == '?' || c == '\'' ||
+				    c == '*')
+					e--;
+				else if ((c == ')' && count(s + i, e - i, '(') < count(s + i, e - i, ')')) ||
+					 (c == ']' && count(s + i, e - i, '[') < count(s + i, e - i, ']')) ||
+					 (c == '}' && count(s + i, e - i, '{') < count(s + i, e - i, '}')))
+					e--;
+				else
+					break;
+			}
+			/* "www." needs a name after it; the others something */
+			if (e - i <= pre || (k == 3 && !alnum((unsigned char)s[i + pre])))
+				continue;
+			*at = i;
+			*len = e - i;
+			return 1;
 		}
-		*at = i;
-		*len = e - i;
-		return 1;
 	}
 	return 0;
 }
