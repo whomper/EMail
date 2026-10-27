@@ -167,8 +167,13 @@ void text_at(short x, short y, const char *s, long n, short cols, short flags)
 		return;
 	vswr_mode(vdi_h, 2);
 	vst_color(vdi_h, (flags & TX_INVERSE) ? 0 : text_pen);
-	vst_effects(vdi_h, (flags & TX_BOLD) ? 1 : (flags & TX_LIGHT) ? 2 : 0);
+	vst_effects(vdi_h, (flags & TX_LIGHT) ? 2 : 0);
 	v_gtext_n(vdi_h, x, y, s, (short)n);
+	/* bold: struck again a pixel right, transparent, as common's
+	   text_bold_strike (NVDI's bold is wider a letter: the guidelines'
+	   Speed, text) */
+	if (flags & TX_BOLD)
+		v_gtext_n(vdi_h, (short)(x + 1), y, s, (short)n);
 	vst_effects(vdi_h, 0);
 }
 

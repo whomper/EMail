@@ -192,16 +192,14 @@ static int is_heb(unsigned char c)
 
 /* a run of characters, in their cells (font_cells): in one call, made
    to fill them, or one character to a cell, spaces left out */
-static short cells_now = FC_RUNS;	/* font_cells or font_cells_bold, by the effects set */
-
 static void cells_at(short x, short y, const char *s, short n)
 {
 	short k;
-	if (cells_now == FC_RUNS || n == 1) {
+	if (font_cells == FC_RUNS || n == 1) {
 		text_n(vdi_h, x, y, s, n);
 		return;
 	}
-	if (cells_now == FC_JUSTIFY) {
+	if (font_cells == FC_JUSTIFY) {
 		v_justified_n(vdi_h, x, y, s, n, n * cw, 0, 1);
 		return;
 	}
@@ -260,9 +258,10 @@ static void visual_at(short x, short y, const char *out, short n, short flags, s
 	if (heb_mode != HM_MAP && has_heb(out, n)) {
 		wr_mode(2);
 		text_col(col);
-		text_effects(effects);
-		cells_now = (effects & 1) ? font_cells_bold : font_cells;
+		text_effects(effects & ~1);
 		runs_at(x, y, out, n);
+		if (effects & 1)	/* bold: struck again a pixel right (below) */
+			runs_at(x + 1, y, out, n);
 		text_effects(0);	/* off again: others draw text plainly (fontsel's sample) */
 		return;
 	}
@@ -285,11 +284,19 @@ static void visual_at(short x, short y, const char *out, short n, short flags, s
 			a_lcol = col;
 		return;
 	}
-	text_effects(effects);
-	cells_now = (effects & 1) ? font_cells_bold : font_cells;
+	/* bold elsewhere (NVDI, a GDOS font, an inverse row, a grey ground):
+	   the plain run struck again a pixel to the right, transparent, in
+	   its cells (common's text_bold_strike, the guidelines' Speed:
+	   text), never vst_effects' bold, which NVDI makes a pixel or more
+	   wider a letter, so the next run drawn covered the last letters
+	   (EHypView, Erez's photo: "On the Falcon itsel"). On TOS's own VDI
+	   the pixels are those of its bold */
+	text_effects(effects & ~1);
 	for (i = 0; i < n; i += 120) {
 		short k = n - i > 120 ? 120 : (short)(n - i);
 		cells_at(x + i * cw, y, out + i, k);
+		if (effects & 1)
+			cells_at(x + 1 + i * cw, y, out + i, k);
 	}
 	text_effects(0);
 }

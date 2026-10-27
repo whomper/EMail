@@ -231,7 +231,7 @@ void font_apply(void);		/* opt.font_id/pt -> cw, ch */
 void font_sys_push(void);	/* the system font, for a popup or the About box */
 void font_sys_pop(void);	/* back to the window's font */
 void font_reselect(void);	/* the text font again, after drawing in another */
-extern short font_cells, font_cells_bold;	/* how a GDOS font's runs are drawn, plain and bold: */
+extern short font_cells;	/* how a GDOS font's runs are drawn, bold too: */
 #define FC_RUNS 0		/* in one call (the system font; a GDOS font a cell wide to the pixel) */
 #define FC_CELLS 1		/* a character to a cell (a proportional font) */
 #define FC_JUSTIFY 2		/* in one call, made to fill their cells (a monospaced font of a
