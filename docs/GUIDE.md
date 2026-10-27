@@ -77,7 +77,9 @@ while EMail isn't running](#new-mail-while-email-isnt-running).
 This guide is also in `EMAIL.HYP`, a hypertext: with EHypView, ST-Guide
 or HypView running (as an accessory, or as a program under MultiTOS or
 MagiC), the Help key or **Help > EMail help** opens it, from next to
-`EMAIL.PRG` or from the viewer's own help folder. Without a viewer, Help
+`EMAIL.PRG` or from the viewer's own help folder. The viewer named by
+`STGUIDE=` in the AES's environment is asked first; on MiNT and MagiC
+EMail starts it when it isn't running. Without a viewer, Help
 says how to get one and offers the list of keys instead; **Help > Keys**
 shows that list at any time.
 
