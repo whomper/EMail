@@ -339,6 +339,10 @@ without opening each message on the way. Return moves the keyboard to
 the message. In the message pane Space and
 Backspace page down and up. Closing the main window quits EMail.
 
+A name or subject too long for its column, and a folder's name too long
+for the folder pane, are cut short; rest the mouse on one and a tooltip
+shows all of it.
+
 Where the AES can iconify windows (MultiTOS, MagiC, XaAES, N.AES), the
 main window and the editor have the iconify button: each shrinks to
 EMail's icon, the main window with the number of unread messages in the

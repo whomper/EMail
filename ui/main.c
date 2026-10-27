@@ -1141,8 +1141,9 @@ void cmd_refresh_folders(ACCOUNT *a)
 static unsigned long last_input;	/* pf_ms() of the last key, click or message */
 
 /* ---------------- tooltips (as EFTP's and ECal's) ----------------
- * shown when the mouse rests on a button of the editor's bar, gone when
- * it moves, a key is pressed or a button clicked */
+ * shown when the mouse rests on a button of the editor's bar, a name in
+ * a message's header, or a name or subject the list or the folder pane
+ * cuts short; gone when it moves, a key is pressed or a button clicked */
 static short tip_on, tip_tried, hover_x = -1, hover_y = -1;
 static unsigned long hover_at;
 static GRECT tip_r;
@@ -1163,11 +1164,20 @@ static void tip_show(void)
 	GRECT r, scr;
 	tip_tried = 1;
 	if (!editor_tip(hover_x, hover_y, text, sizeof(text)) &&
-	    !(wind_find(hover_x, hover_y) == main_h && reader_tip(hover_x, hover_y, text, sizeof(text))))
+	    !(wind_find(hover_x, hover_y) == main_h &&
+	      (reader_tip(hover_x, hover_y, text, sizeof(text)) || list_tip(hover_x, hover_y, text, sizeof(text)) ||
+	       folders_tip(hover_x, hover_y, text, sizeof(text)))))
 		return;
+#ifdef DRAW_TRACE
+	{
+		char t[140];
+		snprintf(t, sizeof(t), "TIP %s", text);
+		pf_debug(t);
+	}
+#endif
 	n = (short)strlen(text);
-	if (n > 60)
-		n = 60;
+	if (n > (desk_w - 2 * MARGIN - 2) / cw)	/* as much as the screen's width holds */
+		n = (short)((desk_w - 2 * MARGIN - 2) / cw);
 	r.w = n * cw + 2 * MARGIN;
 	r.h = ch + 6;
 	r.x = hover_x + cw;
@@ -1193,7 +1203,7 @@ static void tip_show(void)
 	clip_on(&scr);
 	fill(&r, 0);
 	frame(&r, 1);
-	text_at(r.x + MARGIN, r.y + 3, text, n, n, TX_LTR);
+	text_at(r.x + MARGIN, r.y + 3, text, n, n, 0);	/* a Hebrew subject right to left */
 	graf_mouse(M_ON, 0);
 	wind_update(END_UPDATE);
 	tip_on = 1;

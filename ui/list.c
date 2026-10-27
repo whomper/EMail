@@ -354,6 +354,22 @@ static void size_str(long n, char *out)
 		snprintf(out, 8, "%ldM", (n + 512L * 1024) / (1024L * 1024));
 }
 
+/* "Name <a@b>" shows as the name EContact has for a@b, else as Name,
+   else as a@b; ask: a name not known yet is asked for */
+static void row_name(HDR *h, const char *who, char *name, int size, int ask)
+{
+	char mail[PEOPLE_ADDR];
+	const char *known;
+	addr_split(who ? who : "", name, size, mail, sizeof(mail));
+	known = mail[0] ? people_name(mail) : 0;
+	if (ask && mail[0] && !known)
+		pend_add(h->uid);	/* asked: it may come */
+	if (known && *known)
+		str_copy(name, known, size);
+	else if (!name[0])
+		str_copy(name, mail, size);
+}
+
 static void draw(WIN *w, GRECT *clip)
 {
 	short cols = TEXT_COLS(w->work.w), c_from, c_subj, c_date;
@@ -459,20 +475,7 @@ static void draw(WIN *w, GRECT *clip)
 		}
 		if (blue)
 			text_pen = pen[P_ACCENT];
-		/* "Name <a@b>" shows as the name EContact has for a@b, else as
-		   Name, else as a@b */
-		{
-			char mail[PEOPLE_ADDR];
-			const char *known;
-			addr_split(who ? who : "", name, sizeof(name), mail, sizeof(mail));
-			known = mail[0] ? people_name(mail) : 0;
-			if (mail[0] && !known)
-				pend_add(h->uid);	/* asked: it may come */
-			if (known && *known)
-				str_copy(name, known, sizeof(name));
-			else if (!name[0])
-				str_copy(name, mail, sizeof(name));
-		}
+		row_name(h, who, name, sizeof(name), 1);
 		text_at(xf, y, name, strlen(name), c_from, fl | TX_RIGHT);
 		text_at(xs, y, h->subject, strlen(h->subject), c_subj - 1, fl | TX_RIGHT);
 		date_str(h->date, date, sizeof(date), 1);
@@ -931,6 +934,44 @@ static int key(WIN *w, short kstate, short k)
 		return 1;
 	}
 	return 0;
+}
+
+/* the tooltip over a name or a subject the list cuts short: all of it
+   (Erez, 27 Oct 2026) */
+int list_tip(short mx, short my, char *out, int size)
+{
+	WIN *w = &w_list;
+	short cols = TEXT_COLS(w->work.w), c_from, c_subj, c_date, x0 = TEXT_X(w->work.x);
+	short y0 = w->work.y + w->head_h, xs, xd;
+	char name[64];
+	const char *t;
+	long i;
+	HDR *h;
+	if (!cur_folder || w->work.w <= 0 || mx < w->work.x || mx >= w->work.x + w->work.w || my < y0 ||
+	    my >= w->work.y + w->work.h)
+		return 0;
+	fresh();
+	i = w->top + (my - y0) / ch;
+	if (i < 0 || i >= nview)
+		return 0;
+	h = &cur_folder->h[view[i]];
+	columns(cols, &c_from, &c_subj, &c_date);
+	xs = x0 + COL8(MK + 1 + c_from);
+	xd = x0 + COL8(MK + 1 + c_from + c_subj);
+	if (mx >= x0 + COL8(MK) && mx < xs) {
+		row_name(h, show_to() ? h->to : h->from, name, sizeof(name), 0);
+		if ((long)strlen(name) <= c_from)
+			return 0;
+		t = name;
+	} else if (mx >= xs && mx < xd) {
+		if ((long)strlen(h->subject) <= c_subj - 1)
+			return 0;
+		t = h->subject;
+	} else {
+		return 0;
+	}
+	str_copy(out, t, size);
+	return 1;
 }
 
 void list_init(void);

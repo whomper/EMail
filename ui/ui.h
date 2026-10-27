@@ -61,6 +61,8 @@ void editor_names_came(void);
 void editor_picked(const PERSON *list, int n);
 void reader_names_came(void);
 int  reader_tip(short mx, short my, char *out, int size);	/* a name's address: 1 */
+int  list_tip(short mx, short my, char *out, int size);		/* a name or subject cut short: 1 */
+int  folders_tip(short mx, short my, char *out, int size);	/* a name cut short: 1 */
 void list_names_came(void);
 /* the name to show for an address: EContact's, or the address itself */
 const char *person_shown(const char *addr);

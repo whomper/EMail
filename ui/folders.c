@@ -161,6 +161,43 @@ static void draw(WIN *w, GRECT *clip)
 	}
 }
 
+/* the tooltip over an account's or a folder's name the pane cuts short:
+   all of it (Erez, 27 Oct 2026) */
+int folders_tip(short mx, short my, char *out, int size)
+{
+	WIN *w = &w_folders;
+	short cols = TEXT_COLS(w->work.w);
+	const char *t;
+	long i;
+	ENTRY *e;
+	if (w->work.w <= 0 || mx < w->work.x || mx >= w->work.x + w->work.w || my < w->work.y ||
+	    my >= w->work.y + w->work.h)
+		return 0;
+	i = w->top + (my - w->work.y) / ch;
+	if (i < 0 || i >= nent)
+		return 0;
+	e = &ent[i];
+	if (!e->fi) {
+		t = e->a->name;
+		if ((long)strlen(t) <= cols)
+			return 0;
+	} else {
+		short room = cols - (1 + e->fi->depth * 2);
+		char cnt[16];
+		cnt[0] = 0;
+		if (e->fi->unread > 0)
+			snprintf(cnt, sizeof(cnt), " %s", num(e->fi->unread));
+		else if (e->fi->role == FR_OUTBOX && e->fi->total > 0)
+			snprintf(cnt, sizeof(cnt), " %s", num(e->fi->total));
+		room -= (short)strlen(cnt) + 1;
+		t = e->fi->disp;
+		if ((long)strlen(t) <= room)
+			return 0;
+	}
+	str_copy(out, t, size);
+	return 1;
+}
+
 /* a folder the open folder's messages can move to (as Move to offers
    them): the same account and kind, not the Outbox, not itself */
 int folder_takes(ACCOUNT *a, FINFO *f)
