@@ -252,7 +252,11 @@ REPLAYSRC   := common/tests/fuzz/fuzz_net.c common/tests/fuzz/replay.c
 $(OBJDIR)/replay_%: tests/fuzz/fuzz_%.c $(HOSTSRC) $(HDRS) $(HOSTLIB) $(REPLAYSRC) | $(OBJDIR)
 	$(HOSTCC) $(REPLAYFLAGS) -o $@ $< $(HOSTSRC) $(REPLAYSRC) $(HOSTLIB)
 
-test: $(OBJDIR)/unit $(addprefix $(OBJDIR)/replay_,$(FUZZERS))
+# the 68000 builds looked at for word and long accesses at an odd stack
+# or frame offset, an address error on a 68000 (the guidelines, The
+# machines: common/tools/oddaccess.py)
+test: $(OBJDIR)/unit $(addprefix $(OBJDIR)/replay_,$(FUZZERS)) binary/EMAIL.PRG binary/EMAILCHK.ACC
+	python3 common/tools/oddaccess.py $(OBJDIR)/mail.elf $(CHKDIR)/emailchk.elf
 	$(OBJDIR)/unit
 	@for f in $(FUZZERS); do \
 	  $(OBJDIR)/replay_$$f tests/fuzz/seeds/$$f $$(ls -d tests/fuzz/found/$$f 2>/dev/null) || exit 1; \
