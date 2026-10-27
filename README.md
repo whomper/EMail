@@ -348,9 +348,8 @@ It includes, under their own licences (compatible with the GPL):
 - `CACERT.PEM`, the root certificates for a Direct connection, from Mozilla's CA
   list (Mozilla Public License 2.0)
 
-EMail follows the design of Troll, the GFA-BASIC newsreader and mail client by Rajah Lone: the same
-four windows (folders, message list, message, editor), IMAP mirroring, and STinG or MiNTnet networking.
-It reuses parts of [ClaudeST](https://github.com/whomper/ClaudeST): the freestanding TOS runtime, GEM
+EMail has four windows (folders, message list, message, editor), mirrors IMAP folders, and works over
+STinG or MiNTnet. It reuses parts of [ClaudeST](https://github.com/whomper/ClaudeST): the freestanding TOS runtime, GEM
 bindings, STinG client, Hebrew right-to-left layout and keyboard, and the Hatari test tools.
 
 ---

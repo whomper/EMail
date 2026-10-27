@@ -55,7 +55,7 @@ A TT without a DSP took 17 s over Gmail's certificates (RSA-2048,
 RSA-4096, RSA-2048) and 22 s over GMX's, and both servers hung up during
 the handshake (two testers' logs). BearSSL's portable C builds each
 32-bit multiply-add of a Montgomery multiplication out of 64-bit C
-arithmetic, about 530 cycles each; PolarSSL, which Troll uses, has an
+arithmetic, about 530 cycles each; PolarSSL has an
 assembly loop for the 68020 and up there. `mont030.S` is that loop:
 `mulu.l` with a 64-bit result, two of them per word, about 130 cycles.
 

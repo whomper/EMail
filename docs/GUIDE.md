@@ -298,8 +298,7 @@ A bigger TCP receive window in STinG's configuration (32000 rather than
 
 ## The main window
 
-EMail's main window has three panes, like the GFA Troll it follows and
-like a modern mail program:
+EMail's main window has three panes, like a modern mail program:
 
 - **Folders** (left): each account with its folders and unread counts.
   Click a folder to open it. Click an account's name to check its mail.

@@ -4,8 +4,8 @@
  * imap.c - IMAP4rev1 client.
  *
  * Each response is read whole, with any {n} literals inlined after
- * their marker, then tokenised. Commands are synchronous, like the GFA
- * GFA Troll's: send, then read until the tagged completion.
+ * their marker, then tokenised. Commands are synchronous:
+ * send, then read until the tagged completion.
  */
 #include <stdlib.h>
 #include <string.h>

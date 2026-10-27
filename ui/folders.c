@@ -2,7 +2,7 @@
  * Copyright (C) 2026 AERA | Erez Yaary */
 /*
  * folders.c - the folders window: every account with its folders and
- * unread counts (the GFA Troll's "groups" window). Clicking a folder opens it
+ * unread counts. Clicking a folder opens it
  * in the message list; IMAP folders are synchronised first.
  */
 #include <string.h>

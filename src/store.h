@@ -3,7 +3,7 @@
 /*
  * store.h - EMail's data on disk: settings and accounts (EMAIL.INF),
  * the folder list of each account, and per folder a header index plus
- * cached message files. Like the GFA Troll, IMAP folders are a mirror
+ * cached message files. IMAP folders are a mirror
  * of the server (headers always, bodies once read); POP3 accounts keep
  * their mail in local folders. All names are 8.3 so plain TOS copes:
  *
@@ -63,7 +63,7 @@ typedef struct {
 	char dir[200];
 	short nfolders;
 	FINFO folders[MAXFOLDER];
-	IMAP *im;		/* kept open while working, like the GFA Troll */
+	IMAP *im;		/* kept open while working */
 	unsigned long im_used;
 	/* the last connection failed: work from the cache until Check mail
 	   (or the timed check) connects again */

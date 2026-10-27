@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later
  * Copyright (C) 2026 AERA | Erez Yaary */
 /*
- * list.c - the message list window (the GFA Troll's "headers" window):
+ * list.c - the message list window:
  * newest first, unread with a dot (and blue), flag/attachment marks, and the From (or
  * To, in Sent and Outbox) and Subject columns laid out right to left
  * when they are Hebrew.

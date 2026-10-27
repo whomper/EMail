@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later
  * Copyright (C) 2026 AERA | Erez Yaary */
 /*
- * ui.h - EMail's GEM interface: four windows like the GFA Troll
+ * ui.h - EMail's GEM interface: four windows
  * (folders, message list, message, editor), a menu bar and dialogs.
  */
 #ifndef UI_H

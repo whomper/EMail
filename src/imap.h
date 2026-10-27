@@ -2,7 +2,7 @@
  * Copyright (C) 2026 AERA | Erez Yaary */
 /*
  * imap.h - IMAP4rev1 client (RFC 3501) with the extensions a modern
- * server offers and the GFA Troll uses: UIDPLUS, MOVE, SPECIAL-USE, NAMESPACE.
+ * server offers: UIDPLUS, MOVE, SPECIAL-USE, NAMESPACE.
  */
 #ifndef IMAP_H
 #define IMAP_H
