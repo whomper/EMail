@@ -245,6 +245,22 @@ static short d_long(short x, short y, char *text, short len, short cap, char mas
 	return obj;
 }
 
+/* field i in a thin frame */
+static short d_framed(short i)
+{
+	TEDINFO *t = (TEDINFO *)tree[i].ob_spec;
+	tree[i].ob_type = G_FBOXTEXT;
+	t->te_thickness = -1;
+	t->te_color = 0x1180;
+	return i;
+}
+
+/* a number field in a thin frame */
+static short d_field(short x, short y, char *buf, short len, char kind)
+{
+	return d_framed(d_edit(x, y, buf, len, kind));
+}
+
 static LFIELD *lf_at(short obj)
 {
 	short i;
@@ -375,6 +391,12 @@ static int selected(short i)
 
 /* ---------------- account ---------------- */
 
+/* row r of the account dialog: r lines and a gap of a_gap pixels a row
+   from the first field's down; p pixels more */
+static short a_gap;
+#define AYP(r, p) ((short)((r) | ((((r) > 3 ? (r) - 3 : 0) * a_gap + (p)) << 8)))
+#define AY(r) AYP(r, 0)
+
 int dlg_account(ACCOUNT *a)
 {
 	/* as long as the account's own (store.h); the fields show less */
@@ -400,45 +422,48 @@ int dlg_account(ACCOUNT *a)
 	str_copy(suser, opt.falcon ? a->dsmtpuser : a->smtpuser, sizeof(suser));
 	str_copy(spass, opt.falcon ? a->dsmtppass : a->smtppass, sizeof(spass));
 
-	d_begin(62, 21);
+	/* every field in a frame (the guidelines, 5.7), the rows a few
+	   pixels apart so the frames don't touch */
+	a_gap = gl_hchar >= 16 ? 3 : 2;
+	d_begin(62, (short)(21 + (16 * a_gap + gl_hchar - 1) / gl_hchar));
 	d_add(G_STRING, 0, 0, (long)"Mail account", 2, 1, 12, 1);
 	d_text(16, 1, opt.falcon ? "Direct connection: the provider's servers"
 				 : "the Pi gateway's servers and login");
-	d_text(2, 3, "Account name:");
-	f_name = d_long(17, 3, name, 30, sizeof(name) - 1, 0);
-	d_text(2, 4, "Your name:");
-	f_full = d_long(17, 4, full, 30, sizeof(full) - 1, 0);
-	d_text(2, 5, "E-mail:");
-	f_email = d_long(17, 5, email, 42, sizeof(email) - 1, 0);
+	d_text(2, AY(3), "Account name:");
+	f_name = d_framed(d_long(17, AY(3), name, 30, sizeof(name) - 1, 0));
+	d_text(2, AY(4), "Your name:");
+	f_full = d_framed(d_long(17, AY(4), full, 30, sizeof(full) - 1, 0));
+	d_text(2, AY(5), "E-mail:");
+	f_email = d_framed(d_long(17, AY(5), email, 42, sizeof(email) - 1, 0));
 
-	d_text(2, 7, "Incoming mail:");
-	f_imap = d_add(G_BUTTON, SELECTABLE | RBUTTON, a->pop ? 0 : SELECTED, (long)"IMAP", 17, 7, 8, 1);
-	f_pop = d_add(G_BUTTON, SELECTABLE | RBUTTON, a->pop ? SELECTED : 0, (long)"POP3", 27, 7, 8, 1);
-	d_text(2, 8, "Server:");
-	f_host = d_long(17, 8, host, 30, sizeof(host) - 1, 0);
-	d_text(49, 8, "Port:");
-	f_port = d_edit(55, 8, port, 5, '9');
-	d_text(2, 9, "User:");
-	f_user = d_long(17, 9, user, 42, sizeof(user) - 1, 0);
-	d_text(2, 10, "Password:");
-	f_pass = d_long(17, 10, pass, 30, sizeof(pass) - 1, '*');
+	d_text(2, AY(7), "Incoming mail:");
+	f_imap = d_add(G_BUTTON, SELECTABLE | RBUTTON, a->pop ? 0 : SELECTED, (long)"IMAP", 17, AY(7), 8, 1);
+	f_pop = d_add(G_BUTTON, SELECTABLE | RBUTTON, a->pop ? SELECTED : 0, (long)"POP3", 27, AY(7), 8, 1);
+	d_text(2, AY(8), "Server:");
+	f_host = d_framed(d_long(17, AY(8), host, 30, sizeof(host) - 1, 0));
+	d_text(49, AY(8), "Port:");
+	f_port = d_field(55, AY(8), port, 5, '9');
+	d_text(2, AY(9), "User:");
+	f_user = d_framed(d_long(17, AY(9), user, 42, sizeof(user) - 1, 0));
+	d_text(2, AY(10), "Password:");
+	f_pass = d_framed(d_long(17, AY(10), pass, 30, sizeof(pass) - 1, '*'));
 	/* 3 pixels down: the 3D outset (5.6) clear of the password above */
-	f_leave = d_check(17, (short)(11 | (3 << 8)), "POP3: leave mail on the server", a->leave);
+	f_leave = d_check(17, AYP(11, 3), "POP3: leave mail on the server", a->leave);
 
-	d_text(2, 13, "Outgoing (SMTP)");
-	d_text(2, 14, "Server:");
-	f_shost = d_long(17, 14, shost, 30, sizeof(shost) - 1, 0);
-	d_text(49, 14, "Port:");
-	f_sport = d_edit(55, 14, sport, 5, '9');
-	d_text(2, 15, "User:");
-	f_suser = d_long(17, 15, suser, 42, sizeof(suser) - 1, 0);
-	d_text(2, 16, "Password:");
-	f_spass = d_long(17, 16, spass, 30, sizeof(spass) - 1, '*');
-	d_text(17, 17, "(empty: as incoming, \"-\": no login)");
+	d_text(2, AY(13), "Outgoing (SMTP)");
+	d_text(2, AY(14), "Server:");
+	f_shost = d_framed(d_long(17, AY(14), shost, 30, sizeof(shost) - 1, 0));
+	d_text(49, AY(14), "Port:");
+	f_sport = d_field(55, AY(14), sport, 5, '9');
+	d_text(2, AY(15), "User:");
+	f_suser = d_framed(d_long(17, AY(15), suser, 42, sizeof(suser) - 1, 0));
+	d_text(2, AY(16), "Password:");
+	f_spass = d_framed(d_long(17, AY(16), spass, 30, sizeof(spass) - 1, '*'));
+	d_text(17, AY(17), "(empty: as incoming, \"-\": no login)");
 
-	b_del = d_button(2, 19, 10, "Delete", EXIT);
-	d_button(38, 19, 10, "Cancel", EXIT);
-	b_ok = d_button(50, 19, 10, "OK", EXIT | DEFAULT);
+	b_del = d_button(2, AY(19), 10, "Delete", EXIT);
+	d_button(38, AY(19), 10, "Cancel", EXIT);
+	b_ok = d_button(50, AY(19), 10, "OK", EXIT | DEFAULT);
 	d_end();
 	(void)f_name; (void)f_full; (void)f_email; (void)f_host; (void)f_port; (void)f_user;
 	(void)f_pass; (void)f_shost; (void)f_sport; (void)f_suser; (void)f_spass;
@@ -563,22 +588,6 @@ static void tick_draw(short k)
 	dlg_draw(tree, tick_box[k]);
 }
 
-/* field i in a thin frame */
-static short d_framed(short i)
-{
-	TEDINFO *t = (TEDINFO *)tree[i].ob_spec;
-	tree[i].ob_type = G_FBOXTEXT;
-	t->te_thickness = -1;
-	t->te_color = 0x1180;
-	return i;
-}
-
-/* a number field in a thin frame */
-static short d_field(short x, short y, char *buf, short len, char kind)
-{
-	return d_framed(d_edit(x, y, buf, len, kind));
-}
-
 /* rows of a part: y in characters plus a few pixels per framed field
    above, so the frames don't touch */
 /* rows of a part, with some air between them: row n of a part starting
@@ -642,7 +651,7 @@ static short first_edit(void)
 	return 0;
 }
 
-/* the zone button: its name, the offset now, and a down arrow */
+/* the zone button: its name, the offset now, and "..." */
 static short zone_btn;
 
 static void zone_label(void)
@@ -657,11 +666,14 @@ static void zone_label(void)
 	s_zlabel[28] = 0;
 	n = (short)strlen(z->name);
 	o = (short)strlen(off);
-	if (n > 25 - o)
-		n = (short)(25 - o);
+	if (n > 22 - o)
+		n = (short)(22 - o);
 	memcpy(s_zlabel + 1, z->name, n);
-	memcpy(s_zlabel + 26 - o, off, o);
-	s_zlabel[27] = 2;		/* the system font's down arrow */
+	memcpy(s_zlabel + 24 - o, off, o);
+	/* a long list (some 400 zones) opens the list dialog, not a pop-up:
+	   its button ends in "...", without a down arrow (the guidelines,
+	   5.7) */
+	memcpy(s_zlabel + 25, "...", 3);
 }
 
 static short pick_w(const char *title, const char **items, short n, short lw);
@@ -1026,7 +1038,7 @@ int dlg_ask(const char *title, const char *label, char *buf, short cap)
 	d_begin(len + 6 > 40 ? len + 6 : 40, 8);
 	d_add(G_STRING, 0, 0, (long)title, 2, 1, (short)strlen(title), 1);
 	d_text(2, 3, label);
-	f = d_long(2, 4, field, len, cap, 0);
+	f = d_framed(d_long(2, 4, field, len, cap, 0));
 	d_button((len + 6 > 40 ? len + 6 : 40) - 24, 6, 10, "Cancel", EXIT);
 	b_ok = d_button((len + 6 > 40 ? len + 6 : 40) - 12, 6, 10, "OK", EXIT | DEFAULT);
 	d_end();
