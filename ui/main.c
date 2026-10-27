@@ -948,7 +948,8 @@ static void cmd_accounts(void)
 		mail_disconnect(a);
 		folders_load(a);
 	}
-	store_save_settings();
+	if (r)			/* Cancel writes nothing (3.5): not even the passwords again */
+		store_save_settings();
 	folders_build();
 	menu_update();
 	if (r > 0 && !opt.offline &&
@@ -1064,7 +1065,8 @@ void cmd_edit_account(ACCOUNT *a)
 	} else if (r > 0) {
 		mail_disconnect(a);
 	}
-	store_save_settings();
+	if (r)			/* Cancel writes nothing (3.5) */
+		store_save_settings();
 	folders_build();
 	menu_update();
 }

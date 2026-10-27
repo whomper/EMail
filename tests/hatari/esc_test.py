@@ -146,17 +146,30 @@ try:
     time.sleep(2)
     now = inf()
     check("Settings, Esc in a field: the dialog stays, the field empty (CHECK=0 on OK)",
-          "CHECK=0" in now and now != before)
+          b"CHECK=0" in now and now != before)
     before = now
 
-    menu(340, 27)                        # Options > Accounts...
+    menu(340, 27)                        # Options > Accounts...: Edit, New, Cancel
     r.shot("e4-accounts")
-    r.key(K["ESC"])                      # the tester's case (27 Oct 2026): in a field
+    r.click(242, 272)                    # Edit: the account dialog
+    time.sleep(2)
+    r.key(K["ESC"])                      # the tester's case (27 Oct 2026): in the name
     time.sleep(1)                        # Esc empties it; the account stays open
-    r.shot("e4-accounts-esc")
+    r.shot("e4-account-esc")
     r.key(UNDO)
     time.sleep(1.5)
-    check("Accounts, Esc in a field then Undo: EMAIL.INF as it was", inf() == before)
+    check("Account, Esc in the name then Undo: EMAIL.INF as it was", inf() == before)
+    menu(340, 27)
+    r.click(242, 272)
+    time.sleep(2)
+    r.key(K["ESC"])                      # emptied, still open: a new name typed
+    r.type("Esc test")
+    r.key(K["RETURN"])
+    time.sleep(4)
+    now = inf()
+    check("Account, Esc then a name and OK: the account renamed, not cancelled",
+          b"Esc test" in now)
+    before = now
 
     r.click(330, 124)                    # Avi's message
     time.sleep(10)
