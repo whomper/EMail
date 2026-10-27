@@ -1303,7 +1303,7 @@ void dlg_keys(void)
 	static const char *lines[] = {
 		"^N  new message        \x01^N check mail (^K)",
 		"^R  reply              \x01^R reply to all",
-		"\x01^F forward            ^U  mark as unread",
+		"\x01^F forward            \x01^U mark as unread",
 		"^G  flag / unflag      ^M  move to a folder",
 		"Del delete             ^A  select all",
 		"^C  copy   ^X  cut     ^V  paste",
@@ -1313,7 +1313,8 @@ void dlg_keys(void)
 		"In the editor: \x01^D send  ^S into the Outbox",
 		"               ^T attach  ^B addresses",
 		"^,  settings           Help this guide",
-		"^W  close the window   ^Q  quit"
+		"^U  close the window   ^W  next window",
+		"^Q  quit               Undo cancels a dialog"
 	};
 	short i, n = (short)(sizeof(lines) / sizeof(lines[0]));
 	d_begin(52, n + 6);

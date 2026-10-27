@@ -598,7 +598,7 @@ so those are left out when showing a message.
 |--------------|----------------------------|--------------|-------------------------|
 | Ctrl+N       | new message                | Shift+Ctrl+N | check mail (or Ctrl+K)  |
 | Ctrl+R       | reply                      | Shift+Ctrl+R | reply to all (or Ctrl+E) |
-| Shift+Ctrl+F | forward                    | Ctrl+U       | mark as unread          |
+| Shift+Ctrl+F | forward                    | Shift+Ctrl+U | mark as unread          |
 | Ctrl+G       | flag / unflag              | Ctrl+M       | move to a folder        |
 | Ctrl+C       | copy                       | Ctrl+X       | cut                     |
 | Ctrl+V       | paste                      |              |                         |
@@ -606,9 +606,10 @@ so those are left out when showing a message.
 | Shift+Ctrl+D | send (in the editor)       | Ctrl+S       | into the Outbox (editor) |
 | Ctrl+T       | attach a file              | Ctrl+B       | address book            |
 | F10          | Hebrew keyboard on/off     | Help         | this guide              |
-| Esc          | close the editor; stop     | Ctrl+W       | close the window        |
+| Ctrl+U       | close the window           | Ctrl+W       | the next window on top  |
 | Tab          | next pane                  | Ctrl+Q       | quit                    |
-| Ctrl+,       | settings                   |              |                         |
+| Ctrl+,       | settings                   | Undo         | cancel a dialog         |
+| Esc          | empty a field; stop        |              |                         |
 | Shift+click  | add/remove one message     | Right button | what you can do there   |
 | Control+click| select a range             |              |                         |
 

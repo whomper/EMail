@@ -62,23 +62,27 @@ static const MBAR_ITEM m_desk[] = {
 	{ 0, 0, 0 }
 };
 static const MBAR_ITEM m_file[] = {
-	{ "New message", "^N", C_NEW },
 	{ "Check mail", "\x01^N", C_CHECK },
 	{ "Send Outbox", 0, C_SENDQ },
 	{ "-", 0, 0 },
 	{ "Save attachment...", 0, C_SAVEATT },
 	{ "-", 0, 0 },
-	{ "Close window", "^W", C_CLOSE },
+	{ "Close window", "^U", C_CLOSE },
+	{ "Next window", "^W", C_NEXTWIN },
 	{ "Quit", "^Q", C_QUIT },
 	{ 0, 0, 0 }
 };
+/* a command on messages is in their menu, New message too (the
+   guidelines, 3.1) */
 static const MBAR_ITEM m_msg[] = {
+	{ "New message", "^N", C_NEW },
+	{ "-", 0, 0 },
 	{ "Reply", "^R", C_REPLY },
 	{ "Reply to all", "\x01^R", C_REPLYALL },
 	{ "Forward", "\x01^F", C_FORWARD },
 	{ "-", 0, 0 },
 	{ "Mark as read", 0, C_MARKREAD },
-	{ "Mark as unread", "^U", C_UNREAD },
+	{ "Mark as unread", "\x01^U", C_UNREAD },
 	{ "Flag", "^G", C_FLAG },
 	{ "Move to...", "^M", C_MOVE },
 	{ "Delete", "Del", C_DELETE },
@@ -164,6 +168,7 @@ void menu_update(void)
 	enable(C_GETALL, cur_finfo && !cur_finfo->local && !cur_finfo->noselect);
 	enable(C_SELALL, cur_folder != 0);
 	enable(C_SAVEATT, msg && cur_msg->nparts > 0);
+	enable(C_NEXTWIN, ed && main_h > 0);
 	enable(C_SEND, ed);
 	enable(C_SAVEOUT, ed);
 	enable(C_ATTACH, ed);
@@ -1285,6 +1290,15 @@ static void command(short cmd)
 			main_closed();
 		}
 		break;
+	case C_NEXTWIN: {
+		/* EMail's other window on top, in turn: the main window and
+		   the editor (the guidelines, 3.2); with one, nothing */
+		short top, d;
+		wind_get(0, WF_TOP, &top, &d, &d, &d);
+		if (main_h > 0 && w_editor.h > 0)
+			wind_set(top == main_h ? w_editor.h : main_h, WF_TOP, 0, 0, 0, 0);
+		break;
+	}
 	case C_REPLY: cmd_reply(0, 0); break;
 	case C_REPLYALL: cmd_reply(1, 0); break;
 	case C_FORWARD: cmd_reply(0, 1); break;
@@ -1452,11 +1466,11 @@ static int shortcut(short kstate, short key)
 		case 0x31: cmd = shift ? C_CHECK : C_NEW; break;	/* N */
 		case 0x25: cmd = C_CHECK; break;	/* K */
 		case 0x10: cmd = C_QUIT; break;		/* Q */
-		case 0x11: cmd = C_CLOSE; break;	/* W */
+		case 0x16: cmd = shift ? C_UNREAD : C_CLOSE; break;	/* U */
+		case 0x11: cmd = C_NEXTWIN; break;	/* W */
 		case 0x13: cmd = shift ? C_REPLYALL : C_REPLY; break;	/* R */
 		case 0x12: cmd = C_REPLYALL; break;	/* E */
 		case 0x21: cmd = shift ? C_FORWARD : C_NONE; break;	/* F: Find, one day */
-		case 0x16: cmd = C_UNREAD; break;	/* U */
 		case 0x22: cmd = C_FLAG; break;		/* G */
 		case 0x32: cmd = C_MOVE; break;		/* M */
 		case 0x1e: cmd = C_SELALL; break;	/* A */
