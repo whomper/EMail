@@ -32,6 +32,7 @@
 #include "aboutbox.h"
 #include "accmem.h"
 #include "notify.h"
+#include "aboutline.h"
 #include "bgwork.h"
 #include "twin.h"
 #include "busy.h"
@@ -642,15 +643,23 @@ static void check(int asked)
 
 /* ---------------- the Desk menu ---------------- */
 
+/* the three status lines in the family's words (the guidelines, 1.3;
+   common/ui/aboutline.c): the connection, what it checks, the memory */
 static void about(void)
 {
-	static char line1[80], line2[60];
-	ABOUT a = { "EMail check", mail_version, "New mail for EMail while it isn't running", { line1, line2, 0 },
-		    { 0, 0, 0 }, icon_bits, icon16_px, icon16_rgb, icon256_px, icon256_rgb };
-	char avail[40];
-	snprintf(line1, sizeof(line1), "%s  \xF9  %s", strcmp(net_stack(), "none") ? net_stack() : "no network",
-		 !opt.falcon ? "Gateway" : tls_ovl_loaded() ? "Direct (TLS.OVL)" : "Direct connection");
-	pf_memory(line2, sizeof(line2), avail, sizeof(avail));
+	static char line1[80], line2[60], line3[80];
+	ABOUT a = { "EMail check", mail_version, "New mail for EMail while it isn't running",
+		    { line1, line2, line3 }, { 0, 0, 0 }, icon_bits, icon16_px, icon16_rgb, icon256_px, icon256_rgb };
+	about_net_line(line1, sizeof(line1), net_stack(), opt.falcon ? ABOUT_DIRECT : ABOUT_GATEWAY,
+		       opt.offline ? ABOUT_OFFLINE : ABOUT_READY);
+	if (!folder[0] || !naccts)
+		str_copy(line2, folder[0] ? "No account yet" : "EMail not chosen yet", sizeof(line2));
+	else if (opt.check > 0)
+		snprintf(line2, sizeof(line2), "%d account%s, every %d minute%s", naccts, naccts == 1 ? "" : "s",
+			 opt.check, opt.check == 1 ? "" : "s");
+	else
+		snprintf(line2, sizeof(line2), "%d account%s, on Check now", naccts, naccts == 1 ? "" : "s");
+	about_mem_line(line3, sizeof(line3));
 	about_show(&a);
 }
 
@@ -772,6 +781,7 @@ int main(void)
 	av_init("EMAILCHK");
 	notify_init("EMAILCHK");	/* before the first event call: its memory */
 	notify_clicked = notified;
+	notify_ask();
 	net_init();
 	pf_idle = busy_idle;
 	dlg_title = "EMail check";	/* its alerts' and boxes' windows (MiNT, MagiC) */

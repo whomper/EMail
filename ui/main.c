@@ -285,6 +285,9 @@ static int check_alerted;	/* cmd_check_all showed an alert */
    or iconified, goes to BGEM.NG as a notification (the guidelines, 4.5);
    without BGEM.NG (TOS, MagiC) the status line says it, as before */
 static ACCOUNT *news_acct;	/* the first account with new mail */
+#ifdef DRAW_TRACE
+static char *notify_test;
+#endif
 
 static int in_front(void)
 {
@@ -1663,6 +1666,7 @@ int main(void)
 	start_mark("appl_init");
 	notify_init("EMAIL   ");
 	notify_clicked = notified;
+	notify_ask();		/* BGEM.NG's answer comes to the main loop */
 	if (ap_id < 0)
 		return 1;
 	vdi_h = graf_handle(&gl_wchar, &gl_hchar, &d, &d);
@@ -1790,15 +1794,11 @@ int main(void)
 	}
 	start_mark("inbox");
 #ifdef DRAW_TRACE
-	{
-		/* the test build (xaaes_test.py): EMAIL_NOTIFY= in the AES's
-		   environment sends that text as new mail's notification would */
-		char *t = 0;
-		if (shel_envrn(&t, "EMAIL_NOTIFY=") && t && *t) {
-			news_acct = naccts ? accts[0] : 0;
-			pf_debug(notify_send("EMail", t, "Open|Later", 1) ? "NOTIFY sent" : "NOTIFY not sent");
-		}
-	}
+	/* the test build (xaaes_test.py): EMAIL_NOTIFY= in the AES's
+	   environment is sent as new mail's notification would be, once
+	   BGEM.NG has answered */
+	if (!shel_envrn(&notify_test, "EMAIL_NOTIFY=") || (notify_test && !*notify_test))
+		notify_test = 0;
 #endif
 	last_check = pf_ms();
 	/* all of the window is drawn and nothing was shown over it: the
@@ -1918,6 +1918,13 @@ int main(void)
 			cmd_check_all();
 			quiet_check = 0;
 		}
+#ifdef DRAW_TRACE
+		if (notify_test && notify_ok()) {
+			news_acct = naccts ? accts[0] : 0;
+			pf_debug(notify_send("EMail", notify_test, "Open|Later", 1) ? "NOTIFY sent" : "NOTIFY not sent");
+			notify_test = 0;
+		}
+#endif
 		people_poll();		/* the names asked for while drawing go out */
 		win_skip_open_redraw = 0;	/* the first event only */
 	}

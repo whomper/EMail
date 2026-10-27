@@ -48,7 +48,7 @@ HBSSLOBJ = $(patsubst $(BSSL)/src/%.c,$(OBJDIR)/hbssl/%.o,$(BSSLSRC))
 
 CORE    := util charset mime links conn imap pop3 smtp store compose mail futil bidi secret ctime tz
 ATARI   := libc tos plat_tos net_tos sting gem tls_ovl crash bigbuf
-UI      := main draw text notify win folders list reader editor dialogs popup font fontsel about dsp_ovl theme help av alert mbar aboutbox iconify clip clipedit dd busy people_ask dialog field av_people people_file panebar
+UI      := main draw text notify aboutline win folders list reader editor dialogs popup font fontsel about dsp_ovl theme help av alert mbar aboutbox iconify clip clipedit dd busy people_ask dialog field av_people people_file panebar
 
 OBJDIR  := build
 OBJS    := $(OBJDIR)/crt0.o $(OBJDIR)/sting_s.o $(OBJDIR)/nf.o $(OBJDIR)/crash_s.o \
@@ -122,7 +122,7 @@ $(OBJDIR)/nf.o: common/atari/nf.S | $(OBJDIR)
 CHKDIR  := build/chk
 CHKOBJ  := sting_s nf util charset mime links conn imap pop3 store newmail futil bidi secret ctime tz \
            ovl libc tos plat_tos net_tos sting gem tls_ovl bigbuf \
-           emailchk notify dsp_ovl av alert dialog aboutbox accmem bgwork twin busy field clip clipedit crash crash_s
+           emailchk notify aboutline dsp_ovl av alert dialog aboutbox accmem bgwork twin busy field clip clipedit crash crash_s
 binary/EMAILCHK.ACC: FORCE | binary
 	$(MAKE) OBJDIR=$(CHKDIR) TRACECF="-ffunction-sections -fdata-sections" $(CHKDIR)/emailchk.elf
 	PRGFLAGS=7 python3 common/tools/elf2tos.py $(CHKDIR)/emailchk.elf $@
