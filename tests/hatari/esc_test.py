@@ -92,8 +92,13 @@ def inf():
 
 
 def fetches():
-    p = os.path.join(hd, "EMAIL.LOG")
-    return open(p, "rb").read().count(b"BODY.PEEK[]") if os.path.exists(p) else 0
+    """the messages kept on the Atari: the bytes of every MESSAGES.DAT
+    (EMAIL.LOG's fetches were counted once, but its lines are written
+    late, in pieces)"""
+    n = 0
+    for d, _, fs in os.walk(hd):
+        n += sum(os.path.getsize(os.path.join(d, f)) for f in fs if f.upper() == "MESSAGES.DAT")
+    return n
 
 
 def server():
@@ -118,11 +123,15 @@ try:
     # a fixed time (at 40 s a busy start missed the menu, and the menu's
     # second click opened a message instead)
     r.settle(40, 240)
+    # Avi's message shown first: TOS 1.04 passes the click on a menu item
+    # on to what is under it too, here Avi's row, which then shows it
+    # without fetching it again
+    r.click(330, 124)
+    time.sleep(10)
     before, got = inf(), fetches()
 
     menu(272, 123)                       # Folder > Download all messages
     r.shot("e1-download-all")
-    got = fetches()                      # (TOS 1.04 passes the menu's click on to the list too)
     r.key(K["ESC"])
     time.sleep(3)
     check("Download all, Esc: nothing downloaded", fetches() == got)

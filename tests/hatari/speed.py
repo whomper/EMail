@@ -21,7 +21,7 @@ offline (STARTOFFLINE=1), so no network is needed. The actions, by keys
     the long letter again          (Home)
     a line down the letter         (Tab to it, Down)
     a page down the letter         (Shift+Down)
-    Settings opened, closed        (Ctrl+, then Esc: the window uncovered)
+    Settings opened, closed        (Ctrl+, then Undo: the window uncovered)
     a new message, a letter typed  (Ctrl+N; a sentence typed in the
                                     text, then one more key timed)
 
@@ -125,7 +125,17 @@ def mirror(dest):
     return host, inf
 
 
-r = speed.Rig(work, machine, nvdi=nvdi, display=os.environ.get("SPEED_DISPLAY", ":91"))
+# Undo through Hatari's command FIFO (xdotool has no key Hatari takes for
+# it): Settings closed as a user cancels it (the guidelines, 3.5: Esc
+# empties a field)
+fifo = os.path.join(work, "cmd.fifo")
+r = speed.Rig(work, machine, nvdi=nvdi, display=os.environ.get("SPEED_DISPLAY", ":91"),
+              extra=["--cmd-fifo", fifo])
+
+
+def undo():
+    with open(fifo, "w") as f:
+        f.write("hatari-event keypress 0x61\n")
 host, inf = mirror(os.path.join(r.work, "fixture"))
 shutil.copytree(os.path.join(host, "EMAIL"), os.path.join(r.hd, "EMAIL", "EMAIL"))
 r.put(PRG, "EMAIL")
@@ -156,7 +166,7 @@ try:
         r.act("a line down the letter (Down)", speed.LINE, lambda: r.key("Down"))
         r.act("a page down the letter (Shift+Down)", speed.PAGE, lambda: r.key("shift+Down"))
         r.act("Settings opened (Ctrl+,)", speed.DIALOG, lambda: r.key("ctrl+comma"))
-        r.act("Settings closed (Esc): the window uncovered", speed.WINDOW, lambda: r.key("Escape"))
+        r.act("Settings closed (Undo): the window uncovered", speed.WINDOW, undo)
         r.act("a new message (Ctrl+N)", speed.WINDOW, lambda: r.key("ctrl+n"))
         r.key("Down", "Down", "Down", "Down", "Down")     # past To, Cc, Subject: the text
         r.type("Thanks for the parts, the Falcon works again ")
