@@ -101,8 +101,8 @@ def rest(x, y, name):
     time.sleep(2)
     r.shot(name)
     new = tips()[n:]
-    r.move(x, y + 40)                    # away: it goes
-    time.sleep(0.6)
+    r.move(424, 64)                      # away, onto the pane's title where nothing
+    time.sleep(0.6)                      # is cut (not a list row: its own tooltip)
     return new
 
 
