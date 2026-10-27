@@ -512,8 +512,8 @@ static char s_zone[40], s_zlabel[42], s_check[4], s_page[5], s_wrap[3];
 static char s_sig[SIG_ROWS][SIG_CAP + 1];	/* the signature, a line a row */
 #define PDIR_W 32
 static char s_pdir[sizeof(opt.peopledir)];	/* EContact's folder */
-static short s_on[9];			/* keep, log, hebrew, falcon, dsp, colour, people file, 3D, start */
-enum { T_KEEP, T_LOG, T_HEB, T_FALCON, T_DSP, T_COLOUR, T_PFILE, T_3D, T_START };
+static short s_on[8];			/* keep, log, hebrew, falcon, dsp, colour, people file, start */
+enum { T_KEEP, T_LOG, T_HEB, T_FALCON, T_DSP, T_COLOUR, T_PFILE, T_START };
 
 #define NTICK 8
 static short tick_box[NTICK], tick_lbl[NTICK], tick_var[NTICK], nticks;
@@ -828,7 +828,6 @@ static void settings_load(void)
 	s_on[T_DSP] = opt.dsp;
 	s_on[T_COLOUR] = opt.colour;
 	s_on[T_PFILE] = opt.peoplefile;
-	s_on[T_3D] = opt.dialogs3d;
 	str_copy(s_pdir, opt.peopledir, sizeof(s_pdir));
 	{
 		const char *p = opt.signature;
@@ -899,22 +898,12 @@ static void part_signature(short x, short y)
 
 static void part_look(short x, short y)
 {
-	short k;
 	rows_at(y);
 	d_tick(x, ROW(0), "Use colours", T_COLOUR);
 	d_add(G_STRING, 0, 0, (long)"on screens with 16 colours or more:", x + 3, ROW(1), 35, 1);
 	d_add(G_STRING, 0, 0, (long)"selection, unread counts, flags,", x + 3, ROW(2), 32, 1);
 	d_add(G_STRING, 0, 0, (long)"quoted text, links; with four", x + 3, ROW(3), 29, 1);
 	d_add(G_STRING, 0, 0, (long)"colours, links in blue", x + 3, ROW(4), 22, 1);
-	/* the AES's own 3D look (5.6): greyed where it has none (TOS 1 to
-	   3, EmuTOS in black and white or four colours) */
-	k = d_tick(x, ROW(5), "3D dialogs", T_3D);
-	d_add(G_STRING, 0, 0, (long)"(TOS 4, MagiC, XaAES, EmuTOS in colour)", x, ROW(6), 39, 1);
-	if (!dlg_3d_ok()) {
-		tree[tick_box[k]].ob_state |= DISABLED;
-		tree[tick_lbl[k]].ob_state |= DISABLED;
-		tree[nobj - 1].ob_state |= DISABLED;
-	}
 }
 
 /* EContact's contacts file, when EContact isn't loaded (the guidelines,
@@ -1015,8 +1004,6 @@ int dlg_settings(void)
 	opt.dsp = s_on[T_DSP];
 	opt.colour = s_on[T_COLOUR];
 	opt.peoplefile = s_on[T_PFILE];
-	opt.dialogs3d = s_on[T_3D];
-	dlg_3d_on = opt.dialogs3d;	/* the next dialog follows it */
 	str_copy(opt.peopledir, s_pdir, sizeof(opt.peopledir));
 	sig_store();
 	return 1;

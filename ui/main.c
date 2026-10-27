@@ -1642,7 +1642,6 @@ int main(void)
 	falcon_usable = get_cookie(0x5F435055L) >= 20;	/* _CPU: TLS.OVL needs a 68020 */
 	store_init(dir);
 	start_mark("store");
-	dlg_3d_on = opt.dialogs3d;	/* before the first dialog (5.6) */
 	path_join(tls_ovl_path, sizeof(tls_ovl_path), dir, "TLS.OVL");	/* beside CACERT.PEM */
 	crash_install(dir, "EMail", mail_version);
 	help_init();			/* memory the help viewer may read */

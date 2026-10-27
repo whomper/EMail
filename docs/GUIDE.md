@@ -733,8 +733,8 @@ are underlined).
 sidebar: **Mail** (checking every few minutes, how many messages to load
 at a time, keeping read messages on disk, starting offline), **Writing** (where lines
 wrap, starting with the Hebrew keyboard), **Signature**, **Look**
-(colours, and 3D dialogs: the AES's own 3D look where it draws one, TOS
-4, MagiC, XaAES and EmuTOS in colour; greyed where it doesn't), **Contacts** (EContact's file, below) and **Connection** (the
+(colours; dialogs have the AES's own 3D look wherever it draws one: TOS
+4, MagiC, XaAES and EmuTOS in colour), **Contacts** (EContact's file, below) and **Connection** (the
 time zone, the Direct connection, the DSP and the protocol log).
 
 **Start offline, with the mail on disk** (Settings > Mail, off at

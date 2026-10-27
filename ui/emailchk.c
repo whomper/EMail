@@ -347,7 +347,6 @@ static void settings_done(void)
 	if (is_acc && naccts < MAXACCT && naccts < store_inf_accounts)
 		mem_short();	/* an account that didn't fit */
 	memset(nm, 0, sizeof(nm));
-	dlg_3d_on = opt.dialogs3d;	/* EMail's 3D setting for its alerts too (5.6) */
 	path_join(tls_ovl_path, sizeof(tls_ovl_path), folder, "TLS.OVL");
 	falcon_dsp_init();
 	/* EMail's protocol log on (LOG=1): the accessory's own beside
