@@ -612,15 +612,18 @@ so those are left out when showing a message.
 | Shift+click  | add/remove one message     | Right button | what you can do there   |
 | Control+click| select a range             |              |                         |
 
-The keys are the AERA programs' own (Ctrl+S saves, Ctrl+W closes, Ctrl+,
-opens the settings; Ctrl+F is kept for Find), with Mail's on the Mac for
-the rest. Closing the main window
+The keys are the AERA programs' own (Ctrl+S saves, Ctrl+U closes a
+window, Ctrl+W brings EMail's other window to the top, Ctrl+, opens the
+settings; Ctrl+F is kept for Find), with Mail's on the Mac for the rest. Closing the main window
 ends EMail. Without a help viewer, Help offers the list of keys.
 
-**Esc cancels.** In any dialog box or alert, Esc or Undo does what Cancel
-does (or the button that does nothing, such as Later): nothing is
-deleted, moved, sent or saved, and what was typed is thrown away, even
-with the cursor in a text field.
+**Undo cancels, Esc empties a field.** In any dialog box, Undo does what
+Cancel does (or the button that does nothing, such as Later): nothing is
+deleted, moved, sent or saved, and what was typed is thrown away. Esc
+empties the text field the cursor is in, as GEM's own dialogs do, and the
+dialog stays open; in a dialog without a text field, and in an alert,
+Esc cancels too. In a message you are writing Esc does nothing; Ctrl+U
+closes its window.
 
 **Long text in a field.** A field takes as much as its setting holds,
 not only what it shows: a long address, folder or signature line goes

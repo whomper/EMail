@@ -287,8 +287,10 @@ static short esc_button(void)
 	return exits == 1 ? last : 0;
 }
 
-/* form_do, with password fields, the clipboard (^C ^X ^V) and Esc for
-   Cancel */
+/* form_do, with password fields, the clipboard (^C ^X ^V), Esc and Undo
+   as the guidelines (3.5) have them: Esc empties the field the cursor is
+   in, as GEM's form_do does, and cancels only a dialog without one; Undo
+   cancels */
 static short form_loop(short start)
 {
 	short next = start ? start : first_editable(), edit = 0, idx = 0, cont = 1;
@@ -309,10 +311,11 @@ static short form_loop(short start)
 			ui_modal_message(m);
 		if (e.which & MU_KEYBD) {
 			LFIELD *lf = lf_at(edit);
-			short scan = KEY_SCAN(e.kreturn);
-			if ((scan == 0x01 || scan == 0x61) && esc_button()) {
-				/* Esc or Undo: Cancel, as if clicked, even in a text
-				   field (the AERA guidelines, 3.5) */
+			if ((e.kreturn & 0xff) == 0x1b)
+				e.kreturn = 0x011b;	/* ^[ is Esc, for objc_edit too */
+			if (dlg_cancel_key(e.kreturn, edit != 0) && esc_button()) {
+				/* Undo, or Esc where no field has the cursor:
+				   Cancel, as if clicked */
 				next = esc_button();
 				cont = 0;
 			} else if (lf && lf_key(lf, e.kreturn, KEY_ASCII(e.kreturn), e.kstate, &idx)) {

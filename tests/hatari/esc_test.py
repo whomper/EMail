@@ -1,13 +1,17 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-2.0-or-later
 # Copyright (C) 2026 AERA | Erez Yaary
-"""Esc and Undo cancel (the AERA guidelines, 3.5), as net_test.py:
-Dovecot, FAKESTNG.PRG over the serial port. Each dialog and alert EMail
-can be driven to here is closed with Esc or Undo, and nothing it would
-have done happens: Download all downloads nothing, New folder (with a
-name typed) makes none, Settings and Accounts leave EMAIL.INF as it was,
-Move to moves nothing, and Quit and closing a message being written keep
-EMail and the message. Screenshots of each dialog and alert.
+"""Esc and Undo (the AERA guidelines, 3.5: Erez, 27 Oct 2026), as
+net_test.py: Dovecot, FAKESTNG.PRG over the serial port. Undo cancels a
+dialog; Esc empties the text field the cursor is in and the dialog stays,
+and cancels a dialog without a field and an alert. Each dialog and alert
+EMail can be driven to here is closed so, and nothing it would have done
+happens: Download all downloads nothing, New folder (a name typed, Esc,
+Undo) makes none, Accounts leaves EMAIL.INF as it was, Move to moves
+nothing, and Quit and closing a message being written (^U) keep EMail
+and the message, in which Esc does nothing. Settings: Esc empties its
+first field (Check for new mail every), and OK keeps it so. Screenshots
+of each dialog and alert.
 
     esc_test.py WORKDIR [MACHINE]
 """
@@ -126,21 +130,33 @@ try:
     r.type("Zzz")
     time.sleep(0.5)
     r.shot("e2-new-folder")
-    r.key(K["ESC"])                      # in the text field
+    r.key(K["ESC"])                      # in the text field: emptied
+    time.sleep(1)
+    r.shot("e2-new-folder-emptied")
+    r.key(UNDO)                          # cancels
     time.sleep(3)
-    check("New folder, Esc in the name: no folder", "Zzz" not in server()[0])
+    check("New folder, Esc in the name then Undo: no folder", "Zzz" not in server()[0])
 
     menu(340, 43)                        # Options > Settings...
     r.shot("e3-settings")
-    r.key(K["ESC"])
-    time.sleep(1.5)
-    check("Settings, Esc: EMAIL.INF as it was", inf() == before)
+    r.key(K["ESC"])                      # empties "Check for new mail every"
+    time.sleep(1)
+    r.shot("e3-settings-emptied")
+    r.key(K["RETURN"])                   # OK: the dialog was still open
+    time.sleep(2)
+    now = inf()
+    check("Settings, Esc in a field: the dialog stays, the field empty (CHECK=0 on OK)",
+          "CHECK=0" in now and now != before)
+    before = now
 
     menu(340, 27)                        # Options > Accounts...
     r.shot("e4-accounts")
+    r.key(K["ESC"])                      # the tester's case (27 Oct 2026): in a field
+    time.sleep(1)                        # Esc empties it; the account stays open
+    r.shot("e4-accounts-esc")
     r.key(UNDO)
     time.sleep(1.5)
-    check("Accounts, Undo: EMAIL.INF as it was", inf() == before)
+    check("Accounts, Esc in a field then Undo: EMAIL.INF as it was", inf() == before)
 
     r.click(330, 124)                    # Avi's message
     time.sleep(10)
@@ -163,15 +179,15 @@ try:
     r.shot("e6-quit")
     r.key(K["ESC"])
     time.sleep(1.5)
-    r.key(K["ESC"])                      # close the message: "Keep this message?"
+    r.key(K["ESC"])                      # in the text: nothing
+    time.sleep(1)
+    r.ctrl("u")                          # close the message: "Keep this message?"
     time.sleep(1.5)
     r.shot("e7-keep")
     r.key(K["ESC"])
     time.sleep(1.5)
     r.shot("e8-still-writing")
-    log = open(os.path.join(work, "hatari.log"), errors="replace").read() if os.path.exists(
-        os.path.join(work, "hatari.log")) else ""
-    check("Quit and closing, Esc: EMail and the message stay", r.proc.poll() is None)
+    check("Quit and closing (^U), Esc: EMail and the message stay", r.proc.poll() is None)
     check("and nothing was written to EMAIL.INF", inf() == before)
 finally:
     r.stop()

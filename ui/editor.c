@@ -945,8 +945,9 @@ static int key(WIN *w, short kstate, short k)
 			while (cx % 4);
 		}
 		return 1;
-	case 0x01:	/* Esc */
-		w->closed(w);
+	case 0x01:	/* Esc: nothing in a text being written (the guidelines,
+			   3.5: it neither empties it nor closes the window; ^U
+			   closes it) */
 		return 1;
 	}
 	if (key_ctrl(kstate, k))
