@@ -31,6 +31,7 @@
 #include "dialog.h"
 #include "aboutbox.h"
 #include "accmem.h"
+#include "notify.h"
 #include "bgwork.h"
 #include "twin.h"
 #include "busy.h"
@@ -491,6 +492,14 @@ static void start_email(void)
 	pf_debug("EMAILCHK starts EMail");
 }
 
+/* a notification's Open: EMail started, on the Inbox */
+static void notified(short id, short button)
+{
+	(void)id;
+	if (button == 1 && can_start())
+		start_email();
+}
+
 /* ---------------- the check ---------------- */
 
 static int may_check(void)
@@ -621,6 +630,10 @@ static void check(int asked)
 	for (i = 0; i < naccts; i++)
 		newmail_told(&nm[i]);
 	found_text(text, sizeof(text), total);
+	/* news nobody asked for goes to BGEM.NG where it runs (MiNT with
+	   XaAES or N.AES: the guidelines, 4.5), in place of the alert */
+	if (!asked && notify_send("EMail check", text, can_start() ? "Open|Later" : 0, 1))
+		return;
 	if (!can_start())
 		alert(1, "[1][%s|Start EMail to read %s.][ OK ]", text, total == 1 ? "it" : "them");
 	else if (alert(1, "[1][%s|Open EMail?][Open|Later]", text) == 1)
@@ -757,6 +770,8 @@ int main(void)
 	conn_log_hold_bytes = 0;	/* the log's 4 KB, not 16 from the heap */
 	twin_init("EMAIL");
 	av_init("EMAILCHK");
+	notify_init("EMAILCHK");	/* before the first event call: its memory */
+	notify_clicked = notified;
 	net_init();
 	pf_idle = busy_idle;
 	dlg_title = "EMail check";	/* its alerts' and boxes' windows (MiNT, MagiC) */
@@ -780,6 +795,8 @@ int main(void)
 		pending = (short)(folder[0] && (reread || reading || may_check()));
 		which = evnt_multi_(MU_MESAG | MU_TIMER, 0, 0, 0, bg_timer(pending, 1000), msg, &ev);
 		bg_tick();
+		if ((which & MU_MESAG) && notify_message(msg))
+			which &= ~MU_MESAG;	/* BGEM.NG's: its answer, a button clicked */
 		if (which & MU_MESAG) {
 			const char *va;
 			switch (msg[0]) {

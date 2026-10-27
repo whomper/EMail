@@ -558,6 +558,13 @@ EMail?", and **Open** starts it. TOS's own desktop, and EmuTOS's, can't
 be asked by an accessory to start a program, so there it only tells
 you; start EMail from the desktop as always.
 
+**Notifications.** Under MiNT with XaAES or N.AES and BGEM.NG
+running, new mail that came by itself is a notification at the edge of
+the desktop instead of a box, with **Open** and **Later**: from EMail
+check, Open starts EMail; from EMail itself, when its window is behind
+another program's or iconified, Open brings it up on the Inbox. Without
+BGEM.NG (TOS, MagiC) nothing changes: the box, or EMail's status line.
+
 From the Desk menu it says when it last looked and what it found, with
 **Check now** and **About**.
 

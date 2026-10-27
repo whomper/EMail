@@ -24,6 +24,7 @@
 #include "tlsovl.h"
 #include "av.h"
 #include "clip.h"
+#include "notify.h"
 #include "dd.h"
 #include "aboutbox.h"
 #include "mbar.h"
@@ -280,6 +281,51 @@ static int quiet_check;		/* the timed check: errors on the status line */
 
 static int check_alerted;	/* cmd_check_all showed an alert */
 
+/* new mail that came by itself, while EMail is behind another program
+   or iconified, goes to BGEM.NG as a notification (the guidelines, 4.5);
+   without BGEM.NG (TOS, MagiC) the status line says it, as before */
+static ACCOUNT *news_acct;	/* the first account with new mail */
+
+static int in_front(void)
+{
+	short top, d;
+	if (main_h <= 0 || main_iconified)
+		return 0;
+	wind_get(0, WF_TOP, &top, &d, &d, &d);
+	return top == main_h || (w_editor.h > 0 && top == w_editor.h);
+}
+
+/* Open: the main window up, with the Inbox of the account the news was
+   for */
+static void notified(short id, short button)
+{
+	FINFO *in;
+	short i;
+	(void)id;
+	if (button != 1 || main_h <= 0)
+		return;
+	if (main_iconified) {
+		short m[8];
+		m[0] = WM_UNICONIFY;
+		m[1] = ap_id;
+		m[2] = 0;
+		m[3] = main_h;
+		wind_get(main_h, WF_UNICONIFY, &m[4], &m[5], &m[6], &m[7]);
+		win_message(m);
+	}
+	wind_set(main_h, WF_TOP, 0, 0, 0, 0);
+	for (i = 0; i < naccts && accts[i] != news_acct; i++)
+		;
+	if (i == naccts)
+		i = 0;
+	if (naccts && (in = folder_role(accts[i], FR_INBOX)) != 0)
+		folders_select(accts[i], in);
+	menu_update();
+#ifdef DRAW_TRACE
+	pf_debug("NOTIFY opened");
+#endif
+}
+
 void cmd_check_all(void)
 {
 	short i;
@@ -299,6 +345,8 @@ void cmd_check_all(void)
 		mail_err[0] = 0;
 		if (!mail_check(accts[i], &n) && mail_err[0] && !errs[0])
 			str_copy(errs, mail_err, sizeof(errs));
+		if (n > 0 && !total)
+			news_acct = accts[i];
 		total += n;
 	}
 	busy(0);
@@ -324,6 +372,8 @@ void cmd_check_all(void)
 			snprintf(m + strlen(m), sizeof(m) - strlen(m), ", %s in %d other folders",
 				 num(mail_new_other), mail_new_folders);
 		status(m);
+		if (quiet_check && total > 0 && !in_front())
+			notify_send("EMail", m, "Open|Later", 1);
 	}
 	menu_update();
 }
@@ -1611,6 +1661,8 @@ int main(void)
 	}
 	ap_id = appl_init();
 	start_mark("appl_init");
+	notify_init("EMAIL   ");
+	notify_clicked = notified;
 	if (ap_id < 0)
 		return 1;
 	vdi_h = graf_handle(&gl_wchar, &gl_hchar, &d, &d);
@@ -1737,6 +1789,17 @@ int main(void)
 			folders_select(accts[0], in);
 	}
 	start_mark("inbox");
+#ifdef DRAW_TRACE
+	{
+		/* the test build (xaaes_test.py): EMAIL_NOTIFY= in the AES's
+		   environment sends that text as new mail's notification would */
+		char *t = 0;
+		if (shel_envrn(&t, "EMAIL_NOTIFY=") && t && *t) {
+			news_acct = naccts ? accts[0] : 0;
+			pf_debug(notify_send("EMail", t, "Open|Later", 1) ? "NOTIFY sent" : "NOTIFY not sent");
+		}
+	}
+#endif
 	last_check = pf_ms();
 	/* all of the window is drawn and nothing was shown over it: the
 	   AES's redraw for its opening is the start's fourth of every pane */
@@ -1797,6 +1860,8 @@ int main(void)
 		} else if (hovering && pf_ms() - hover_at >= 700UL) {
 			tip_show();	/* after the mouse rested 0.7 s */
 		}
+		if ((which & MU_MESAG) && notify_message(msg))
+			which &= ~MU_MESAG;	/* BGEM.NG's: its answer, a button clicked */
 		if (which & MU_MESAG) {
 			const char *va;
 			switch (msg[0]) {

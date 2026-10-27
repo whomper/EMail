@@ -14,6 +14,10 @@ inside EMail's window is a part it didn't draw.
 1. The first start: the welcome box over the whole window.
 2. With an account (EMAIL.INF): the check at the start, as the tester's
    (POP3); it can't connect here, and its box comes over the window.
+3. BGEM.NG's stand-in running (common/tests/notify's BUBBLE.PRG, `make
+   prg` there once), the test build (make build/trace/EMAIL.PRG) sends a
+   notification as for new mail (the guidelines, 4.5) and its Open brings
+   EMail up.
 
     xaaes_test.py WORKDIR          (EMAIL_PRG= another build to test)
 
@@ -44,11 +48,13 @@ def check(what, good, detail=""):
         fails.append(what)
 
 
-def run(name, steps, copy=()):
+def run(name, steps, copy=(), cnf=()):
     w = os.path.join(work, name)
     cmd = [sys.executable, RUN, w, ETOS, prg, "--display", ":97", "--steps", steps]
-    for c in copy:
-        cmd += ["--copy", c]
+    if copy:
+        cmd += ["--copy", *copy]       # one --copy: run.py takes its list (nargs="*")
+    for c in cnf:
+        cmd += ["--cnf", c]
     r = subprocess.run(cmd, capture_output=True, text=True, timeout=900)
     print(r.stdout.strip().splitlines()[-1] if r.stdout.strip() else r.stderr[-400:], flush=True)
     return w, r.returncode
@@ -82,6 +88,35 @@ shot = os.path.join(w, "shots", "grab0001.png")
 if os.path.exists(shot):
     n = undrawn(shot)
     check("its window is drawn whole, behind the check's box", n < 20, "%d desktop pixels" % n)
+
+# 3. BGEM.NG (the guidelines, 4.5): common's stand-in, BUBBLE.PRG
+#    (common/tests/notify: `make prg` there; BGEM.NG 1.02 itself stops in
+#    this FreeMiNT), runs first. The test build, started offline (no
+#    check, no box), sends EMAIL_NOTIFY='s text as new mail's
+#    notification: EMail asks BUBBLE first, sends it once answered, and
+#    the stand-in's click on Open brings EMail's window up on the Inbox
+bubble = os.path.join(ROOT, "common", "tests", "notify", "build", "BUBBLE.PRG")
+trace = os.path.join(ROOT, "build", "trace", "EMAIL.PRG")
+if os.path.exists(bubble) and os.path.exists(trace):
+    inf3 = os.path.join(work, "inf3", "EMAIL.INF")
+    os.makedirs(os.path.dirname(inf3), exist_ok=True)
+    with open(inf3, "w", newline="") as f:
+        f.write("[options]\r\nstartoffline=1\r\n[account]\r\nname=Dana\r\nemail=dana@example.com\r\n"
+                "in=pop3\r\nhost=192.168.1.2\r\nport=110\r\nuser=dana\r\npass=secret\r\n")
+    keep = prg
+    prg = trace
+    w, rc = run("bgemng", "until EMail 30;until NOTIFY 60;wait 20;shot", copy=[inf3, bubble],
+                cnf=["setenv EMAIL_NOTIFY Two-new-messages", "run c:\\BUBBLE.PRG"])
+    prg = keep
+    log = open(os.path.join(w, "hatari.log"), errors="replace").read() if os.path.exists(
+        os.path.join(w, "hatari.log")) else ""
+    check("BGEM.NG (its stand-in) asked first", "BUBBLE asked by" in log)
+    check("the notification sent", "NOTIFY sent" in log)
+    want = 'BUBBLE show 1 10 [ Title="EMail" From="EMAIL   " ][0][Two-new-messages][Open|Later]'
+    check("... as BGEM.NG wants it", want in log, want)
+    check("Open brings EMail up on the Inbox", "NOTIFY opened" in log)
+else:
+    check("BUBBLE.PRG and build/trace/EMAIL.PRG built", False)
 
 print("screenshots in %s/*/shots" % work)
 print("%d failed" % len(fails) if fails else "all passed")
