@@ -122,6 +122,7 @@ try:
 
     menu(272, 123)                       # Folder > Download all messages
     r.shot("e1-download-all")
+    got = fetches()                      # (TOS 1.04 passes the menu's click on to the list too)
     r.key(K["ESC"])
     time.sleep(3)
     check("Download all, Esc: nothing downloaded", fetches() == got)
@@ -151,7 +152,7 @@ try:
 
     menu(340, 27)                        # Options > Accounts...: Edit, New, Cancel
     r.shot("e4-accounts")
-    r.click(242, 272)                    # Edit: the account dialog
+    r.key(K["RETURN"])                   # Edit, the alert's default: the account dialog
     time.sleep(2)
     r.key(K["ESC"])                      # the tester's case (27 Oct 2026): in the name
     time.sleep(1)                        # Esc empties it; the account stays open
@@ -160,7 +161,7 @@ try:
     time.sleep(1.5)
     check("Account, Esc in the name then Undo: EMAIL.INF as it was", inf() == before)
     menu(340, 27)
-    r.click(242, 272)
+    r.key(K["RETURN"])
     time.sleep(2)
     r.key(K["ESC"])                      # emptied, still open: a new name typed
     r.type("Esc test")
