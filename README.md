@@ -19,7 +19,9 @@ An e-mail program for the Atari ST, STE, TT and Falcon, written in C for GEM.
   together.
 - **Folders:** create, rename and delete; an alphabetical folder picker for moving messages.
 - **New mail while EMail isn't running:** EMail check (`EMAILCHK.ACC`), a small desk accessory, looks
-  in each account's Inbox as often as EMail would and says how many new messages have come.
+  in each account's Inbox as often as EMail would and says how many new messages have come; under MiNT
+  with BGEM.NG, new mail is a notification with Open and Later, from EMail check and from EMail itself
+  while its window is behind.
 - **Links that open:** web addresses and an HTML message's links are underlined; a click opens one in
   EWeb (or CAB or HighWire), a `mailto:` one as a new message.
 - **Modern but Atari:** one window with draggable panes, right-click menus, colour on 16- and 256-colour
