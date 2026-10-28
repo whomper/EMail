@@ -962,28 +962,21 @@ int win_mouse(short mx, short my, short button, short clicks, short kstate)
    pane through the main window's) */
 static void slider_message(WIN *w, short *msg)
 {
-	/* TOS 4's AES sends an arrow or page again while it still counts
-	   the button down: a click of 0.12 s on a Falcon turned two pages
-	   (Erez, 26 Oct 2026). One that comes soon after the last, with the
-	   button already up, is that press's echo; held, it repeats */
-	static unsigned long arrowed_at;
+	/* one WM_ARROWED a step: TOS 3 and 4's second one for a click is
+	   dropped by common's evnt_multi_ (guidelines 5.1, one click, one
+	   step); a held button's repeats come as the AES sends them */
 	long rows = win_rows(w), max = w->total - rows;
-	short mx, my, mb, ks;
 	if (msg[0] == WM_VSLID) {
 		if (max > 0)
 			win_scroll_to(w, (long)msg[4] * max / 1000);
 		return;
 	}
-	graf_mkstate(&mx, &my, &mb, &ks);
-	if (!(mb & 1) && arrowed_at && pf_ms() - arrowed_at < 250)
-		return;
 	switch (msg[4]) {
 	case 0: win_scroll_to(w, w->top - rows); break;
 	case 1: win_scroll_to(w, w->top + rows); break;
 	case 2: win_scroll_to(w, w->top - 1); break;
 	case 3: win_scroll_to(w, w->top + 1); break;
 	}
-	arrowed_at = pf_ms();
 }
 
 void main_closed(void);

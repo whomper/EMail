@@ -12,6 +12,9 @@ each pane draws ("DRAW list y h", "COPY list y h"). With 40 messages on
 Dovecot (as net_test.py: FAKESTNG.PRG and serial_bridge.py), it checks:
 
 - a click on the message shown draws nothing again;
+- three clicks on the reader's arrow (the window's own) are three steps,
+  and one on its slider's track one page (guidelines 5.1: TOS 4's AES
+  sends each click twice, common's evnt_multi_ drops the second);
 - three clicks on the list's down arrow move the rows with a copy and
   draw one row each, and nothing in the folder pane or the reader;
 - the list scrolled that way looks as the same list drawn from scratch;
@@ -171,14 +174,24 @@ try:
     # with a GDOS font of 10 points (the hub's run under NVDI)
     drawn = [x for x in t if x[0] == "DRAW"]
     row = drawn[0][3] if drawn else ROW
-    # the reader's arrow is the window's own (5.1): the AES sends a step
-    # for each click, and TOS 4's another while the button is still down,
-    # so three clicks are three steps or more; each one a copy and a line
+    # the reader's arrow is the window's own (5.1): one click, one step
+    # (TOS 4's AES sends each click twice; common's evnt_multi_ drops
+    # the second), each one a copy and a line
     copies = len([x for x in t if x[0] == "COPY" and x[1] == "reader"])
-    check("three steps down the reader: a copy and a line (%d) drawn at each (%d steps)" % (row, copies),
-          3 <= copies <= 6 and
+    check("three clicks, three steps down the reader: a copy and a line (%d) drawn at each (%d steps)" % (row, copies),
+          copies == 3 and
           len([x for x in drawn if x[1] == "reader" and x[3] == row]) == copies and
           len(drawn) == copies and row < 30)
+    # a click on the slider's track under the slider: one page, drawn once
+    n = mark()
+    r.click(RARROW_X, RARROW_Y - 40)
+    time.sleep(1.5)
+    r.settle(3, 20)
+    t = since(n)
+    print("track:", t)
+    pages = [x for x in t if x[0] == "DRAW" and x[1] == "reader" and x[3] > 3 * row]
+    check("a click on the reader's track: one page (%d drawn)" % len(pages),
+          len(pages) == 1 and not [x for x in t if x[0] == "COPY" and x[1] == "reader"])
     rscrolled = shot("s2b-reader")
     r.ctrl(",")                          # Settings, OK: everything drawn from scratch
     time.sleep(3)
