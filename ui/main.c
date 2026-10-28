@@ -482,7 +482,9 @@ static void start_browser(const char *url)
 	len = (short)strlen(arg);
 	tail[0] = (char)len;
 	memcpy(tail + 1, arg, len + 1);
-	/* EWeb keeps its files in the folder it starts in: that one */
+	/* EWeb's folder made the current one: EmuTOS and MiNT start it there;
+	   TOS 1.04 and 4.04 start it in the desktop's folder, and EWeb finds
+	   its files from its own path (app_dir, guidelines 6.1) */
 	str_copy(dir, prg, sizeof(dir));
 	if ((e = strrchr(dir, '\\')) != 0)
 		e[1] = 0;
@@ -1594,15 +1596,13 @@ static void place_windows(void)
 	}
 }
 
-/* the folder EMAIL.PRG was started from */
+/* EMAIL.PRG's own folder (app_dir: the current one only when the AES
+   names no other); TOS 1.04 and 4.04 start a program that another one
+   started in the desktop's folder, not its own (guidelines 6.1) */
 static void work_dir(char *out, int size)
 {
-	char path[160];
-	short drv = (short)Dgetdrv();
-	path[0] = 0;
-	Dgetpath(path, 0);
-	snprintf(out, size, "%c:%s", 'A' + drv, path);
-	if (out[strlen(out) - 1] == '\\')
+	str_copy(out, app_dir(), size);
+	if (out[0] && out[strlen(out) - 1] == '\\')	/* "C:" for the root, as before */
 		out[strlen(out) - 1] = 0;
 }
 
