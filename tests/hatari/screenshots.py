@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-2.0-or-later
 # Copyright (C) 2026 AERA | Erez Yaary
-"""The screenshots in docs/, on an emulated Falcon in 16 colours.
+"""The screenshots in docs/, on an emulated Falcon in 256 colours (Erez,
+28 Oct 2026: the family's pictures in 256 colours).
 
 An inbox of everyday English mail (the Hebrew test messages stay with the
 tests), the time zone Europe/London, a few folders. Saves the main window
@@ -24,7 +25,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.normpath(os.path.join(HERE, "..", ".."))
 IMAP, SMTP = 10143, 10025
 
-work, machine, more = rig.cli("Falcon")
+work, machine, more = rig.cli("Falcon:256")
 os.makedirs(work, exist_ok=True)
 srv = os.path.join(work, "srv")
 hd = os.path.join(work, "hd")
@@ -102,7 +103,8 @@ os.makedirs(os.path.join(hd, "AUTO"))
 rig.install_prg(hd)
 rig.fakesting(os.path.join(hd, "AUTO"))
 with open(os.path.join(hd, "EMAIL.INF"), "w", newline="") as f:
-    f.write("[OPTIONS]\r\nTIMEZONE=Europe/London\r\nHEBREW=0\r\nSIGNATURE=Sent from my Falcon\r\n[ACCOUNT]\r\nNAME=Home\r\n"
+    f.write("[OPTIONS]\r\nTIMEZONE=Europe/London\r\nHEBREW=0\r\nSIGNATURE=Sent from my Falcon\r\n"
+            "PANES=144,0\r\n[ACCOUNT]\r\nNAME=Home\r\n"
             "FULLNAME=Dana Falcon\r\nEMAIL=dana@test.local\r\nIN=imap\r\nHOST=127.0.0.1\r\nPORT=%d\r\n"
             "USER=dana\r\nPASS=secret\r\nSMTPHOST=127.0.0.1\r\nSMTPPORT=%d\r\n" % (IMAP, SMTP))
 

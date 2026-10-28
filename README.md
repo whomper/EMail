@@ -29,7 +29,7 @@ An e-mail program for the Atari ST, STE, TT and Falcon, written in C for GEM.
 - **Any Atari:** TOS 1.04 to 4.x, EmuTOS, MagiC and MiNT, with STinG or MiNTnet, from a 68000 ST in
   medium resolution to a Falcon in 640×480. It runs in TT RAM when the machine has some.
 
-![EMail on a Falcon: folders, the inbox and a message with its quoted reply in colour](docs/screenshot.png)
+![EMail on a Falcon in 256 colours: folders, the inbox and a message with its quoted reply in colour](docs/screenshot.png)
 
 ## Getting started
 
@@ -152,7 +152,7 @@ took EFTP's downloads from 40 to 75 KB/s.
 - A crash in EMail is caught: an alert, `CRASH.LOG` with what happened, and the Atari keeps running
 - `EMAIL.INF` in capitals, each setting with a note above it
 
-![Settings: a sidebar of parts, here Connection with the time zone by name](docs/settings.png)
+![Settings in 256 colours: a sidebar of parts, here Connection with the time zone by name](docs/settings.png)
 
 ## How it reaches the servers
 
