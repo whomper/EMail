@@ -24,6 +24,10 @@ int  mail_refresh_folders(ACCOUNT *a);		/* IMAP LIST */
 int  mail_sync_folder(ACCOUNT *a, FINFO *fi, long *newmsgs);
 /* mirror opt.page more (older) messages of an IMAP folder */
 int  mail_load_more(ACCOUNT *a, FINFO *fi, long *added);
+/* Search server: an IMAP folder's messages with the text (Atari
+   charset) in their headers or body, the newest max of them, their
+   headers mirrored; *uids (the caller's to free), in UID order */
+int  mail_search(ACCOUNT *a, FINFO *fi, const char *atari, long max, unsigned long **uids, long *n);
 /* inbox (IMAP sync or POP3 download), then send the Outbox */
 int  mail_check(ACCOUNT *a, long *newmsgs);
 /* of those new messages, how many outside the Inbox, and where: the

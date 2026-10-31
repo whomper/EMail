@@ -223,6 +223,25 @@ int main(int argc, char **argv)
 			}
 		fold_close(f);
 		printf("ok\n");
+	} else if (!strcmp(cmd, "search") && a && argc > 5) {
+		/* search ACCT FOLDER TEXT [MAX]: Search server, TEXT in UTF-8 */
+		FINFO *fi = find_folder(a, argv[4]);
+		unsigned long *u;
+		long n, i, tl;
+		char *t;
+		FOLDER *f;
+		if (!fi)
+			return 1;
+		t = cs_to_atari(argv[5], (long)strlen(argv[5]), cs_id("utf-8"), &tl);
+		if (!mail_search(a, fi, t, argc > 6 ? atol(argv[6]) : 200, &u, &n))
+			return fail("search");
+		free(t);
+		f = fold_open(a, fi);
+		printf("found: %ld\n", n);
+		for (i = 0; i < n; i++)
+			printf("%lu %s\n", u[i], fold_get(f, u[i]) ? "mirrored" : "missing");
+		fold_close(f);
+		free(u);
 	} else if (!strcmp(cmd, "list") && a && argc > 4) {
 		FINFO *fi = find_folder(a, argv[4]);
 		FOLDER *f;

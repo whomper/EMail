@@ -17,6 +17,8 @@ An e-mail program for the Atari ST, STE, TT and Falcon, written in C for GEM.
   filed in Junk or by server rules shows up too.
 - **Many messages at once:** select several and mark them read or unread, flag, move or delete them
   together.
+- **Find:** Ctrl+F narrows the message list to what you type, by sender or subject, as you type; **Search
+  server** looks through the messages' text on the IMAP server too.
 - **Folders:** create, rename and delete; an alphabetical folder picker for moving messages.
 - **New mail while EMail isn't running:** EMail check (`EMAILCHK.ACC`), a small desk accessory, looks
   in each account's Inbox as often as EMail would and says how many new messages have come; under MiNT
@@ -313,7 +315,8 @@ Hebrew message and sends a Hebrew reply; the test checks the reply and its copy 
 `disk_test.py` counts each job's file opens and lookups from Hatari's GEMDOS trace and fails above its
 budget (the AERA guidelines, 6.5), and cuts a folder's file short to see the message fetched again.
 `select_test.py`, `rename_test.py`, `drag_test.py` (messages dragged onto a folder), `tip_test.py` (a
-tooltip over a name, subject or folder cut short, none where it fits), `esc_test.py`
+tooltip over a name, subject or folder cut short, none where it fits), `find_test.py` (Find on disk as
+you type, Esc, Search server for a word in a body, Undo and Ctrl+F to leave), `esc_test.py`
 (Undo cancels every dialog, Esc empties a field and cancels a dialog without one and every alert), `field_test.py` (more typed into a field than it shows, and
 all of it kept: the AERA guidelines, 5.4) and `colour_tour.py` run the same way. `font_test.py` chooses the
 first GDOS font in Options > Font, checks the windows redraw in it and that it is saved, then starts EMail

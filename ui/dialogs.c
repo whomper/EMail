@@ -1322,6 +1322,7 @@ void dlg_keys(void)
 		"\x01^F forward            \x01^U mark as unread",
 		"^G  flag / unflag      ^M  move to a folder",
 		"Del delete             ^A  select all",
+		"^F  find in the folder \x01Return  search server",
 		"^C  copy   ^X  cut     ^V  paste",
 		"Shift+click   add or remove one message",
 		"Control+click select a range of messages",

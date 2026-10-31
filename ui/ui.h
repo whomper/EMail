@@ -154,6 +154,25 @@ void list_select_all(void);
 void reader_selection(long n);			/* the reader says how many are selected */
 void list_select_uid(unsigned long uid);
 void list_after_remove(void);
+long list_count(void);
+void list_relayout(void);			/* the list's rows (the "load more" one too) */
+void list_after_find(void);		/* Find left: the selection in sight */
+/* Find (find.c): a field across the top of the list */
+int find_active(void);
+int find_filtering(void);		/* the list shows what was found */
+int find_match(HDR *h, int to);
+int find_titles(char *t, int tn, char *i, int in, long shown, long ondisk, long onserver);
+short find_row_h(void);
+void find_draw(GRECT *clip);
+void find_open(void);
+void find_close(int draw);
+void find_toggle(void);
+int find_key(short kstate, short key);
+void find_click(short mx, short my);
+int find_tip(short mx, short my, char *out, int size);
+void find_focus(void);
+int find_waiting(void);
+void find_now(void);
 
 void reader_show(HDR *h);		/* load and show a message */
 int reader_show_begin(HDR *h);		/* reader_show in two steps: read and parse it, */
@@ -204,7 +223,7 @@ void dlg_keys(void);			/* Help: the keys */
 enum {
 	C_NONE, C_ABOUT, C_HELP, C_KEYS, C_REFETCH, C_GETALL,
 	C_NEW, C_CHECK, C_SENDQ, C_SAVEATT, C_CLOSE, C_NEXTWIN, C_QUIT,
-	C_CUT, C_COPY, C_PASTE, C_SELALL,
+	C_CUT, C_COPY, C_PASTE, C_SELALL, C_FIND,
 	C_REPLY, C_REPLYALL, C_FORWARD, C_UNREAD, C_MARKREAD, C_FLAG, C_MOVE, C_DELETE,
 	C_SEND, C_SAVEOUT, C_ATTACH, C_ABOOK,
 	C_FOLDERS, C_REFRESH, C_NEWFOLDER, C_RENFOLDER, C_DELFOLDER,

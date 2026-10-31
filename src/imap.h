@@ -78,6 +78,9 @@ int imap_status_many(IMAP *im, const char *const *mboxes, int n, long *messages,
 int imap_store(IMAP *im, const char *uidset, int add, unsigned short flags);
 int imap_store_seq(IMAP *im, const char *seqset, int add, unsigned short flags);
 int imap_copy(IMAP *im, const char *uidset, const char *dest);
+/* UID SEARCH TEXT: the UIDs of the selected folder's messages with the
+   text (UTF-8) in their headers or body; *uids is the caller's to free */
+int imap_search(IMAP *im, const char *utf8, unsigned long **uids, long *n);
 int imap_move(IMAP *im, const char *uidset, const char *dest);	/* MOVE or COPY+delete */
 int imap_expunge(IMAP *im, const char *uidset);
 int imap_append(IMAP *im, const char *mbox, unsigned short flags, const char *data, long len);

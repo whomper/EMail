@@ -404,6 +404,35 @@ About box says "Running in TT RAM", or "Running in ST RAM (TT RAM not
 used)" when the program file's TT RAM flags were switched off. It also
 names the connection: Gateway, or Direct with TLS.OVL's version (and DSP).
 
+## Finding messages
+
+**Ctrl+F** (Message > Find) puts a field across the top of the message
+list. Type in it: once you pause, the list keeps only the open folder's
+messages whose sender (name or address) or subject has what you typed,
+capitals or not, Hebrew too; in Sent, the Outbox and Drafts it looks at
+whom they went to. The list's title says what it shows: `Find "invoice"
+in Inbox: 12 of 500`. The rows, their order and their marks are the
+folder's, and everything you can do to a message works on what is found:
+open, delete, move, drag to a folder, flag, mark, the right-click menu.
+
+While the list has the keyboard, the field takes the keys you type with
+(Backspace, Delete, Left and Right, Ctrl+C, Ctrl+X, Ctrl+V); Up, Down
+and Return move through what was found and open it, and Tab goes to the
+next pane. **Esc empties the field**, and the whole folder is back.
+**Undo**, Ctrl+F again, the field's `x` or another folder leaves Find.
+
+**Search server** (the button, or Shift+Return) asks the IMAP server to
+look through the folder's messages, their text too, not only what is on
+disk: its newest 200 finds are listed, `Server: "invoice" in Inbox: 34`,
+those EMail didn't have yet with their sender, subject and date (the
+message comes when you open it, as any other). Esc stops it, as any
+job. Find on its own looks only at what is on disk: in a folder whose
+older messages were never loaded, the list's title says so (`12 of the
+500 on disk`).
+
+Working offline, Find works on disk and Search server is grey. A POP3
+account has no server to search: its Inbox has Find alone.
+
 ## Writing
 
 The editor's buttons along the top are **Send**, **Outbox**,
@@ -613,7 +642,7 @@ so those are left out when showing a message.
 | Shift+Ctrl+F | forward                    | Shift+Ctrl+U | mark as unread          |
 | Ctrl+G       | flag / unflag              | Ctrl+M       | move to a folder        |
 | Ctrl+C       | copy                       | Ctrl+X       | cut                     |
-| Ctrl+V       | paste                      |              |                         |
+| Ctrl+V       | paste                      | Ctrl+F       | find in the folder      |
 | Delete       | delete (to Trash)          | Ctrl+A       | select all messages     |
 | Shift+Ctrl+D | send (in the editor)       | Ctrl+S       | into the Outbox (editor) |
 | Ctrl+T       | attach a file              | Ctrl+B       | address book            |
@@ -627,7 +656,7 @@ so those are left out when showing a message.
 
 The keys are the AERA programs' own (Ctrl+S saves, Ctrl+U closes a
 window, Ctrl+W brings EMail's other window to the top, Ctrl+, opens the
-settings; Ctrl+F is kept for Find), with Mail's on the Mac for the rest. Closing the main window
+settings, Ctrl+F finds), with Mail's on the Mac for the rest. Closing the main window
 ends EMail. Without a help viewer, Help offers the list of keys.
 
 **Undo cancels, Esc empties a field.** In any dialog box, Undo does what

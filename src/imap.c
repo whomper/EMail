@@ -827,6 +827,97 @@ int imap_append(IMAP *im, const char *mbox, unsigned short flags, const char *da
 	}
 }
 
+/* UID SEARCH's answer: "* SEARCH 4 17 230" (several lines, or none) */
+typedef struct {
+	unsigned long *u;
+	long n, cap;
+} SEARCHCB;
+
+static void search_line(SEARCHCB *sc, const char *s)
+{
+	if (!str_istarts(s + 2, "SEARCH"))
+		return;
+	s += 8;
+	for (;;) {
+		char *e;
+		unsigned long v;
+		while (*s == ' ')
+			s++;
+		if (!isdigit((u8)*s))
+			return;
+		v = strtoul(s, &e, 10);
+		s = e;
+		if (sc->n == sc->cap) {
+			long cap = sc->cap ? sc->cap * 2 : 64;
+			unsigned long *nu = realloc(sc->u, cap * sizeof(*nu));
+			if (!nu)
+				return;
+			sc->u = nu;
+			sc->cap = cap;
+		}
+		sc->u[sc->n++] = v;
+	}
+}
+
+static void search_cb(IMAP *im, void *ud, const char *s, long n)
+{
+	(void)im;
+	(void)n;
+	search_line(ud, s);
+}
+
+int imap_search(IMAP *im, const char *utf8, unsigned long **uids, long *n)
+{
+	SEARCHCB sc;
+	char q[300], tag[8];
+	long len = (long)strlen(utf8);
+	int r;
+	memset(&sc, 0, sizeof(sc));
+	*uids = 0;
+	*n = 0;
+	if (!has_8bit(utf8, len) && len < 200) {
+		imap_quote(q, sizeof(q), utf8);
+		r = run(im, 0, search_cb, &sc, "UID SEARCH TEXT %s", q);
+	} else {
+		/* a word not in ASCII (Hebrew): a literal, in UTF-8, as IMAP
+		   asks of 8-bit text */
+		snprintf(tag, sizeof(tag), "T%04u", ++im->tag);
+		if (!conn_cmd(im->c, 0, "%s UID SEARCH CHARSET UTF-8 TEXT {%ld}", tag, len))
+			return -1;
+		if (read_response(im) < 0)
+			return -1;
+		if (im->resp.s[0] != '+') {
+			str_copy(im->err, im->resp.s, sizeof(im->err));
+			return 0;
+		}
+		if (!conn_write(im->c, utf8, len) || !conn_write(im->c, "\r\n", 2))
+			return -1;
+		for (r = -2; r == -2;) {
+			const char *s;
+			if (read_response(im) < 0) {
+				r = -1;
+				break;
+			}
+			s = im->resp.s;
+			if (!strncmp(s, tag, 5) && s[5] == ' ') {
+				r = !strncasecmp(s + 6, "OK", 2);
+				if (!r)
+					str_copy(im->err, s + 6, sizeof(im->err));
+			} else if (s[0] == '*' && s[1] == ' ') {
+				untagged(im, s);
+				search_line(&sc, s);
+			}
+		}
+	}
+	if (r <= 0) {
+		free(sc.u);
+		return r;
+	}
+	*uids = sc.u;
+	*n = sc.n;
+	return 1;
+}
+
 int imap_create(IMAP *im, const char *mbox)
 {
 	char q[300];

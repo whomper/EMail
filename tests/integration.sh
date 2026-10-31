@@ -189,6 +189,11 @@ out=$(run show 1 INBOX "$U3")
 expect "HTML-only message turned into text" "Hello Atari fans" "$out"
 expect "HTML list item" "  - Falcon030" "$out"
 
+out=$(run search 1 INBOX Falcon030)
+expect "search: a word in an HTML body" "^found: 1" "$out"
+expect "search: ... the newsletter" "^$U3 mirrored" "$out"
+out=$(run search 1 INBOX "נשמע")
+expect "search: a Hebrew word in a base64 body (UTF-8 literal)" "^$U1 mirrored" "$out"
 run flag 1 INBOX "$U1" +flagged >/dev/null
 run sync 1 INBOX >/dev/null
 out=$(run list 1 INBOX)
@@ -343,6 +348,18 @@ expect "progress: headers counted with a bar" "Big - headers 100 of 100  \[#####
 expect "big folder: server count, only 100 mirrored" "synced: 250 total, 6 unread, .* 100 loaded" "$out"
 out=$(run list 1 Big)
 expect "big folder: newest message mirrored" "Big 250" "$out"
+# Search server: the server's SEARCH TEXT; an old message not mirrored
+# comes with its headers, the newest MAX of many
+out=$(run search 1 Big "Big 042")
+expect "search: a subject outside the mirror" "^found: 1" "$out"
+expect "search: its headers mirrored" "mirrored" "$out"
+expect "search: listed with them" "Big 042" "$(run list 1 Big)"
+out=$(run search 1 Big robot 5)
+expect "search: the newest 5 of 250" "^found: 5" "$out"
+expect "search: ... the newest" "$(uid_of "$(run list 1 Big)" "Big 250") mirrored" "$out"
+out=$(run search 1 Big "nothing like this")
+expect "search: nothing found" "^found: 0" "$out"
+run sync 1 Big >/dev/null	# the mirror's window again, as a check leaves it
 
 # a message with a 1 MB attachment: downloaded, saved and opened whole
 python3 - $IMAP <<'PY'

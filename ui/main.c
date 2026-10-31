@@ -82,6 +82,8 @@ static const MBAR_ITEM m_msg[] = {
 	{ "Reply to all", "\x01^R", C_REPLYALL },
 	{ "Forward", "\x01^F", C_FORWARD },
 	{ "-", 0, 0 },
+	{ "Find...", "^F", C_FIND },
+	{ "-", 0, 0 },
 	{ "Mark as read", 0, C_MARKREAD },
 	{ "Mark as unread", "\x01^U", C_UNREAD },
 	{ "Flag", "^G", C_FLAG },
@@ -168,6 +170,8 @@ void menu_update(void)
 	enable(C_REFETCH, cur_finfo && !cur_finfo->local && (list_current() || list_marked() > 1));
 	enable(C_GETALL, cur_finfo && !cur_finfo->local && !cur_finfo->noselect);
 	enable(C_SELALL, cur_folder != 0);
+	enable(C_FIND, cur_folder != 0);
+	menu_icheck(mb.tree, mbar_object(&mb, C_FIND), find_active());
 	enable(C_SAVEATT, msg && cur_msg->nparts > 0);
 	enable(C_NEXTWIN, ed && main_h > 0);
 	enable(C_SEND, ed);
@@ -1167,7 +1171,8 @@ static void tip_show(void)
 	tip_tried = 1;
 	if (!editor_tip(hover_x, hover_y, text, sizeof(text)) &&
 	    !(wind_find(hover_x, hover_y) == main_h &&
-	      (reader_tip(hover_x, hover_y, text, sizeof(text)) || list_tip(hover_x, hover_y, text, sizeof(text)) ||
+	      (reader_tip(hover_x, hover_y, text, sizeof(text)) || find_tip(hover_x, hover_y, text, sizeof(text)) ||
+	       list_tip(hover_x, hover_y, text, sizeof(text)) ||
 	       folders_tip(hover_x, hover_y, text, sizeof(text)))))
 		return;
 #ifdef DRAW_TRACE
@@ -1377,6 +1382,7 @@ static void command(short cmd)
 	case C_REFETCH: cmd_download_again(); break;
 	case C_GETALL: cmd_download_all(cur_acct, cur_finfo); break;
 	case C_SELALL: list_select_all(); break;
+	case C_FIND: find_toggle(); break;
 	case C_SEND: editor_send(1); break;
 	case C_SAVEOUT: editor_send(0); break;
 	case C_ATTACH: editor_attach(); break;
@@ -1523,6 +1529,10 @@ static int shortcut(short kstate, short key)
 		help_key_pressed();
 		return 1;
 	}
+	/* Find's field has the keys it edits while the list has the keyboard
+	   (^C ^X ^V and Delete too); Up, Down and Return stay the list's */
+	if (top == &w_list && find_key(kstate, key))
+		return 1;
 	if (key_ctrl(kstate, key)) {
 		short cmd = C_NONE, shift = (kstate & (K_LSHIFT | K_RSHIFT)) != 0;
 		switch (scan) {
@@ -1537,7 +1547,7 @@ static int shortcut(short kstate, short key)
 		case 0x11: cmd = C_NEXTWIN; break;	/* W */
 		case 0x13: cmd = shift ? C_REPLYALL : C_REPLY; break;	/* R */
 		case 0x12: cmd = C_REPLYALL; break;	/* E */
-		case 0x21: cmd = shift ? C_FORWARD : C_NONE; break;	/* F: Find, one day */
+		case 0x21: cmd = shift ? C_FORWARD : C_FIND; break;	/* F */
 		case 0x22: cmd = C_FLAG; break;		/* G */
 		case 0x32: cmd = C_MOVE; break;		/* M */
 		case 0x1e: cmd = C_SELALL; break;	/* A */
@@ -1846,7 +1856,7 @@ int main(void)
 		} else {
 			which = busy_key(&ev) ? MU_KEYBD : evnt_multi_(MU_MESAG | MU_KEYBD | MU_BUTTON | MU_TIMER | MU_M1,
 									 0x101, 3, 0,
-									 list_show_waiting() || win_sliders_waiting() ? 0 : hovering ? 100 : 1000,
+									 list_show_waiting() || win_sliders_waiting() ? 0 : find_waiting() ? 50 : hovering ? 100 : 1000,
 									 msg, &ev);
 		}
 		/* a message a key moved to is shown once no key is waiting, and
@@ -1860,6 +1870,8 @@ int main(void)
 			list_show_later(1);
 		if (win_sliders_waiting() && !(which & (MU_KEYBD | MU_MESAG | MU_BUTTON)))
 			win_sliders_now();
+		if (find_waiting() && !(which & MU_KEYBD))
+			find_now();	/* the keys paused: the list follows the field */
 		if (which & MU_M1) {
 			win_hover(ev.mx, ev.my);
 			hover_x = ev.mx;

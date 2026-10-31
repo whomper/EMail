@@ -661,6 +661,99 @@ int mail_load_more(ACCOUNT *a, FINFO *fi, long *added)
 	return job_out(r);
 }
 
+/* ---------------- Search server ---------------- */
+
+static int cmp_ulong(const void *x, const void *y)
+{
+	unsigned long a = *(const unsigned long *)x, b = *(const unsigned long *)y;
+	return a < b ? -1 : a > b;
+}
+
+static int search(ACCOUNT *a, FINFO *fi, const char *atari, long max, unsigned long **uids, long *n)
+{
+	FOLDER *f;
+	unsigned long *u = 0, *want;
+	char *utf;
+	long ul, cnt = 0, i, j, pos;
+	HDRCTX hc;
+	int r, renumbered = 0;
+	if (fi->local || a->pop || !mail_connect(a))
+		return 0;
+	utf = atari_to_utf8(atari, (long)strlen(atari), &ul);
+	if (!utf) {
+		str_copy(mail_err, "Not enough memory to search.", sizeof(mail_err));
+		return 0;
+	}
+	status("%s: searching %s on the server...", a->name, fi->disp);
+	r = imap_select(a->im, fi->server, 0);
+	if (r > 0 && a->im->uidvalidity) {
+		f = fold_open(a, fi);
+		if (f && f->uidvalidity && f->uidvalidity != a->im->uidvalidity) {
+			/* renumbered on the server: the mirror is the next check's */
+			snprintf(mail_err, sizeof(mail_err), "%s changed on the server.|Check mail, then search again.",
+				 fi->disp);
+			renumbered = 1;
+			r = 0;
+		}
+		if (f)
+			fold_close(f);
+	}
+	if (r > 0)
+		r = imap_search(a->im, utf, &u, &cnt);
+	free(utf);
+	if (r <= 0) {
+		free(u);
+		return renumbered ? 0 : imap_failed(a, r);
+	}
+	/* the newest max: the UIDs grow as messages come */
+	qsort(u, cnt, sizeof(*u), cmp_ulong);
+	if (cnt > max) {
+		memmove(u, u + cnt - max, max * sizeof(*u));
+		cnt = max;
+	}
+	/* the headers of those not mirrored, as a check fetches them */
+	f = cnt ? fold_open(a, fi) : 0;
+	if (f) {
+		want = malloc(cnt * sizeof(*want));
+		j = 0;
+		if (want)
+			for (i = 0; i < cnt; i++)
+				if (!fold_get(f, u[i]))
+					want[j++] = u[i];
+		hc.f = f;
+		hc.added = hc.unseen = 0;
+		if (j)
+			prog_start(0, 0, j, "%s: %s - headers", a->name, fi->disp);
+		for (pos = 0; pos < j && r > 0;) {
+			char set[700];
+			uidset(want, j, &pos, set, sizeof(set), 50);
+			r = imap_fetch(a->im, set,
+				       "(UID FLAGS RFC822.SIZE INTERNALDATE BODY.PEEK[HEADER.FIELDS (FROM TO SUBJECT DATE CONTENT-TYPE)])",
+				       header_cb, &hc);
+		}
+		if (j)
+			prog_end();
+		free(want);
+		fold_close(f);
+		if (r <= 0) {
+			free(u);
+			return imap_failed(a, r);
+		}
+	}
+	status("");
+	*uids = u;
+	*n = cnt;
+	return 1;
+}
+
+int mail_search(ACCOUNT *a, FINFO *fi, const char *atari, long max, unsigned long **uids, long *n)
+{
+	*uids = 0;
+	*n = 0;
+	job_in();
+	return job_out(search(a, fi, atari, max, uids, n));
+}
+
 /* ---------------- POP3 ---------------- */
 
 typedef struct {

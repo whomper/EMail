@@ -154,7 +154,7 @@ static void layout(void)
 	set_pane(&w_folders, mwork.x, mwork.y, fw, mwork.h);
 	set_pane(&w_list, mwork.x + fw + DIV, mwork.y, mwork.w - fw - DIV, lh);
 	set_pane(&w_reader, mwork.x + fw + DIV, mwork.y + lh + DIV, mwork.w - fw - DIV, mwork.h - lh - DIV);
-	w_list.head_h = ch + 3;
+	w_list.head_h = ch + 3 + find_row_h();	/* Find's row above the column titles */
 	for (i = 0; i < NPANE; i++) {
 		WIN *w = panes[i];
 		long max = w->total - win_rows(w);
@@ -658,6 +658,8 @@ void win_focus(WIN *w)
 	focus = w;
 	redraw_header(old);
 	redraw_header(w);
+	if (old == &w_list || w == &w_list)
+		find_focus();	/* Find's cursor goes with the keyboard */
 }
 
 void win_top(WIN *w)

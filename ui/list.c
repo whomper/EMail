@@ -116,6 +116,14 @@ void list_titles(void)
 		win_info(&w_list, "");
 		return;
 	}
+	if (find_titles(t, sizeof(t), i, sizeof(i), nview, cur_folder->n,
+			cur_folder->exists ? cur_folder->exists : cur_finfo->total)) {
+		if (nmarks > 1)
+			snprintf(i, sizeof(i), "%s selected", num(nmarks));
+		win_title(&w_list, t);
+		win_info(&w_list, i);
+		return;
+	}
 	snprintf(t, sizeof(t), "%s - %s", cur_finfo->disp, cur_acct->name);
 	win_title(&w_list, t);
 	if (nmarks > 1)
@@ -243,9 +251,18 @@ static void build_view(void)
 		if (view) {
 			nview = cur_folder->n;
 			sort_view();
-			/* a big local folder lists a page at a time too */
-			if (cur_finfo->local && nview > shown)
+			if (find_filtering()) {
+				/* Find: those found, all of them on disk, in order */
+				long j = 0;
+				int to = show_to();
+				for (i = 0; i < nview; i++)
+					if (find_match(&cur_folder->h[view[i]], to))
+						view[j++] = view[i];
+				nview = j;
+			} else if (cur_finfo->local && nview > shown) {
+				/* a big local folder lists a page at a time too */
 				nview = shown;
+			}
 			for (i = 0; i < nview; i++)
 				if (cur_folder->h[view[i]].uid == sel_uid)
 					sel = i;
@@ -261,7 +278,9 @@ static void build_view(void)
 		nmarks = 0;
 	}
 	more = 0;
-	if (cur_folder && cur_finfo->local)
+	if (find_filtering())
+		;			/* what was found: no "load more" row */
+	else if (cur_folder && cur_finfo->local)
 		more = cur_folder->n - nview;
 	else if (cur_folder) {
 		long server = cur_folder->exists ? cur_folder->exists : cur_finfo->total;
@@ -273,6 +292,7 @@ static void build_view(void)
 
 void list_load(void)
 {
+	find_close(0);		/* another folder: Find is left */
 	sel_uid = 0;
 	nmarks = 0;
 	anchor = -1;
@@ -300,6 +320,32 @@ void list_select_uid(unsigned long uid)
 			win_ensure_visible(&w_list, i);
 		}
 	win_redraw(&w_list, 0);
+}
+
+/* the list made again and drawn whole (Find's row came or went) */
+void list_relayout(void)
+{
+	build_view();
+	w_list.total = nview + (more ? 1 : 0);
+	if (w_list.top > nview)
+		w_list.top = 0;
+	list_titles();
+	win_sliders(&w_list);
+	shown_sig = shows();
+	shown_valid = 1;
+	win_redraw(&w_list, 0);
+}
+
+long list_count(void)
+{
+	fresh();
+	return nview + (more ? 1 : 0);
+}
+
+void list_after_find(void)
+{
+	if (sel >= 0 && sel < nview)
+		win_ensure_visible(&w_list, sel);
 }
 
 /* after the current message was deleted or moved: nothing chosen, so
@@ -376,6 +422,7 @@ static void draw(WIN *w, GRECT *clip)
 	long i, rows = win_rows(w) + 1, first, last;
 	short x0 = TEXT_X(w->work.x), y0 = w->work.y + w->head_h;
 	short xf, xs, xd, xz;		/* the columns, on 8-pixel steps */
+	short ty = w->work.y + find_row_h();	/* the column titles, under Find's row */
 	GRECT r;
 	fresh();
 	/* only the rows the area meets: a row drawn again (a click, a mark)
@@ -408,13 +455,14 @@ static void draw(WIN *w, GRECT *clip)
 			fill(&r, 0);
 	}
 
+	find_draw(clip);
 	/* column titles */
 	if (clip->y < y0) {
 		const char *who = show_to() ? "To" : "From";
 		text_pen = pen[P_DIM];
-		text_at(xf, w->work.y + 1, who, strlen(who), c_from, TX_BOLD);
-		text_at(xs, w->work.y + 1, "Subject", 7, c_subj, TX_BOLD);
-		text_at(xd, w->work.y + 1, "Date", 4, c_date, TX_BOLD);
+		text_at(xf, ty + 1, who, strlen(who), c_from, TX_BOLD);
+		text_at(xs, ty + 1, "Subject", 7, c_subj, TX_BOLD);
+		text_at(xd, ty + 1, "Date", 4, c_date, TX_BOLD);
 		text_pen = 1;
 		hline(w->work.x, w->work.x + w->work.w - 1, w->work.y + w->head_h - 2);
 	}
@@ -423,7 +471,8 @@ static void draw(WIN *w, GRECT *clip)
 		return;
 	}
 	if (!nview) {
-		const char *m = cur_finfo->role == FR_OUTBOX ? "Nothing waiting to be sent." : "No messages.";
+		const char *m = find_filtering() ? "Nothing found." :
+				cur_finfo->role == FR_OUTBOX ? "Nothing waiting to be sent." : "No messages.";
 		text_at(x0, w->work.y + w->head_h + ch, m, strlen(m), cols, TX_LIGHT);
 		return;
 	}
@@ -802,6 +851,10 @@ static void click(WIN *w, short mx, short my, short clicks, short kstate)
 {
 	long i;
 	fresh();
+	if (my < w->work.y + find_row_h()) {
+		find_click(mx, my);
+		return;
+	}
 	if (my < w->work.y + w->head_h)
 		return;
 	i = w->top + (my - w->work.y - w->head_h) / ch;
