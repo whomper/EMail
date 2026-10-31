@@ -79,6 +79,8 @@ void win_info(WIN *w, const char *info);
 void win_redraw(WIN *w, GRECT *area);		/* area NULL = everything */
 void win_redraw_lines(WIN *w, long first, long n);
 void win_sliders(WIN *w);
+int win_sliders_waiting(void);	/* the main window's slider to set at the next turn */
+void win_sliders_now(void);
 void win_scroll_to(WIN *w, long top);
 void win_ensure_visible(WIN *w, long line);
 long win_rows(WIN *w);				/* whole lines that fit */

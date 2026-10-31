@@ -1846,7 +1846,7 @@ int main(void)
 		} else {
 			which = busy_key(&ev) ? MU_KEYBD : evnt_multi_(MU_MESAG | MU_KEYBD | MU_BUTTON | MU_TIMER | MU_M1,
 									 0x101, 3, 0,
-									 list_show_waiting() ? 0 : hovering ? 100 : 1000,
+									 list_show_waiting() || win_sliders_waiting() ? 0 : hovering ? 100 : 1000,
 									 msg, &ev);
 		}
 		/* a message a key moved to is shown once no key is waiting, and
@@ -1858,6 +1858,8 @@ int main(void)
 			 (which & (MU_MESAG | MU_BUTTON) || (KEY_SCAN(ev.kreturn) != 0x48 &&
 							   KEY_SCAN(ev.kreturn) != 0x50 && KEY_SCAN(ev.kreturn) != 0x47)))
 			list_show_later(1);
+		if (win_sliders_waiting() && !(which & (MU_KEYBD | MU_MESAG | MU_BUTTON)))
+			win_sliders_now();
 		if (which & MU_M1) {
 			win_hover(ev.mx, ev.my);
 			hover_x = ev.mx;

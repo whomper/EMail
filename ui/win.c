@@ -743,6 +743,26 @@ static int scroll_copy(WIN *w, GRECT *a, long d)
 	return 1;
 }
 
+/* The reader scrolled: the main window's slider is set in the next turn
+   with no key or message waiting, not with the scroll. TOS draws the
+   bar again at each wind_set, some 20 ms of a line down the letter on a
+   stock Falcon (TOS 4.04: 55 ms with it, 35 without); a held key
+   scrolls on and the slider follows when it is let go. */
+static int sliders_due;
+
+int win_sliders_waiting(void)
+{
+	return sliders_due;
+}
+
+void win_sliders_now(void)
+{
+	if (sliders_due) {
+		sliders_due = 0;
+		win_sliders(&w_reader);
+	}
+}
+
 void win_scroll_to(WIN *w, long top)
 {
 	long old = w->top;
@@ -765,6 +785,8 @@ void win_scroll_to(WIN *w, long top)
 		bar_of(w, &b);
 		m = pb_moved(&b, old);
 		main_redraw(&m);
+	} else if (w == &w_reader) {
+		sliders_due = 1;	/* in the next turn, by itself (below) */
 	} else {
 		win_sliders(w);
 	}
