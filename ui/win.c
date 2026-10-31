@@ -210,6 +210,39 @@ static void bar_of(WIN *w, PANEBAR *b)
 	b->across = 0;		/* down the pane's right side */
 }
 
+/* what each pane's bar shows on the screen, as last drawn: its place,
+   its slider's start and length. win_sliders draws a bar again only
+   when that changes (EMail's list bar, drawn whole: 70 ms an ST) */
+static GRECT bar_r[NPANE];
+static short bar_sy[NPANE], bar_sh[NPANE];
+
+static int pane_no(WIN *w)
+{
+	int i;
+	for (i = 0; i < NPANE; i++)
+		if (panes[i] == w)
+			return i;
+	return -1;
+}
+
+static int bar_same(WIN *w, int note)
+{
+	PANEBAR b;
+	short ty, th, sy, sh;
+	int i = pane_no(w), same;
+	if (i < 0)
+		return 0;
+	bar_of(w, &b);
+	pb_slider(&b, &ty, &th, &sy, &sh);
+	same = !memcmp(&bar_r[i], &b.r, sizeof(GRECT)) && bar_sy[i] == sy && bar_sh[i] == sh;
+	if (note) {
+		bar_r[i] = b.r;
+		bar_sy[i] = sy;
+		bar_sh[i] = sh;
+	}
+	return same;
+}
+
 static void draw_header(WIN *w)
 {
 	GRECT h;
@@ -324,6 +357,7 @@ static void draw_main(GRECT *clip)
 			bar_of(w, &b);
 			pb_draw(&b, &r);
 			clip_on(clip);
+			bar_same(w, 1);	/* what it shows now */
 		}
 	}
 	r = div_v();
@@ -428,7 +462,8 @@ void win_sliders(WIN *w)
 	short h = w->h;
 	if (w->pane && w != &w_reader) {
 		GRECT s = sb_rect(w);
-		main_redraw(&s);
+		if (!bar_same(w, 0))	/* drawn again only when it moves */
+			main_redraw(&s);
 		return;
 	}
 	if (w == &w_reader)		/* the main window's slider */
@@ -698,6 +733,45 @@ int win_is_top(WIN *w)
 
 /* ---------------- scrolling ---------------- */
 
+/* What a pane shows in a, moved dy pixels down (up when dy < 0) on the
+   screen, as scroll_copy moves its rows: Find's row coming or going
+   moves the list under it rather than drawing it again (Erez, 31 Oct
+   2026: the ST drew the whole list, 115 ms). 0 where the pane isn't all
+   in sight: the caller draws it */
+int win_shift(WIN *w, GRECT *a, short dy)
+{
+	GRECT r;
+	short pxy[8], ady = dy < 0 ? -dy : dy;
+	if (!w->pane || main_h <= 0 || main_iconified || !dy || ady >= a->h)
+		return 0;
+	wind_update(BEG_UPDATE);
+	wind_get(main_h, WF_FIRSTXYWH, &r.x, &r.y, &r.w, &r.h);
+	if (r.x > a->x || r.y > a->y || r.x + r.w < a->x + a->w || r.y + r.h < a->y + a->h) {
+		wind_update(END_UPDATE);
+		return 0;
+	}
+	pxy[0] = pxy[4] = a->x;
+	pxy[2] = pxy[6] = a->x + a->w - 1;
+	if (dy > 0) {
+		pxy[1] = a->y;
+		pxy[3] = a->y + a->h - 1 - dy;
+		pxy[5] = a->y + dy;
+		pxy[7] = a->y + a->h - 1;
+	} else {
+		pxy[1] = a->y + ady;
+		pxy[3] = a->y + a->h - 1;
+		pxy[5] = a->y;
+		pxy[7] = a->y + a->h - 1 - ady;
+	}
+	graf_mouse(M_OFF, 0);
+	clip_on(a);
+	scr_rows(vdi_h, pxy);
+	trace("SHIFT", w, a);
+	graf_mouse(M_ON, 0);
+	wind_update(END_UPDATE);
+	return 1;
+}
+
 /* A pane scrolled by fewer rows than it shows: the rows that stay move
    on the screen with one raster copy and only the new ones are drawn. A
    GDOS font's rows are drawn a letter at a time, so a pane drawn afresh
@@ -750,19 +824,32 @@ static int scroll_copy(WIN *w, GRECT *a, long d)
    bar again at each wind_set, some 20 ms of a line down the letter on a
    stock Falcon (TOS 4.04: 55 ms with it, 35 without); a held key
    scrolls on and the slider follows when it is let go. */
-static int sliders_due;
+static int sliders_due;		/* a bit for each pane (panes[]) */
 
 int win_sliders_waiting(void)
 {
 	return sliders_due;
 }
 
+/* a pane's bar set in the next turn with nothing waiting (Find: the
+   list's, after what was found is drawn) */
+void win_sliders_later(WIN *w)
+{
+	int i = pane_no(w);
+	if (i >= 0)
+		sliders_due |= 1 << i;
+}
+
+/* one bar a turn */
 void win_sliders_now(void)
 {
-	if (sliders_due) {
-		sliders_due = 0;
-		win_sliders(&w_reader);
-	}
+	int i;
+	for (i = 0; i < NPANE; i++)
+		if (sliders_due & (1 << i)) {
+			sliders_due &= ~(1 << i);
+			win_sliders(panes[i]);
+			return;
+		}
 }
 
 void win_scroll_to(WIN *w, long top)
@@ -788,7 +875,7 @@ void win_scroll_to(WIN *w, long top)
 		m = pb_moved(&b, old);
 		main_redraw(&m);
 	} else if (w == &w_reader) {
-		sliders_due = 1;	/* in the next turn, by itself (below) */
+		win_sliders_later(w);	/* in the next turn, by itself (below) */
 	} else {
 		win_sliders(w);
 	}

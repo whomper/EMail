@@ -145,11 +145,21 @@ static const MBAR_TITLE bar[] = {
 
 static MBAR mb;
 
+/* an item's state set only when it changes: menu_update runs after
+   every command, and some forty AES calls an 8 MHz ST takes 40 ms over
+   (Find opened: 180 ms, 75 of it its drawing) */
 static void enable(short cmd, int on)
 {
 	short i = mbar_object(&mb, cmd);
-	if (i >= 0)
+	if (i >= 0 && !(mb.tree[i].ob_state & DISABLED) != !!on)
 		menu_ienable(mb.tree, i, on ? 1 : 0);
+}
+
+static void check(short cmd, int on)
+{
+	short i = mbar_object(&mb, cmd);
+	if (i >= 0 && !(mb.tree[i].ob_state & CHECKED) != !on)
+		menu_icheck(mb.tree, i, on ? 1 : 0);
 }
 
 void menu_update(void)
@@ -171,7 +181,7 @@ void menu_update(void)
 	enable(C_GETALL, cur_finfo && !cur_finfo->local && !cur_finfo->noselect);
 	enable(C_SELALL, cur_folder != 0);
 	enable(C_FIND, cur_folder != 0);
-	menu_icheck(mb.tree, mbar_object(&mb, C_FIND), find_active());
+	check(C_FIND, find_active());
 	enable(C_SAVEATT, msg && cur_msg->nparts > 0);
 	enable(C_NEXTWIN, ed && main_h > 0);
 	enable(C_SEND, ed);
@@ -181,10 +191,10 @@ void menu_update(void)
 	enable(C_NEWFOLDER, cur_acct && !cur_acct->pop);
 	enable(C_DELFOLDER, cur_finfo && !cur_finfo->local && !cur_finfo->role);
 	enable(C_RENFOLDER, cur_finfo && !cur_finfo->local && !cur_finfo->role && !cur_finfo->noselect);
-	menu_icheck(mb.tree, mbar_object(&mb, C_OFFLINE), opt.offline);
-	menu_icheck(mb.tree, mbar_object(&mb, C_FALCON), opt.falcon);
-	menu_icheck(mb.tree, mbar_object(&mb, C_HEBREW), hebrew_kbd);
-	menu_icheck(mb.tree, mbar_object(&mb, C_LOG), opt.log);
+	check(C_OFFLINE, opt.offline);
+	check(C_FALCON, opt.falcon);
+	check(C_HEBREW, hebrew_kbd);
+	check(C_LOG, opt.log);
 }
 
 /* ---------------- status and helpers ---------------- */
@@ -1856,7 +1866,7 @@ int main(void)
 		} else {
 			which = busy_key(&ev) ? MU_KEYBD : evnt_multi_(MU_MESAG | MU_KEYBD | MU_BUTTON | MU_TIMER | MU_M1,
 									 0x101, 3, 0,
-									 list_show_waiting() || win_sliders_waiting() ? 0 : find_waiting() ? 50 : hovering ? 100 : 1000,
+									 list_show_waiting() || win_sliders_waiting() || list_later_waiting() ? 0 : find_waiting() ? 20 : hovering ? 100 : 1000,
 									 msg, &ev);
 		}
 		/* a message a key moved to is shown once no key is waiting, and
@@ -1868,10 +1878,16 @@ int main(void)
 			 (which & (MU_MESAG | MU_BUTTON) || (KEY_SCAN(ev.kreturn) != 0x48 &&
 							   KEY_SCAN(ev.kreturn) != 0x50 && KEY_SCAN(ev.kreturn) != 0x47)))
 			list_show_later(1);
-		if (win_sliders_waiting() && !(which & (MU_KEYBD | MU_MESAG | MU_BUTTON)))
-			win_sliders_now();
-		if (find_waiting() && !(which & MU_KEYBD))
-			find_now();	/* the keys paused: the list follows the field */
+		/* what waits for a quiet turn, one a turn: a bar, the list's
+		   title (Find) */
+		if (!(which & (MU_KEYBD | MU_MESAG | MU_BUTTON))) {
+			if (find_waiting() && find_now())
+				;	/* Find's look, a step; the list after it */
+			else if (win_sliders_waiting())
+				win_sliders_now();
+			else if (list_later_waiting())
+				list_later_now();
+		}
 		if (which & MU_M1) {
 			win_hover(ev.mx, ev.my);
 			hover_x = ev.mx;

@@ -79,6 +79,8 @@ void win_info(WIN *w, const char *info);
 void win_redraw(WIN *w, GRECT *area);		/* area NULL = everything */
 void win_redraw_lines(WIN *w, long first, long n);
 void win_sliders(WIN *w);
+void win_sliders_later(WIN *w);
+int win_shift(WIN *w, GRECT *a, short dy);
 int win_sliders_waiting(void);	/* the main window's slider to set at the next turn */
 void win_sliders_now(void);
 void win_scroll_to(WIN *w, long top);
@@ -155,12 +157,17 @@ void reader_selection(long n);			/* the reader says how many are selected */
 void list_select_uid(unsigned long uid);
 void list_after_remove(void);
 long list_count(void);
-void list_relayout(void);			/* the list's rows (the "load more" one too) */
-void list_after_find(void);		/* Find left: the selection in sight */
+void list_relayout(void);
+void list_find_refresh(long top, long force);
+int list_later_waiting(void);
+void list_later_now(void);			/* the list's rows (the "load more" one too) */
 /* Find (find.c): a field across the top of the list */
 int find_active(void);
 int find_filtering(void);		/* the list shows what was found */
 int find_match(HDR *h, int to);
+const long *find_results(long *n);	/* its look's, when it is of the folder as it is */
+const long *list_order(long *n);	/* the open folder in date order */
+int show_to_list(void);
 int find_titles(char *t, int tn, char *i, int in, long shown, long ondisk, long onserver);
 short find_row_h(void);
 void find_draw(GRECT *clip);
@@ -172,7 +179,7 @@ void find_click(short mx, short my);
 int find_tip(short mx, short my, char *out, int size);
 void find_focus(void);
 int find_waiting(void);
-void find_now(void);
+int find_now(void);
 
 void reader_show(HDR *h);		/* load and show a message */
 int reader_show_begin(HDR *h);		/* reader_show in two steps: read and parse it, */

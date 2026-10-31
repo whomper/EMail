@@ -108,6 +108,11 @@ static int show_to(void)
 			     cur_finfo->role == FR_DRAFTS);
 }
 
+int show_to_list(void)
+{
+	return show_to();
+}
+
 void list_titles(void)
 {
 	char t[100], i[120];
@@ -237,6 +242,38 @@ static void sort_view(void)
 	}
 }
 
+/* the folder in date order, as sort_view left it: Find's every look
+   starts from it, not from a sort again (40 ms an ST, 500 messages) */
+static long *order, norder;
+static FOLDER *order_of;
+static unsigned order_gen;
+
+/* the open folder in date order, kept until it changes: its count in
+   *n, or 0 (no memory: build_view sorts its own) */
+const long *list_order(long *n)
+{
+	*n = 0;
+	if (!cur_folder || !cur_folder->n)
+		return 0;
+	if (!order || order_of != cur_folder || order_gen != cur_folder->gen || norder != cur_folder->n) {
+		long *o = realloc(order, cur_folder->n * sizeof(long)), *keep = view;
+		long keepn = nview;
+		if (!o)
+			return 0;
+		order = o;
+		view = order;		/* sort_view sorts view[0..nview) */
+		nview = cur_folder->n;
+		sort_view();
+		view = keep;
+		nview = keepn;
+		order_of = cur_folder;
+		order_gen = cur_folder->gen;
+		norder = cur_folder->n;
+	}
+	*n = norder;
+	return order;
+}
+
 static void build_view(void)
 {
 	long i;
@@ -249,19 +286,32 @@ static void build_view(void)
 	if (cur_folder && cur_folder->n) {
 		view = malloc(cur_folder->n * sizeof(long));
 		if (view) {
+			const long *got;
 			nview = cur_folder->n;
-			sort_view();
-			if (find_filtering()) {
-				/* Find: those found, all of them on disk, in order */
-				long j = 0;
-				int to = show_to();
-				for (i = 0; i < nview; i++)
-					if (find_match(&cur_folder->h[view[i]], to))
-						view[j++] = view[i];
-				nview = j;
-			} else if (cur_finfo->local && nview > shown) {
-				/* a big local folder lists a page at a time too */
-				nview = shown;
+			if (find_filtering() && (got = find_results(&i)) != 0) {
+				/* Find: what its look through the folder found, in
+				   date order (find.c, a step a turn) */
+				memcpy(view, got, i * sizeof(long));
+				nview = i;
+			} else {
+				const long *o = list_order(&i);
+				if (o)
+					memcpy(view, o, nview * sizeof(long));
+				else
+					sort_view();
+				if (find_filtering()) {
+					/* the folder changed since Find looked (a check, a
+					   delete): looked through again here, at once */
+					long j = 0;
+					int to = show_to();
+					for (i = 0; i < nview; i++)
+						if (find_match(&cur_folder->h[view[i]], to))
+							view[j++] = view[i];
+					nview = j;
+				} else if (cur_finfo->local && nview > shown) {
+					/* a big local folder lists a page at a time too */
+					nview = shown;
+				}
 			}
 			for (i = 0; i < nview; i++)
 				if (cur_folder->h[view[i]].uid == sel_uid)
@@ -322,6 +372,108 @@ void list_select_uid(unsigned long uid)
 	win_redraw(&w_list, 0);
 }
 
+/* ---------------- Find: only the rows that changed ----------------
+ * What each row on the screen shows, before the list changes and
+ * after: a row drawn again only where they differ (Erez, 31 Oct 2026:
+ * Find on an ST drew the whole list at each look). The title and the
+ * bar follow in the next turns, one a turn. */
+typedef struct {
+	unsigned long uid;	/* 0: an empty row; ~0: the "load more" row */
+	unsigned short flags;
+	char lit;
+} SEEN;
+
+static long seen_rows(SEEN *s, long rows)
+{
+	long r;
+	for (r = 0; r < rows; r++) {
+		long i = w_list.top + r;
+		memset(&s[r], 0, sizeof(SEEN));
+		if (i < nview) {
+			HDR *h = &cur_folder->h[view[i]];
+			s[r].uid = h->uid;
+			s[r].flags = h->flags;
+			s[r].lit = (char)(nmarks ? marked(i) : i == sel);
+		} else if (i == nview && more) {
+			s[r].uid = ~0UL;
+			s[r].flags = (unsigned short)more;
+			s[r].lit = (char)(i == sel);
+		}
+	}
+	return rows;
+}
+
+static int titles_due;
+
+int list_later_waiting(void)
+{
+	return titles_due;
+}
+
+void list_later_now(void)
+{
+	if (titles_due) {
+		titles_due = 0;
+		list_titles();
+	}
+}
+
+/* the list made again for Find, its first row at top; the rows from
+   screen row force on drawn whatever they showed (what win_shift
+   uncovered) */
+void list_find_refresh(long top, long force)
+{
+	long rows = win_rows(&w_list) + 1, r, from = -1;
+	SEEN *was = 0, *now = 0;
+	int known = cur_folder && view_of == cur_folder && view_gen == cur_folder->gen;
+	if (rows > 0 && known) {
+		was = malloc(rows * sizeof(SEEN));
+		now = malloc(rows * sizeof(SEEN));
+	}
+	if (was && now)
+		seen_rows(was, rows);
+	build_view();
+	w_list.total = nview + (more ? 1 : 0);
+	if (top < 0) {
+		/* Find left: where the list was, the selection in sight */
+		long shows_n = win_rows(&w_list), max = w_list.total - shows_n;
+		top = w_list.top;
+		if (sel >= 0 && (sel < top || sel >= top + shows_n))
+			top = sel - shows_n / 2;
+		if (top > max)
+			top = max;
+		if (top < 0)
+			top = 0;
+	}
+	w_list.top = top > nview ? 0 : top;
+	if (!was || !now) {
+		free(was);
+		free(now);
+		list_titles();
+		win_sliders(&w_list);
+		shown_sig = shows();
+		shown_valid = 1;
+		win_redraw(&w_list, 0);
+		return;
+	}
+	seen_rows(now, rows);
+	for (r = 0; r <= rows; r++) {
+		int differ = r < rows && (r >= force || memcmp(&was[r], &now[r], sizeof(SEEN)));
+		if (differ && from < 0)
+			from = r;
+		if (!differ && from >= 0) {	/* a run of them at once */
+			win_redraw_lines(&w_list, w_list.top + from, r - from);
+			from = -1;
+		}
+	}
+	free(was);
+	free(now);
+	shown_sig = shows();
+	shown_valid = 1;
+	titles_due = 1;
+	win_sliders_later(&w_list);
+}
+
 /* the list made again and drawn whole (Find's row came or went) */
 void list_relayout(void)
 {
@@ -340,12 +492,6 @@ long list_count(void)
 {
 	fresh();
 	return nview + (more ? 1 : 0);
-}
-
-void list_after_find(void)
-{
-	if (sel >= 0 && sel < nview)
-		win_ensure_visible(&w_list, sel);
 }
 
 /* after the current message was deleted or moved: nothing chosen, so
@@ -456,8 +602,8 @@ static void draw(WIN *w, GRECT *clip)
 	}
 
 	find_draw(clip);
-	/* column titles */
-	if (clip->y < y0) {
+	/* column titles, where the area reaches them (not for Find's field) */
+	if (clip->y < y0 && clip->y + clip->h > ty) {
 		const char *who = show_to() ? "To" : "From";
 		text_pen = pen[P_DIM];
 		text_at(xf, ty + 1, who, strlen(who), c_from, TX_BOLD);
