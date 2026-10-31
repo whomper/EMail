@@ -255,6 +255,7 @@ static void visual_at(short x, short y, const char *out, short n, short flags, s
 	char m[BIDI_MAX];
 	short i, effects = ((flags & TX_BOLD) ? 1 : (flags & TX_LIGHT) ? 2 : 0) | fx;
 	short col = (flags & TX_INVERSE) ? 0 : text_pen;
+	int on_white;
 	if (heb_mode != HM_MAP && has_heb(out, n)) {
 		wr_mode(2);
 		text_col(col);
@@ -270,14 +271,32 @@ static void visual_at(short x, short y, const char *out, short n, short flags, s
 		out = m;
 		heb_font_map(m, n, opt.hebfont);
 	}
+	on_white = !(flags & TX_INVERSE) && white_set && x >= white.x && y >= white.y &&
+	    x + n * cw < white.x + white.w && y + ch <= white.y + white.h;
+	/* plain black text on white (the reader's lines, the list's rows):
+	   common's text_plain puts the system font's glyphs straight into
+	   TOS's screen, a third of the VDI's time on an ST (the guidelines'
+	   Speed); elsewhere it is text_n, the same pixels on white */
+	if (!effects && on_white && col == 1 && font_cells == FC_RUNS) {
+		wr_mode(1);
+		text_col(1);
+		text_effects(0);
+		for (i = 0; i < n; i += 120)
+			text_plain(vdi_h, x + i * cw, y, out + i, n - i > 120 ? 120 : n - i);
+		return;
+	}
 	wr_mode(2);
 	text_col(col);
 	/* on white, in the window's text: transparent there is TOS's
 	   MD_REPLACE, so bold and underline go on afterwards */
-	if (effects && !(flags & TX_INVERSE) && white_set && x >= white.x && y >= white.y &&
-	    x + n * cw < white.x + white.w && y + ch <= white.y + white.h && text_fx_fast(effects, 1)) {
+	if (effects && on_white && text_fx_fast(effects, 1)) {
 		text_effects(0);
-		text_n(vdi_h, x, y, out, n);
+		if (col == 1 && font_cells == FC_RUNS) {
+			wr_mode(1);
+			text_plain(vdi_h, x, y, out, n);
+		} else {
+			text_n(vdi_h, x, y, out, n);
+		}
 		text_fx(vdi_h, x, y, out, n, effects, col);
 		a_wr = -1;	/* text_fx sets its own */
 		if (effects & 8)

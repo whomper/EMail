@@ -23,6 +23,7 @@
 #include "util.h"
 #include "bidi.h"
 #include "iconify.h"
+#include "text.h"
 #include "../src/plat.h"
 #include "panebar.h"
 
@@ -268,7 +269,12 @@ static const char *trace_name(WIN *w)
 }
 static void trace_ms(const char *what, WIN *w, GRECT *r, long ms)
 {
+	static int plain = 99;
 	char t[90];
+	if (text_plain_state() != plain) {	/* "TEXTPLAIN 1": common's text_plain into the screen */
+		snprintf(t, sizeof(t), "TEXTPLAIN %d", plain = text_plain_state());
+		pf_debug(t);
+	}
 	snprintf(t, sizeof(t), "%s %s %d %d heap %ld %ld ms %ld", what, trace_name(w), r->y - w->work.y, r->h,
 		 heap_use, heap_peak, ms);
 	pf_debug(t);
@@ -699,7 +705,6 @@ static int scroll_copy(WIN *w, GRECT *a, long d)
 {
 	GRECT r, strip;
 	short pxy[8], dy;
-	MFDB scr;
 	long rows = win_rows(w);
 	if (!w->pane || main_h <= 0 || main_iconified || !d || d >= rows || -d >= rows)
 		return 0;
@@ -712,7 +717,6 @@ static int scroll_copy(WIN *w, GRECT *a, long d)
 		wind_update(END_UPDATE);
 		return 0;
 	}
-	memset(&scr, 0, sizeof(scr));	/* the screen */
 	pxy[0] = pxy[4] = a->x;
 	pxy[2] = pxy[6] = a->x + a->w - 1;
 	strip = *a;
@@ -731,7 +735,7 @@ static int scroll_copy(WIN *w, GRECT *a, long d)
 	}
 	graf_mouse(M_OFF, 0);
 	clip_on(a);			/* NVDI clips raster copies: the pane's own */
-	vro_cpyfm(vdi_h, 3, pxy, &scr, &scr);
+	scr_rows(vdi_h, pxy);		/* by the CPU on TOS's screen (common) */
 	trace("COPY", w, a);
 	graf_mouse(M_ON, 0);
 	wind_update(END_UPDATE);

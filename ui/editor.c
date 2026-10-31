@@ -17,6 +17,7 @@
 #include "bidi.h"
 #include "util.h"
 #include "clip.h"
+#include "text.h"
 #include "av.h"
 
 typedef struct {
@@ -640,11 +641,7 @@ static void draw(WIN *w, GRECT *clip)
 			pxy[1] = y;
 			pxy[2] = pxy[0] + 1;
 			pxy[3] = y + ch - 1;
-			vswr_mode(vdi_h, 3);	/* XOR */
-			vsf_interior(vdi_h, 1);
-			vsf_color(vdi_h, 1);
-			vr_recfl(vdi_h, pxy);
-			vswr_mode(vdi_h, 1);
+			scr_xor(vdi_h, pxy);	/* the cursor, inverted (common) */
 			attr_forget();
 		}
 	}
