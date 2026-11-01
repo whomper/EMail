@@ -141,8 +141,13 @@ def undo():
 host, inf = mirror(os.path.join(r.work, "fixture"))
 shutil.copytree(os.path.join(host, "EMAIL"), os.path.join(r.hd, "EMAIL", "EMAIL"))
 r.put(PRG, "EMAIL")
+# FONT=ID,PT: the text in that font (a GDOS font under NVDI, as Erez's
+# EMAIL.INF has it: font_test.py with AERA_WITH_NVDI=1 writes the first
+# monospaced one's FONT= there)
+font = os.environ.get("FONT")
 r.write("EMAIL\\EMAIL.INF".replace("\\", os.sep),
-        inf.replace("\r\n", "\n").replace("tz=180\n", "tz=180\nstartoffline=1\n"))
+        inf.replace("\r\n", "\n").replace("tz=180\n", "tz=180\nstartoffline=1\n" +
+                                            ("font=%s\n" % font if font else "")))
 acc = os.environ.get("ACC") == "1"
 try:
     if acc:
