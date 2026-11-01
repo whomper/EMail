@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "ui.h"
+#include "click.h"
 #include "theme.h"
 #include "../src/plat.h"
 #include "../src/mail.h"
@@ -264,21 +265,6 @@ void folders_select(ACCOUNT *a, FINFO *fi)
 	menu_update();
 }
 
-/* the button held: 1 when it came up over row i of the pane (5.8: the
-   action on the release, over the row pressed; let go elsewhere, none) */
-static int released_over(WIN *w, long i)
-{
-	short x, y, b, k;
-	for (;;) {
-		graf_mkstate(&x, &y, &b, &k);
-		if (!(b & 1))
-			break;
-		evnt_timer_(10);
-	}
-	return x >= w->work.x && x < w->work.x + w->work.w && y >= w->work.y && y < w->work.y + w->work.h &&
-	       w->top + (y - w->work.y) / ch == i;
-}
-
 static void click(WIN *w, short mx, short my, short clicks, short kstate)
 {
 	long i = w->top + (my - w->work.y) / ch;
@@ -290,17 +276,35 @@ static void click(WIN *w, short mx, short my, short clicks, short kstate)
 	/* guidelines 5.8 (Erez, 1 Nov 2026): a folder's row lit on the press,
 	   at once, the row it left drawn again; the folder opened on the
 	   release over it. The account line checks its mail on the release */
-	if (ent[i].fi && !ent[i].fi->noselect && i != sel) {
+	{
 		long was = sel;
-		sel = i;
-		win_redraw_lines(w, sel, 1);	/* the row pressed first */
-		if (was >= 0) {
-			evnt_timer_(0);
-			win_redraw_lines(w, was, 1);
+		short dx, dy;
+		GRECT r;
+		r.x = w->work.x;
+		r.y = w->work.y + (short)((i - w->top) * ch);
+		r.w = w->work.w;
+		r.h = ch;
+		if (ent[i].fi && !ent[i].fi->noselect && i != sel) {
+			sel = i;
+			win_redraw_lines(w, sel, 1);	/* the row pressed first */
+			if (was >= 0) {
+				evnt_timer_(0);
+				win_redraw_lines(w, was, 1);
+			}
+		}
+		/* the release, the loop's redraws going on (common's click.c) */
+		if (press_track(&r, mx, my, 0, ui_press_message, &dx, &dy) != PRESS_IN) {
+			/* let go elsewhere: the folder shown chosen again (5.8) */
+			if (sel != was) {
+				long now = sel;
+				sel = was;
+				win_redraw_lines(w, now, 1);
+				if (was >= 0)
+					win_redraw_lines(w, was, 1);
+			}
+			return;
 		}
 	}
-	if (!released_over(w, i))
-		return;
 	if (!ent[i].fi) {
 		/* the account line: check this account */
 		long n;

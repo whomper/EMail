@@ -619,6 +619,16 @@ void ui_modal_message(const short *msg)
 	in_modal = 0;
 }
 
+/* a message while a press waits for its release (common's press_track,
+   5.8): a redraw at once, the rest kept for the loop */
+void ui_press_message(short *m)
+{
+	if (m[0] == WM_REDRAW)
+		win_message(m);
+	else
+		ui_modal_message(m);
+}
+
 /* the redraws the AES has queued, done now: a window closed before a
    long wait leaves the screen first. Other messages are kept for later */
 void ui_redraws(void)

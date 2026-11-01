@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "ui.h"
+#include "click.h"
 #include "theme.h"
 #include "../src/mail.h"
 #include "util.h"
@@ -1066,8 +1067,23 @@ static void click(WIN *w, short mx, short my, short clicks, short kstate)
 	   release, in the turns after, a step a turn (as Up and Down); held
 	   and moved, a drag onto a folder, and no message shown */
 	press_row(i);
-	if (drag_messages(i, mx, my))
-		return;
+	{
+		short dx, dy;
+		GRECT r;
+		r.x = w->work.x;
+		r.y = w->work.y + w->head_h + (short)((i - w->top) * ch);
+		r.w = w->work.w;
+		r.h = ch;
+		/* the release, the loop's redraws going on (common's click.c);
+		   moved while held: a drag onto a folder, no message shown */
+		switch (press_track(&r, mx, my, 0, ui_press_message, &dx, &dy)) {
+		case PRESS_DRAG:
+			drag_messages(i, mx, my);
+			return;
+		case PRESS_OUT:
+			return;		/* let go elsewhere: the selection stays */
+		}
+	}
 	if (clicks > 1) {
 		select_row(i, 1);	/* a double click: open it, the keyboard to it */
 		return;
