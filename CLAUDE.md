@@ -118,3 +118,19 @@ These come from AERA-Atari's repo template and are the same in every app's CLAUD
   (`common/ui/av_people.c`, `people_ask.c`); EContact has no patch for
   EMail any more. Check it with `econtact_test.py` against EContact's
   latest release.
+
+## Maintenance mode (Erez, 1 Nov 2026)
+
+EMail is in maintenance mode while EWeb, EPDF and EPlay go to 1.0 (AERA-Atari, ATARI-APP-GUIDELINES.md, section 8). Until Erez ends it:
+- No new features, speed rounds, clean-ups, or catching up with new or changed guidelines.
+- No sync of the shared code (`common/`, `xl/`, `gateway/`). Shared code moving is no reason to rebuild or release.
+- A release only for:
+  - a security or data-loss fault;
+  - a crash or breakage Erez reports;
+  - something outside that stops it working (a certificate, a server);
+  - something EWeb, EPDF or EPlay need from it.
+
+  Such a release takes only that fix (one change from AERA-Atari, not a sync), and its notes say why.
+- Work on `main` that isn't released stays unreleased.
+- Nothing runs in the background; the session waits for Erez or the hub.
+- Only Erez's explicit word ends this mode, for instance that every app is to take the latest shared code and release. The hub passes it on quoting him.
