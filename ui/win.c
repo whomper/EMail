@@ -24,6 +24,7 @@
 #include "bidi.h"
 #include "iconify.h"
 #include "text.h"
+#include "offdraw.h"
 #include "../src/plat.h"
 #include "panebar.h"
 
@@ -369,6 +370,11 @@ static void draw_main(GRECT *clip)
 }
 
 /* redraw area of the main window through its rectangle list */
+/* main_redraw draws each piece off the screen and shows it at once
+   (common's offdraw): a pane's header, its title or count changed, came
+   back with its ground showing first for a frame (the hub, 1 Nov 2026) */
+static int main_off;
+
 static void main_redraw(GRECT *area)
 {
 	GRECT r, a;
@@ -387,8 +393,14 @@ static void main_redraw(GRECT *area)
 	while (r.w > 0 && r.h > 0) {
 		GRECT c = r;
 		if (intersect(&a, &c)) {
-			clip_on(&c);
-			draw_main(&c);
+			if (main_off && c.h <= OFF_ROWS && off_begin(vdi_h, c.x, c.y, c.w, c.h)) {
+				clip_on(&c);	/* the piece: off_begin's own */
+				draw_main(&c);
+				off_end();
+			} else {	/* NVDI, MiNT, a bigger piece: on the screen */
+				clip_on(&c);
+				draw_main(&c);
+			}
 		}
 		wind_get(main_h, WF_NEXTXYWH, &r.x, &r.y, &r.w, &r.h);
 	}
@@ -516,7 +528,9 @@ static void redraw_header(WIN *w)
 	h.y = w->box.y;
 	h.w = w->box.w;
 	h.h = header_h();
+	main_off = 1;
 	main_redraw(&h);
+	main_off = 0;
 }
 
 void win_title(WIN *w, const char *title)

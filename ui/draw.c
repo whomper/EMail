@@ -88,12 +88,21 @@ void fill(GRECT *r, short color)
 		vsf_perimeter(vdi_h, 0);
 		a_fill = 1;
 	}
+	white = *r;
+	white_set = !color;
+	/* white and black by the CPU where it wins (common's scr_fill, where
+	   scr_cpu_wins(): TOS's screen and a 68000); a 68030's TOS 4.04
+	   fills as fast or faster, and a stock Falcon's letter took 20 ms
+	   longer by the CPU (1 Nov 2026): there, and under NVDI, the VDI
+	   with the attributes set once, as before */
+	if ((color == 0 || color == 1) && scr_cpu_wins()) {
+		scr_fill(vdi_h, pxy, color);
+		return;
+	}
 	if (color != a_fcol)
 		vsf_color(vdi_h, a_fcol = color);
 	wr_mode(1);
 	vr_recfl(vdi_h, pxy);
-	white = *r;
-	white_set = !color;
 }
 
 void hline(short x1, short x2, short y)

@@ -146,7 +146,8 @@ void list_load(void);			/* (re)read cur_folder into the list */
 void list_refresh(void);
 void list_titles(void);
 HDR *list_current(void);
-int list_show_waiting(void);		/* a message to show at the next turns (a key moved to it) */
+int list_show_waiting(void);
+int list_press_at(short mx, short my);	/* on the message rows */		/* a message to show at the next turns (a key moved to it) */
 void list_show_later(int all);		/* its next step, or all of them */
 /* several messages selected */
 long list_marked(void);				/* how many (0: just the current one) */

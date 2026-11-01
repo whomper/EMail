@@ -264,6 +264,21 @@ void folders_select(ACCOUNT *a, FINFO *fi)
 	menu_update();
 }
 
+/* the button held: 1 when it came up over row i of the pane (5.8: the
+   action on the release, over the row pressed; let go elsewhere, none) */
+static int released_over(WIN *w, long i)
+{
+	short x, y, b, k;
+	for (;;) {
+		graf_mkstate(&x, &y, &b, &k);
+		if (!(b & 1))
+			break;
+		evnt_timer_(10);
+	}
+	return x >= w->work.x && x < w->work.x + w->work.w && y >= w->work.y && y < w->work.y + w->work.h &&
+	       w->top + (y - w->work.y) / ch == i;
+}
+
 static void click(WIN *w, short mx, short my, short clicks, short kstate)
 {
 	long i = w->top + (my - w->work.y) / ch;
@@ -271,6 +286,20 @@ static void click(WIN *w, short mx, short my, short clicks, short kstate)
 	(void)clicks;
 	(void)kstate;
 	if (i < 0 || i >= nent)
+		return;
+	/* guidelines 5.8 (Erez, 1 Nov 2026): a folder's row lit on the press,
+	   at once, the row it left drawn again; the folder opened on the
+	   release over it. The account line checks its mail on the release */
+	if (ent[i].fi && !ent[i].fi->noselect && i != sel) {
+		long was = sel;
+		sel = i;
+		win_redraw_lines(w, sel, 1);	/* the row pressed first */
+		if (was >= 0) {
+			evnt_timer_(0);
+			win_redraw_lines(w, was, 1);
+		}
+	}
+	if (!released_over(w, i))
 		return;
 	if (!ent[i].fi) {
 		/* the account line: check this account */

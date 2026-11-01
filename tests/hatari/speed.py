@@ -19,11 +19,15 @@ offline (STARTOFFLINE=1), so no network is needed. The actions, by keys
     a short message shown          (Down)
     a page down the list           (Shift+Down)
     the long letter again          (Home)
+    a row pressed, released        (the button held over the third row,
+                                    then let go: lit, then shown; again
+                                    for the first, the long letter)
     Find opened, a letter typed,   (Ctrl+F; e, then x: the 500 messages
     another, Find left              looked through after each; Undo)
     a line down the letter         (Tab to it, Down)
     a page down the letter         (Shift+Down)
     Settings opened, closed        (Ctrl+, then Undo: the window uncovered)
+    About EMail opened, closed     (the EMail menu's first item, then Esc)
     a new message, a letter typed  (Ctrl+N; a sentence typed in the
                                     text, then one more key timed)
 
@@ -135,6 +139,18 @@ r = speed.Rig(work, machine, nvdi=nvdi, display=os.environ.get("SPEED_DISPLAY", 
               extra=["--cmd-fifo", fifo])
 
 
+def press(x, y):
+    """the left button pressed over (x, y) of the screen, and held"""
+    g = dict(l.split("=") for l in r.xdo("getwindowgeometry", "--shell", r.win()).split())
+    r.xdo("mousemove", str(int(g["X"]) + x), str(int(g["Y"]) + y))
+    time.sleep(0.4)
+    r.xdo("mousedown", "1")
+
+
+def release():
+    r.xdo("mouseup", "1")
+
+
 def undo():
     with open(fifo, "w") as f:
         f.write("hatari-event keypress 0x61\n")
@@ -168,6 +184,14 @@ try:
         r.act("a short message shown (Down)", speed.PAGE, lambda: r.key("Down"))
         r.act("a page down the list (Shift+Down)", speed.PAGE, lambda: r.key("shift+Down"))
         r.act("the long letter again (Home)", speed.PAGE, lambda: r.key("Home"))
+        # guidelines 5.8: a row lit on the press (as a key or a tick, 50
+        # ms), the message on the release; then back to the long letter
+        from PIL import Image
+        row0 = 103 if Image.open(r.shot("rows")).size[1] < 450 else 108
+        r.act("a message row pressed: lit at once", speed.KEY, lambda: press(400, row0 + 32))
+        r.act("released: that message shown", speed.PAGE, release)
+        r.act("the long letter's row pressed", speed.KEY, lambda: press(400, row0))
+        r.act("released: the long letter shown", speed.PAGE, release)
         r.act("Find opened (Ctrl+F)", speed.PAGE, lambda: r.key("ctrl+f"))
         r.act("Find: e typed, the list follows", speed.PAGE, lambda: r.key("e"))
         r.act("Find: x typed, the list follows", speed.PAGE, lambda: r.key("x"))
@@ -178,6 +202,8 @@ try:
         r.act("a page down the letter (Shift+Down)", speed.PAGE, lambda: r.key("shift+Down"))
         r.act("Settings opened (Ctrl+,)", speed.DIALOG, lambda: r.key("ctrl+comma"))
         r.act("Settings closed (Undo): the window uncovered", speed.WINDOW, undo)
+        r.act("About EMail opened (the EMail menu)", speed.DIALOG, lambda: r.menu(40, 28))
+        r.act("About closed (Esc): the window uncovered", speed.WINDOW, lambda: r.key("Escape"))
         r.act("a new message (Ctrl+N)", speed.WINDOW, lambda: r.key("ctrl+n"))
         r.key("Down", "Down", "Down", "Down", "Down")     # past To, Cc, Subject: the text
         r.type("Thanks for the parts, the Falcon works again ")

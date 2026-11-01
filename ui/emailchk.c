@@ -223,10 +223,12 @@ static const struct {
 #define NKEYS (short)(sizeof(keys) / sizeof(keys[0]))
 
 /* read before the heap is taken (2.1: nothing malloc'd before it, or
-   GEMDOS memory is held for good): one open, into a buffer of its own */
+   GEMDOS memory is held for good): one open, into a buffer on the stack,
+   not one kept for good (2 KB of the accessories' first-boot share: the
+   hub, 1 Nov 2026) */
 static void inf_read(void)
 {
-	static char buf[2048];
+	char buf[2048];
 	char *line, *next;
 	long n;
 	int h = pf_open(inf, PF_READ);

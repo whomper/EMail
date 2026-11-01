@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "ui.h"
+#include "panebar.h"
 #include "theme.h"
 #include "../src/mail.h"
 #include "../src/compose.h"
@@ -1728,6 +1729,11 @@ int main(void)
 	}
 	scr_w = work_out[0] + 1;
 	scr_h = work_out[1] + 1;
+	/* the pane bars' slider moves filled by the VDI on TOS's own screen,
+	   not by objc_draw (common's pb_vdi: 30 ms less a line on an ST); it
+	   checks its first box against the AES's and keeps to the AES's
+	   where they differ */
+	pb_vdi(vdi_h);
 	vq_extnd(vdi_h, 1, work_out);
 	planes = work_out[4];
 	if (!screen_check("EMail", scr_w)) {	/* not in ST low */
@@ -1875,9 +1881,10 @@ int main(void)
 		if (list_show_waiting() && !(which & (MU_KEYBD | MU_MESAG | MU_BUTTON)))
 			list_show_later(0);
 		else if (list_show_waiting() &&
-			 (which & (MU_MESAG | MU_BUTTON) || (KEY_SCAN(ev.kreturn) != 0x48 &&
-							   KEY_SCAN(ev.kreturn) != 0x50 && KEY_SCAN(ev.kreturn) != 0x47)))
-			list_show_later(1);
+			 ((which & MU_MESAG) || ((which & MU_BUTTON) && !list_press_at(ev.mx, ev.my)) ||
+			  ((which & MU_KEYBD) && KEY_SCAN(ev.kreturn) != 0x48 && KEY_SCAN(ev.kreturn) != 0x50 &&
+			   KEY_SCAN(ev.kreturn) != 0x47)))
+			list_show_later(1);	/* a press on another row moves on, as a key does (5.8) */
 		/* what waits for a quiet turn, one a turn: a bar, the list's
 		   title (Find) */
 		if (!(which & (MU_KEYBD | MU_MESAG | MU_BUTTON))) {
