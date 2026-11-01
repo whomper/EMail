@@ -276,8 +276,11 @@ static void visual_at(short x, short y, const char *out, short n, short flags, s
 	/* plain black text on white (the reader's lines, the list's rows):
 	   common's text_plain puts the system font's glyphs straight into
 	   TOS's screen, a third of the VDI's time on an ST (the guidelines'
-	   Speed); elsewhere it is text_n, the same pixels on white */
-	if (!effects && on_white && col == 1 && font_cells == FC_RUNS) {
+	   Speed). Only where it can (text_plain_state not below 0): under
+	   NVDI or in a GDOS font it would be text_n in MD_REPLACE, not the
+	   transparent text below, as before 1.69 (Erez's video, 1 Nov 2026:
+	   the lists and the letter slower than they were, in his font) */
+	if (!effects && on_white && col == 1 && font_cells == FC_RUNS && text_plain_state() >= 0) {
 		wr_mode(1);
 		text_col(1);
 		text_effects(0);
@@ -291,7 +294,7 @@ static void visual_at(short x, short y, const char *out, short n, short flags, s
 	   MD_REPLACE, so bold and underline go on afterwards */
 	if (effects && on_white && text_fx_fast(effects, 1)) {
 		text_effects(0);
-		if (col == 1 && font_cells == FC_RUNS) {
+		if (col == 1 && font_cells == FC_RUNS && text_plain_state() >= 0) {
 			wr_mode(1);
 			text_plain(vdi_h, x, y, out, n);
 		} else {
