@@ -36,6 +36,11 @@ CFLAGS  := -m68000 -Os -fomit-frame-pointer -ffreestanding -fno-builtin \
 # 1 Nov 2026: the accessories' first-boot share)
 APPCF   ?= -DDLG_CPU
 CFLAGS  += $(TRACECF) $(APPCF)
+# each function and variable in a section of its own, and the link
+# leaves out those nothing uses: common/ brings code EMail doesn't call
+# (some 10 KB of 1.72's EMAIL.PRG; a 1 MB ST with EMail check had 294 KB
+# free for it against 1.71's 314)
+CFLAGS  += -ffunction-sections -fdata-sections
 LDFLAGS := -m68000 -nostdlib -static -no-pie -Wl,--emit-relocs -Wl,-T,common/atari/link.ld \
            -Wl,--build-id=none -Wl,-z,noexecstack -Wl,--no-warn-rwx-segments
 
@@ -84,7 +89,7 @@ $(OBJDIR)/build.o: $(OBJDIR)/build.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 $(OBJDIR)/mail.elf: $(OBJS) $(OBJDIR)/build.o common/atari/link.ld
-	$(CC) $(LDFLAGS) -o $@ $(OBJS) $(OBJDIR)/build.o -lgcc
+	$(CC) $(LDFLAGS) -Wl,--gc-sections -o $@ $(OBJS) $(OBJDIR)/build.o -lgcc
 
 # EMail's icon (the AERA guidelines, 5.5): drawn in common/icons/EMAIL.txt,
 # made into icons/ (the desktop's RSC and ICN files), ui/icon.h and
