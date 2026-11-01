@@ -25,6 +25,7 @@
 #include "iconify.h"
 #include "text.h"
 #include "offdraw.h"
+#include "click.h"
 #include "../src/plat.h"
 #include "panebar.h"
 
@@ -375,9 +376,36 @@ static void draw_main(GRECT *clip)
    back with its ground showing first for a frame (the hub, 1 Nov 2026) */
 static int main_off;
 
+/* A press drawn (5.8): TOS's AES holds BEG_UPDATE back while the left
+   button is held still, so a row drawn selected under it showed only at
+   the release (EHypView, 1 Nov 2026: 1,425 ms on ST:med). While pressing
+   is set the redraws below take common's press_update_begin, which skips
+   the lock there with the button down; a multitasking AES keeps it */
+static int pressing;
+
+void win_pressing(int on)
+{
+	pressing = on;
+}
+
+static int upd_begin(void)
+{
+	if (pressing)
+		return press_update_begin();
+	wind_update(BEG_UPDATE);
+	return 1;
+}
+
+static void upd_end(int took)
+{
+	if (took)
+		wind_update(END_UPDATE);
+}
+
 static void main_redraw(GRECT *area)
 {
 	GRECT r, a;
+	int took;
 	if (main_h <= 0)
 		return;
 	if (main_iconified) {	/* the icon, not the panes (area is the old window's) */
@@ -387,7 +415,7 @@ static void main_redraw(GRECT *area)
 	a = area ? *area : mwork;
 	if (!intersect(&mwork, &a))
 		return;
-	wind_update(BEG_UPDATE);
+	took = upd_begin();
 	graf_mouse(M_OFF, 0);
 	wind_get(main_h, WF_FIRSTXYWH, &r.x, &r.y, &r.w, &r.h);
 	while (r.w > 0 && r.h > 0) {
@@ -405,12 +433,13 @@ static void main_redraw(GRECT *area)
 		wind_get(main_h, WF_NEXTXYWH, &r.x, &r.y, &r.w, &r.h);
 	}
 	graf_mouse(M_ON, 0);
-	wind_update(END_UPDATE);
+	upd_end(took);
 }
 
 void win_redraw(WIN *w, GRECT *area)
 {
 	GRECT r, a;
+	int took;
 	if (w->pane) {
 		a = area ? *area : w->work;
 		if (intersect(&w->box, &a))
@@ -426,7 +455,7 @@ void win_redraw(WIN *w, GRECT *area)
 	a = area ? *area : w->work;
 	if (!intersect(&w->work, &a))
 		return;
-	wind_update(BEG_UPDATE);
+	took = upd_begin();
 	graf_mouse(M_OFF, 0);
 	wind_get(w->h, WF_FIRSTXYWH, &r.x, &r.y, &r.w, &r.h);
 	while (r.w > 0 && r.h > 0) {
@@ -438,7 +467,7 @@ void win_redraw(WIN *w, GRECT *area)
 		wind_get(w->h, WF_NEXTXYWH, &r.x, &r.y, &r.w, &r.h);
 	}
 	graf_mouse(M_ON, 0);
-	wind_update(END_UPDATE);
+	upd_end(took);
 }
 
 void win_redraw_area(GRECT *area)
@@ -709,6 +738,47 @@ void win_focus(WIN *w)
 	redraw_header(w);
 	if (old == &w_list || w == &w_list)
 		find_focus();	/* Find's cursor goes with the keyboard */
+}
+
+/* A press on another pane's rows (5.8): the keyboard goes to it at once,
+   its look (the two headers, Find's cursor) in the turn after the row
+   pressed is drawn, while the button is still held (win_press_idle) or
+   after the click: on a stock Falcon the headers and the folder row
+   together took 55 ms */
+static WIN *focus_was;
+
+static void focus_later(WIN *w)
+{
+	if (!w->pane || w == focus)
+		return;
+	if (!focus_was)
+		focus_was = focus;
+	focus = w;
+}
+
+static WIN *focus_drawn;	/* the new header drawn, the old one not yet */
+
+void win_press_idle(void)
+{
+	WIN *old = focus_was;
+	if (!old)
+		return;
+	if (old == focus) {
+		focus_was = focus_drawn = 0;
+		return;
+	}
+	/* a header a turn: an 8 MHz ST draws one in some 40 ms */
+	pressing = 1;
+	if (focus_drawn != focus) {
+		redraw_header(focus_drawn = focus);
+		pressing = 0;
+		return;
+	}
+	redraw_header(old);
+	pressing = 0;
+	focus_was = focus_drawn = 0;
+	if (old == &w_list || focus == &w_list)
+		find_focus();
 }
 
 void win_top(WIN *w)
@@ -1061,8 +1131,19 @@ int win_mouse(short mx, short my, short button, short clicks, short kstate)
 			WIN *w = panes[i];
 			if (!inside(&w->box, mx, my))
 				continue;
-			win_focus(w);
 			r = sb_rect(w);
+			if ((w == &w_list || w == &w_folders) && !inside(&r, mx, my) && inside(&w->work, mx, my) &&
+			    !(button & 2) && w->click) {
+				focus_later(w);	/* the row pressed drawn first (5.8) */
+				w->click(w, mx, my, clicks, kstate);
+				while (focus_was) {	/* the look not drawn while held */
+					win_press_idle();
+					if (focus_was)
+						evnt_timer_(0);
+				}
+				return 1;
+			}
+			win_focus(w);
 			if (inside(&r, mx, my)) {
 				scrollbar_press(w, mx, my);
 			} else if (inside(&w->work, mx, my)) {

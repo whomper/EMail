@@ -286,21 +286,25 @@ static void click(WIN *w, short mx, short my, short clicks, short kstate)
 		r.h = ch;
 		if (ent[i].fi && !ent[i].fi->noselect && i != sel) {
 			sel = i;
+			win_pressing(1);	/* drawn while the button is held (5.8, TOS) */
 			win_redraw_lines(w, sel, 1);	/* the row pressed first */
 			if (was >= 0) {
 				evnt_timer_(0);
 				win_redraw_lines(w, was, 1);
 			}
+			win_pressing(0);
 		}
 		/* the release, the loop's redraws going on (common's click.c) */
-		if (press_track(&r, mx, my, 0, ui_press_message, &dx, &dy) != PRESS_IN) {
+		if (press_track(&r, mx, my, win_press_idle, ui_press_message, &dx, &dy) != PRESS_IN) {
 			/* let go elsewhere: the folder shown chosen again (5.8) */
 			if (sel != was) {
 				long now = sel;
 				sel = was;
 				win_redraw_lines(w, now, 1);
-				if (was >= 0)
+				if (was >= 0) {
+					evnt_timer_(0);	/* the AES its turn: a row is some 40 ms on an ST */
 					win_redraw_lines(w, was, 1);
+				}
 			}
 			return;
 		}

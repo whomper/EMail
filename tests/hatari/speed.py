@@ -21,13 +21,17 @@ offline (STARTOFFLINE=1), so no network is needed. The actions, by keys
     the long letter again          (Home)
     a row pressed, released        (the button held over the third row,
                                     then let go: lit, then shown; again
-                                    for the first, the long letter)
+                                    for the first, the long letter; the
+                                    row checked lit by its pixels while
+                                    the button is still down)
     Find opened, a letter typed,   (Ctrl+F; e, then x: the 500 messages
     another, Find left              looked through after each; Undo)
     a line down the letter         (Tab to it, Down)
     a page down the letter         (Shift+Down)
     Settings opened, closed        (Ctrl+, then Undo: the window uncovered)
     About EMail opened, closed     (the EMail menu's first item, then Esc)
+    a folder's row pressed, let    (Outbox held, checked lit by its pixels,
+    go elsewhere                    then let go below the pane: Inbox again)
     a new message, a letter typed  (Ctrl+N; a sentence typed in the
                                     text, then one more key timed)
 
@@ -151,6 +155,34 @@ def release():
     r.xdo("mouseup", "1")
 
 
+held_bad = []
+
+
+def held_lit(shot, before, y_new, y_old, what, x0=0.4, x1=0.9):
+    """a press held still (5.8): the row pressed shows selected and the one
+    it left doesn't, by the screen's pixels while the button is still down
+    (TOS's AES holds BEG_UPDATE back while the left button is held: a row
+    drawn under it showed only at the release, and AESGAP can't see it,
+    the wait being inside an AES call; the hub, 1 Nov 2026). The
+    selected and the plain row's ground are taken from the screen before
+    the press, where y_old was the selected row and y_new a plain one"""
+    from PIL import Image
+    from collections import Counter
+
+    def ground(img, y):
+        w = img.size[0]
+        band = [img.getpixel((x, yy)) for yy in range(y - 4, y + 5) for x in range(int(w * x0), int(w * x1))]
+        return Counter(band).most_common(1)[0][0]
+    a, b = Image.open(before).convert("RGB"), Image.open(shot).convert("RGB")
+    sel, plain = ground(a, y_old), ground(a, y_new)
+    ok = sel != plain and ground(b, y_new) == sel and ground(b, y_old) == plain
+    print("%s  %s: held 1 s or more, the row %s" % ("ok  " if ok else "FAIL", what,
+          "shown selected" if ok else "not shown selected (%s, %s; selected %s)" %
+          (ground(b, y_new), ground(b, y_old), sel)), flush=True)
+    if not ok:
+        held_bad.append(what)
+
+
 def undo():
     with open(fifo, "w") as f:
         f.write("hatari-event keypress 0x61\n")
@@ -187,10 +219,15 @@ try:
         # guidelines 5.8: a row lit on the press (as a key or a tick, 50
         # ms), the message on the release; then back to the long letter
         from PIL import Image
-        row0 = 103 if Image.open(r.shot("rows")).size[1] < 450 else 108
+        rows = r.shot("rows")
+        row0 = 103 if Image.open(rows).size[1] < 450 else 108
         r.act("a message row pressed: lit at once", speed.KEY, lambda: press(400, row0 + 32))
+        held = r.shot("held-1")       # the button still down, the screen still
+        held_lit(held, rows, row0 + 32, row0, "a message row pressed")
         r.act("released: that message shown", speed.PAGE, release)
+        rows = r.shot("rows-2")
         r.act("the long letter's row pressed", speed.KEY, lambda: press(400, row0))
+        held_lit(r.shot("held-2"), rows, row0, row0 + 32, "the long letter's row pressed")
         r.act("released: the long letter shown", speed.PAGE, release)
         r.act("Find opened (Ctrl+F)", speed.PAGE, lambda: r.key("ctrl+f"))
         r.act("Find: e typed, the list follows", speed.PAGE, lambda: r.key("e"))
@@ -204,6 +241,13 @@ try:
         r.act("Settings closed (Undo): the window uncovered", speed.WINDOW, undo)
         r.act("About EMail opened (the EMail menu)", speed.DIALOG, lambda: r.menu(40, 28))
         r.act("About closed (Esc): the window uncovered", speed.WINDOW, lambda: r.key("Escape"))
+        # the folder pane (5.8): Outbox lit on the press, then let go
+        # elsewhere, Inbox chosen again (last: the keyboard stays with it)
+        rows = r.shot("rows-3")
+        r.act("a folder's row pressed: lit at once", speed.KEY, lambda: press(60, row0 + 16))
+        held_lit(r.shot("held-3"), rows, row0 + 16, row0, "a folder's row pressed", 0.03, 0.25)
+        r.act("let go elsewhere: the folder shown again", speed.KEY,
+              lambda: (r.xdo("mousemove_relative", "--", "0", "200"), time.sleep(0.4), release()))
         r.act("a new message (Ctrl+N)", speed.WINDOW, lambda: r.key("ctrl+n"))
         r.key("Down", "Down", "Down", "Down", "Down")     # past To, Cc, Subject: the text
         r.type("Thanks for the parts, the Falcon works again ")
@@ -211,6 +255,9 @@ try:
         r.still()
         r.act("a letter typed at a line's end", speed.KEY, lambda: r.key("h"))
     code = r.report()
+    if held_bad:
+        print("FAIL  a held press not shown: " + ", ".join(held_bad))
+        code = 1
 finally:
     r.stop()
 sys.exit(code)

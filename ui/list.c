@@ -788,6 +788,7 @@ static void select_row(long i, int open)
 static void press_row(long i)
 {
 	long old = sel;
+	win_pressing(1);	/* drawn while the button is held (5.8, TOS) */
 	if (nmarks) {
 		nmarks = 0;
 		win_redraw(&w_list, 0);
@@ -805,6 +806,7 @@ static void press_row(long i)
 			win_redraw_lines(&w_list, old, 1);
 		}
 	}
+	win_pressing(0);
 }
 
 /* a press on a message row (the left button): the selection moves
@@ -1076,7 +1078,7 @@ static void click(WIN *w, short mx, short my, short clicks, short kstate)
 		r.h = ch;
 		/* the release, the loop's redraws going on (common's click.c);
 		   moved while held: a drag onto a folder, no message shown */
-		switch (press_track(&r, mx, my, 0, ui_press_message, &dx, &dy)) {
+		switch (press_track(&r, mx, my, win_press_idle, ui_press_message, &dx, &dy)) {
 		case PRESS_DRAG:
 			drag_messages(i, mx, my);
 			return;
