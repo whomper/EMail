@@ -170,8 +170,6 @@ short graf_rubberbox(short x, short y, short minw, short minh, short *w, short *
 short graf_dragbox(short w, short h, short x, short y, short bx, short by, short bw, short bh,
 		   short *nx, short *ny);
 void evnt_set_m1(short leave, short x, short y, short w, short h);
-short evnt_dclick(short rate, short setit);
-short graf_watchbox(OBJECT *tree, short obj, short instate, short outstate);
 short menu_bar(OBJECT *tree, short show);
 short menu_tnormal(OBJECT *tree, short title, short normal);
 short menu_register(short apid, const char *name);
@@ -225,7 +223,6 @@ const char *app_dir(void);
 short wind_find(short x, short y);
 OBJECT *rsrc_tree(short index);
 short objc_draw(OBJECT *tree, short start, short depth, short x, short y, short w, short h);
-short objc_change(OBJECT *tree, short obj, short x, short y, short w, short h, short state, short redraw);
 short form_dial(short flag, short x, short y, short w, short h);
 #define FMD_START  0
 #define FMD_FINISH 3
@@ -302,7 +299,6 @@ short vqt_width(short h, short c);	/* cell width of character c */
    counts from 0 in TOS 1.04 (replace 0, transparent 1) and from 1 in
    EmuTOS 1.4, as the books have it (ClaudeST, 26 Oct 2026): to read it,
    set a known mode once and see what comes back */
-void vqf_attributes(short h, short *a);
 void vqt_attributes(short h, short *a);
 short vqt_extent_n(short h, const char *s, short n);	/* width n characters draw, effects in force */
 /* n characters drawn to len pixels wide, the gaps between characters

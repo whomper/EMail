@@ -10,7 +10,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "ui.h"
-#include "click.h"
 #include "theme.h"
 #include "../src/mail.h"
 #include "util.h"
@@ -783,53 +782,6 @@ static void select_row(long i, int open)
 		win_focus(&w_reader);
 }
 
-/* the press (5.8): the row selected and drawn, the old one drawn again;
-   nothing else yet */
-static void press_row(long i)
-{
-	long old = sel;
-	win_pressing(1);	/* drawn while the button is held (5.8, TOS) */
-	if (nmarks) {
-		nmarks = 0;
-		win_redraw(&w_list, 0);
-		old = -1;
-	}
-	anchor = i;
-	sel = i;
-	sel_uid = cur_folder->h[view[i]].uid;
-	if (old != sel) {
-		/* the row pressed first, then the AES its turn, then the one it
-		   left: an 8 MHz ST draws a row in some 40 ms, two in 85 */
-		win_redraw_lines(&w_list, sel, 1);
-		if (old >= 0) {
-			evnt_timer_(0);
-			win_redraw_lines(&w_list, old, 1);
-		}
-	}
-	win_pressing(0);
-}
-
-/* a press on a message row (the left button): the selection moves
-   there at once, not after the message waiting to be shown (5.8) */
-int list_press_at(short mx, short my)
-{
-	WIN *w = &w_list;
-	return w->work.w > 0 && mx >= w->work.x && mx < w->work.x + w->work.w &&
-	       my >= w->work.y + w->head_h && my < w->work.y + w->work.h;
-}
-
-/* the release: the selected message shown in the next turns */
-static void show_later_sel(void)
-{
-	if (sel < 0 || sel >= nview)
-		return;
-	show_uid = sel_uid;
-	if (cur_msg && !reader_missing && cur_uid == sel_uid)
-		show_step = reader_half() ? 2 : show_step ? 3 : 0;
-	else
-		show_step = 1;
-}
-
 /* the message waiting to be shown: it is, unless the selection moved
    from it or the list was made again */
 int list_show_waiting(void)
@@ -1060,37 +1012,9 @@ static void click(WIN *w, short mx, short my, short clicks, short kstate)
 		mark_click(i, kstate);
 		return;
 	}
-	if (i < 0 || i >= nview) {
-		select_row(i, clicks > 1);
+	if (clicks < 2 && i >= 0 && i < nview && drag_messages(i, mx, my))
 		return;
-	}
-	/* guidelines 5.8 (Erez, 1 Nov 2026): the row selected on the press,
-	   at once, the old and the new row alone; the message on the
-	   release, in the turns after, a step a turn (as Up and Down); held
-	   and moved, a drag onto a folder, and no message shown */
-	press_row(i);
-	{
-		short dx, dy;
-		GRECT r;
-		r.x = w->work.x;
-		r.y = w->work.y + w->head_h + (short)((i - w->top) * ch);
-		r.w = w->work.w;
-		r.h = ch;
-		/* the release, the loop's redraws going on (common's click.c);
-		   moved while held: a drag onto a folder, no message shown */
-		switch (press_track(&r, mx, my, win_press_idle, ui_press_message, &dx, &dy)) {
-		case PRESS_DRAG:
-			drag_messages(i, mx, my);
-			return;
-		case PRESS_OUT:
-			return;		/* let go elsewhere: the selection stays */
-		}
-	}
-	if (clicks > 1) {
-		select_row(i, 1);	/* a double click: open it, the keyboard to it */
-		return;
-	}
-	show_later_sel();
+	select_row(i, clicks > 1);
 }
 
 /* the message menu, shared with the reader */

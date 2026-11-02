@@ -78,10 +78,6 @@ void win_title(WIN *w, const char *title);
 void win_info(WIN *w, const char *info);
 void win_redraw(WIN *w, GRECT *area);		/* area NULL = everything */
 void win_redraw_lines(WIN *w, long first, long n);
-/* the redraws while on: a press drawn (5.8), not held back by TOS while the button is down */
-void win_pressing(int on);
-/* press_track's idle while a row is held: a pane's focus drawn after the row */
-void win_press_idle(void);
 void win_sliders(WIN *w);
 void win_sliders_later(WIN *w);
 int win_shift(WIN *w, GRECT *a, short dy);
@@ -150,9 +146,7 @@ void list_load(void);			/* (re)read cur_folder into the list */
 void list_refresh(void);
 void list_titles(void);
 HDR *list_current(void);
-int list_show_waiting(void);
-int list_press_at(short mx, short my);
-void ui_press_message(short *m);	/* main.c: for press_track */	/* on the message rows */		/* a message to show at the next turns (a key moved to it) */
+int list_show_waiting(void);		/* a message to show at the next turns (a key moved to it) */
 void list_show_later(int all);		/* its next step, or all of them */
 /* several messages selected */
 long list_marked(void);				/* how many (0: just the current one) */

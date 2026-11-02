@@ -31,16 +31,7 @@ CFLAGS  := -m68000 -Os -fomit-frame-pointer -ffreestanding -fno-builtin \
            -fno-asynchronous-unwind-tables -Wall -Wno-pointer-sign \
            -DMAIL_TOS -nostdinc -isystem $(GCCINC) -Iatari/include -Icommon/atari/include \
            -Isrc -Icommon/src -Iatari -Icommon/atari -Iui -Icommon/ui -Icommon/third_party/bearssl/inc
-# EMAIL.PRG's own: common's dialogs drawn by the CPU where it can (faster
-# on an ST); EMAILCHK.ACC is built without it, to stay small (the hub,
-# 1 Nov 2026: the accessories' first-boot share)
-APPCF   ?= -DDLG_CPU
-CFLAGS  += $(TRACECF) $(APPCF)
-# each function and variable in a section of its own, and the link
-# leaves out those nothing uses: common/ brings code EMail doesn't call
-# (some 10 KB of 1.72's EMAIL.PRG; a 1 MB ST with EMail check had 294 KB
-# free for it against 1.71's 314)
-CFLAGS  += -ffunction-sections -fdata-sections
+CFLAGS  += $(TRACECF)
 LDFLAGS := -m68000 -nostdlib -static -no-pie -Wl,--emit-relocs -Wl,-T,common/atari/link.ld \
            -Wl,--build-id=none -Wl,-z,noexecstack -Wl,--no-warn-rwx-segments
 
@@ -57,7 +48,7 @@ HBSSLOBJ = $(patsubst $(BSSL)/src/%.c,$(OBJDIR)/hbssl/%.o,$(BSSLSRC))
 
 CORE    := util charset mime links conn imap pop3 smtp store compose mail futil bidi secret ctime tz
 ATARI   := libc tos plat_tos net_tos sting gem tls_ovl crash bigbuf
-UI      := main draw text notify aboutline win folders list find reader editor dialogs popup font fontsel about dsp_ovl theme help av alert mbar aboutbox iconify clip clipedit dd busy people_ask dialog field av_people people_file panebar offdraw click
+UI      := main draw text notify aboutline win folders list find reader editor dialogs popup font fontsel about dsp_ovl theme help av alert mbar aboutbox iconify clip clipedit dd busy people_ask dialog field av_people people_file panebar
 
 OBJDIR  := build
 OBJS    := $(OBJDIR)/crt0.o $(OBJDIR)/sting_s.o $(OBJDIR)/nf.o $(OBJDIR)/crash_s.o \
@@ -89,7 +80,7 @@ $(OBJDIR)/build.o: $(OBJDIR)/build.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 $(OBJDIR)/mail.elf: $(OBJS) $(OBJDIR)/build.o common/atari/link.ld
-	$(CC) $(LDFLAGS) -Wl,--gc-sections -o $@ $(OBJS) $(OBJDIR)/build.o -lgcc
+	$(CC) $(LDFLAGS) -o $@ $(OBJS) $(OBJDIR)/build.o -lgcc
 
 # EMail's icon (the AERA guidelines, 5.5): drawn in common/icons/EMAIL.txt,
 # made into icons/ (the desktop's RSC and ICN files), ui/icon.h and
@@ -133,7 +124,7 @@ CHKOBJ  := sting_s nf util charset mime links conn imap pop3 store newmail futil
            ovl libc tos plat_tos net_tos sting gem tls_ovl bigbuf \
            emailchk notify aboutline dsp_ovl av alert dialog aboutbox accmem bgwork twin busy field clip clipedit crash crash_s
 binary/EMAILCHK.ACC: FORCE | binary
-	$(MAKE) OBJDIR=$(CHKDIR) APPCF= TRACECF="-ffunction-sections -fdata-sections" $(CHKDIR)/emailchk.elf
+	$(MAKE) OBJDIR=$(CHKDIR) TRACECF="-ffunction-sections -fdata-sections" $(CHKDIR)/emailchk.elf
 	PRGFLAGS=7 python3 common/tools/elf2tos.py $(CHKDIR)/emailchk.elf $@
 $(OBJDIR)/emailchk.elf: $(OBJDIR)/crt0chk.o $(addprefix $(OBJDIR)/,$(addsuffix .o,$(CHKOBJ))) $(OBJDIR)/build.o common/atari/link.ld
 	$(CC) $(LDFLAGS) -Wl,--gc-sections -o $@ $(OBJDIR)/crt0chk.o $(addprefix $(OBJDIR)/,$(addsuffix .o,$(CHKOBJ))) \
@@ -155,7 +146,7 @@ $(OBJDIR)/speed/EMAIL.PRG: FORCE
 	$(MAKE) OBJDIR=$(OBJDIR)/speed TRACECF=-DAES_PROFILE=20 $(OBJDIR)/speed/mail.elf
 	PRGFLAGS=7 python3 common/tools/elf2tos.py $(OBJDIR)/speed/mail.elf $@
 $(OBJDIR)/speed/EMAILCHK.ACC: FORCE
-	$(MAKE) OBJDIR=$(OBJDIR)/speed/chk APPCF= TRACECF="-ffunction-sections -fdata-sections -DAES_PROFILE=20" \
+	$(MAKE) OBJDIR=$(OBJDIR)/speed/chk TRACECF="-ffunction-sections -fdata-sections -DAES_PROFILE=20" \
 		$(OBJDIR)/speed/chk/emailchk.elf
 	PRGFLAGS=7 python3 common/tools/elf2tos.py $(OBJDIR)/speed/chk/emailchk.elf $@
 

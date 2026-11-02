@@ -63,18 +63,8 @@ else:
                     "-subj", "/CN=localhost", "-addext", "subjectAltName=DNS:localhost,DNS:127.0.0.1",
                     "-keyout", key, "-out", cert], check=True, capture_output=True)
 os.chmod(key, 0o644)
-# Dovecot holds an ECDSA certificate as well, as GitHub and many servers
-# do: EMail asks for RSA first, even where the DSP does the curves (a
-# stock Falcon's took 5.5 s for an ECDSA signature; AERA-Atari 713d580)
-eccert, eckey = os.path.join(srv, "ecc.pem"), os.path.join(srv, "eck.pem")
-subprocess.run(["openssl", "req", "-x509", "-newkey", "ec", "-pkeyopt", "ec_paramgen_curve:prime256v1",
-                "-nodes", "-days", "2", "-subj", "/CN=localhost",
-                "-addext", "subjectAltName=DNS:localhost,DNS:127.0.0.1",
-                "-keyout", eckey, "-out", eccert], check=True, capture_output=True)
-os.chmod(eckey, 0o644)
 conf = open(os.path.join(ROOT, "tests", "dovecot.conf.in")).read()
-conf = conf.replace("ssl = no", "ssl = yes\nssl_cert = <%s\nssl_key = <%s\nssl_alt_cert = <%s\nssl_alt_key = <%s"
-                    % (cert, key, eccert, eckey))
+conf = conf.replace("ssl = no", "ssl = yes\nssl_cert = <%s\nssl_key = <%s" % (cert, key))
 conf = conf.replace("inet_listener imaps {\n    port = 0", "inet_listener imaps {\n    port = %d" % IMAPS)
 for k, v in (("@RUN@", run_dir), ("@DIR@", srv), ("@IMAP@", str(IMAP)), ("@POP3@", "10110"),
              ("@UID@", uid.decode()), ("@GID@", gid.decode())):
@@ -94,8 +84,7 @@ os.makedirs(os.path.join(hd, "AUTO"))
 rig.install_prg(hd)
 # the full Mozilla list EMail ships, plus the test certificate
 with open(os.path.join(hd, "CACERT.PEM"), "wb") as f:
-    f.write(open(os.path.join(ROOT, "binary", "CACERT.PEM"), "rb").read() + open(cert, "rb").read() +
-            open(eccert, "rb").read())
+    f.write(open(os.path.join(ROOT, "binary", "CACERT.PEM"), "rb").read() + open(cert, "rb").read())
 rig.fakesting(os.path.join(hd, "AUTO"))
 if reuse:
     shutil.copy(os.path.join(keep, "ROOTS.DAT"), hd)
@@ -182,15 +171,10 @@ try:
 finally:
     r.stop()
     log = os.path.join(hd, "EMAIL.LOG")
-    text = open(log, "rb").read().decode("latin-1") if os.path.exists(log) else ""
-    for line in text.splitlines():
-        if " -- " in line or " !! " in line:
-            print("log:", line)
-    # the server has both certificates: the RSA one, never the ECDSA one
-    rsa = "IMAP -- secure: TLS 1.2, ECDHE-RSA" in text
-    ec = "ECDHE-ECDSA" in text
-    print("  %s   IMAP took the RSA certificate where the server has both" % ("ok" if rsa and not ec else "FAIL"))
-    ok = ok and rsa and not ec
+    if os.path.exists(log):
+        for line in open(log, "rb").read().decode("latin-1").splitlines():
+            if " -- " in line or " !! " in line:
+                print("log:", line)
     bridge.terminate()
     smtp.terminate()
     subprocess.run(["doveadm", "-c", os.path.join(srv, "dovecot.conf"), "stop"])

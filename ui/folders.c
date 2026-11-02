@@ -9,7 +9,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "ui.h"
-#include "click.h"
 #include "theme.h"
 #include "../src/plat.h"
 #include "../src/mail.h"
@@ -273,42 +272,6 @@ static void click(WIN *w, short mx, short my, short clicks, short kstate)
 	(void)kstate;
 	if (i < 0 || i >= nent)
 		return;
-	/* guidelines 5.8 (Erez, 1 Nov 2026): a folder's row lit on the press,
-	   at once, the row it left drawn again; the folder opened on the
-	   release over it. The account line checks its mail on the release */
-	{
-		long was = sel;
-		short dx, dy;
-		GRECT r;
-		r.x = w->work.x;
-		r.y = w->work.y + (short)((i - w->top) * ch);
-		r.w = w->work.w;
-		r.h = ch;
-		if (ent[i].fi && !ent[i].fi->noselect && i != sel) {
-			sel = i;
-			win_pressing(1);	/* drawn while the button is held (5.8, TOS) */
-			win_redraw_lines(w, sel, 1);	/* the row pressed first */
-			if (was >= 0) {
-				evnt_timer_(0);
-				win_redraw_lines(w, was, 1);
-			}
-			win_pressing(0);
-		}
-		/* the release, the loop's redraws going on (common's click.c) */
-		if (press_track(&r, mx, my, win_press_idle, ui_press_message, &dx, &dy) != PRESS_IN) {
-			/* let go elsewhere: the folder shown chosen again (5.8) */
-			if (sel != was) {
-				long now = sel;
-				sel = was;
-				win_redraw_lines(w, now, 1);
-				if (was >= 0) {
-					evnt_timer_(0);	/* the AES its turn: a row is some 40 ms on an ST */
-					win_redraw_lines(w, was, 1);
-				}
-			}
-			return;
-		}
-	}
 	if (!ent[i].fi) {
 		/* the account line: check this account */
 		long n;
