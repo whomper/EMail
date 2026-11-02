@@ -247,7 +247,7 @@ void font_menu(void)
 {
 	static fontsel fs;
 	static char fnt[220];
-	path_join(fnt, sizeof(fnt), opt.workdir, "EMAIL.FNT");
+	path_join(fnt, sizeof(fnt), opt.workdir, "email.fnt");
 	memset(&fs, 0, sizeof(fs));
 	fs.app = "EMail";
 	fs.fnt = fnt;

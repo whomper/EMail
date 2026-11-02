@@ -75,7 +75,7 @@ cp "$ROOT"/tests/mail/*.eml "$D/home/dana/Maildir/new/"
 chown -R nobody: "$D/home"   # Dovecot won't serve mail as root
 
 W=$D/work
-cat > "$W/EMAIL.INF" <<INF
+cat > "$W/email.inf" <<INF
 [options]
 tz=180
 headers=300
@@ -107,8 +107,8 @@ INF
 if [ -n "${FALCON:-}" ]; then
   # Falcon mode: EMail talks TLS to the servers itself; the test
   # certificate is the only root it trusts
-  cp "$D/cert.pem" "$W/CACERT.PEM"
-  python3 - "$W/EMAIL.INF" $((IMAP + 850)) $S_SMTP $POP3 $SMTP <<'PY'
+  cp "$D/cert.pem" "$W/cacert.pem"
+  python3 - "$W/email.inf" $((IMAP + 850)) $S_SMTP $POP3 $SMTP <<'PY'
 import sys
 p, imaps, smtps, pop3, smtp = sys.argv[1:]
 s = open(p).read()
@@ -164,7 +164,7 @@ expect "check: Trash counts updated" "^Trash .*role=3 .*total=1 unread=0" "$out"
 expect "check: F30's counts (34 folders: two batches of questions)" "^F30 .*total=1 unread=1" "$out"
 # GEMDOS keeps some of its little internal memory for each directory it
 # has been in: only folders opened get one, not all 30 at every start
-ndirs=$(find "$W/EMAIL" -mindepth 2 -maxdepth 2 -type d -name 'F*' | wc -l)
+ndirs=$(find "$W/email" -mindepth 2 -maxdepth 2 -type d -name 'f*' | wc -l)
 if [ "$ndirs" -le 4 ]; then PASS=$((PASS+1)); echo "ok   only opened folders have a directory ($ndirs)"
 else FAIL=$((FAIL+1)); echo "FAIL $ndirs folder directories made, most never opened"; fi
 python3 - $IMAP <<'PY'
@@ -202,8 +202,8 @@ expect "flag stored on the server and synced back" "^$U1	 !" "$out"
 # not connected: what is cached still reads, a message that isn't says
 # why, and read/flag changes wait for the next connection
 U2=$(uid_of "$out" "מכתב")
-cp "$W/EMAIL.INF" "$W/EMAIL.INF.net"
-python3 - "$W/EMAIL.INF" <<'PY'
+cp "$W/email.inf" "$W/EMAIL.INF.net"
+python3 - "$W/email.inf" <<'PY'
 import re, sys
 p = sys.argv[1]
 s = open(p, newline="").read()
@@ -218,7 +218,7 @@ expect "not connected: a cached message still reads" "שלום 1990" "$out"
 out=$(run flag 1 INBOX "$U1" -seen)
 out=$(run show 1 INBOX "$U2")
 expect "not connected: an uncached message says why" "not connected\|can't connect\|refused" "$out"
-cp "$W/EMAIL.INF.net" "$W/EMAIL.INF"
+cp "$W/EMAIL.INF.net" "$W/email.inf"
 run sync 1 INBOX >/dev/null
 srv=$(python3 - $IMAP "$U1" <<'PY'
 import imaplib, sys
@@ -256,7 +256,7 @@ m.logout()
 PY
 out=$(run check 1)
 expect "the sent message arrives (To + Bcc)" "new: 2" "$out"
-grep -q "Fresh" "$W/EMAIL/ACCT1/FOLDERS.LST" && { PASS=$((PASS+1)); echo "ok   a folder made elsewhere shows up at the next start"; } || { FAIL=$((FAIL+1)); echo "FAIL new folder not listed"; }
+grep -q "Fresh" "$W/email/acct1/folders.lst" && { PASS=$((PASS+1)); echo "ok   a folder made elsewhere shows up at the next start"; } || { FAIL=$((FAIL+1)); echo "FAIL new folder not listed"; }
 out=$(run list 1 INBOX)
 expect "Hebrew subject of the new mail" "תשובה from the Falcon" "$out"
 U4=$(uid_of "$out" "תשובה")
@@ -315,11 +315,11 @@ SERVER="Archive 2026"
 if [ -z "${TLS:-}" ] && [ -z "${FALCON:-}" ]; then
   python3 "$ROOT/tests/drop_proxy.py" $((IMAP + 900)) $IMAP & SMTPPID="$SMTPPID $!"
   sleep 1
-  cp "$W/EMAIL.INF" "$W/EMAIL.INF.keep"
-  sed -i "0,/^port=$IMAP/s//port=$((IMAP + 900))/" "$W/EMAIL.INF"
+  cp "$W/email.inf" "$W/EMAIL.INF.keep"
+  sed -i "0,/^port=$IMAP/s//port=$((IMAP + 900))/" "$W/email.inf"
   out=$(run rename 1 "Archive 2026" "Archive 2027")
   expect "rename survives a dropped connection" "^ok Archive 2027" "$out"
-  cp "$W/EMAIL.INF.keep" "$W/EMAIL.INF"
+  cp "$W/EMAIL.INF.keep" "$W/email.inf"
   out=$(run list 1 "Archive 2027")
   expect "and the folder keeps its messages" "שלום" "$out"
   SERVER="Archive 2027"
@@ -435,9 +435,9 @@ pack_ok() {  # pack_ok FOLDERDIR: every record the index has, checked
   python3 - "$1" <<'PY'
 import os, struct, sys
 d = sys.argv[1]
-pack = open(os.path.join(d, "MESSAGES.DAT"), "rb").read() if os.path.exists(os.path.join(d, "MESSAGES.DAT")) else b""
+pack = open(os.path.join(d, "messages.dat"), "rb").read() if os.path.exists(os.path.join(d, "messages.dat")) else b""
 bad = n = 0
-for line in open(os.path.join(d, "INDEX.DAT"), encoding="latin-1").read().split("\n")[1:]:
+for line in open(os.path.join(d, "index.dat"), encoding="latin-1").read().split("\n")[1:]:
     f = line.split("\t")
     if len(f) < 9 or int(f[7]) < 0:
         continue
@@ -453,7 +453,7 @@ PY
 }
 read -r PACK OFF LEN <<<"$(run pack 1 Big "$U")"
 BIGDIR=$(dirname "$PACK")
-[ -s "$PACK" ] && [ -z "$(find "$BIGDIR" -name '*.EML')" ] && { PASS=$((PASS+1)); echo "ok   pack: the bodies are in MESSAGES.DAT, no .EML files"; } \
+[ -s "$PACK" ] && [ -z "$(find "$BIGDIR" -name '*.eml')" ] && { PASS=$((PASS+1)); echo "ok   pack: the bodies are in MESSAGES.DAT, no .EML files"; } \
   || { FAIL=$((FAIL+1)); echo "FAIL pack: no MESSAGES.DAT, or .EML files left"; }
 expect "pack: every record is where the index says" "records 3[01][0-9], bad 0" "$(pack_ok "$BIGDIR")"
 # a reset in the middle of an append: the pack ends inside a record
@@ -524,11 +524,11 @@ m.append("INBOX", "(\\Seen)", None, b"From: avi@example.com\r\nSubject: Read els
 m.append("INBOX", "()", None, b"From: avi@example.com\r\nSubject: Checker 2\r\n\r\ntwo\r\n")
 m.logout()
 PY2
-idx=$(md5sum "$W"/EMAIL/ACCT1/*/INDEX.DAT | md5sum)
+idx=$(md5sum "$W"/email/acct1/*/index.dat | md5sum)
 out=$(run newmail 1)
 expect "checker: IMAP, two unread came (one read elsewhere doesn't count)" "^newmail: 2 fresh=1" "$out"
 expect "checker: IMAP, told once" "^again: 2 fresh=0" "$out"
-[ "$idx" = "$(md5sum "$W"/EMAIL/ACCT1/*/INDEX.DAT | md5sum)" ] && { PASS=$((PASS+1)); echo "ok   checker: EMail's files left as they were"; } \
+[ "$idx" = "$(md5sum "$W"/email/acct1/*/index.dat | md5sum)" ] && { PASS=$((PASS+1)); echo "ok   checker: EMail's files left as they were"; } \
   || { FAIL=$((FAIL+1)); echo "FAIL checker changed EMail's indexes"; }
 out=$(run check 1)
 expect "checker: EMail still finds them new" "new: 2" "$out"
@@ -540,7 +540,7 @@ expect "checker: IMAP, nothing new once EMail has them" "^newmail: 0 fresh=0" "$
 touch "$D/before-send"
 out=$(run sendnow 1 "$W/msg.txt")
 expect "Send now sends at once" "sent: 1 result: 1" "$out"
-written=$(find "$W/EMAIL" -type f -newer "$D/before-send" ! -name SEED.DAT)
+written=$(find "$W/email" -type f -newer "$D/before-send" ! -name seed.dat)
 [ -z "$written" ] && { PASS=$((PASS+1)); echo "ok   Send now writes nothing to the disk"; } \
   || { FAIL=$((FAIL+1)); echo "FAIL Send now wrote to the disk:"; sed 's/^/     | /' <<<"$written"; }
 # a POP account keeps its copy in the local Sent
@@ -549,12 +549,12 @@ expect "Send now from a POP account" "sent: 1 result: 1" "$out"
 out=$(run list 2 Sent)
 expect "its copy is in the local Sent" "תשובה" "$out"
 # the server away: the message waits in the Outbox, and goes with the next one
-cp "$W/EMAIL.INF" "$W/EMAIL.INF.keep"
-sed -i "0,/^smtpport=.*/s//smtpport=$((SMTP + 900))/; 0,/^dsmtpport=.*/s//dsmtpport=$((SMTP + 900))/" "$W/EMAIL.INF"
+cp "$W/email.inf" "$W/EMAIL.INF.keep"
+sed -i "0,/^smtpport=.*/s//smtpport=$((SMTP + 900))/; 0,/^dsmtpport=.*/s//dsmtpport=$((SMTP + 900))/" "$W/email.inf"
 out=$(run sendnow 1 "$W/msg.txt")
 expect "no server: queued in the Outbox" "^queued: " "$out"
 expect "no server: nothing sent" "sent: 0 result: -1" "$out"
-cp "$W/EMAIL.INF.keep" "$W/EMAIL.INF"
+cp "$W/EMAIL.INF.keep" "$W/email.inf"
 out=$(run sendnow 1 "$W/msg.txt")
 expect "the next Send now takes the Outbox along" "sent: 2 result: 1" "$out"
 out=$(run list 1 Outbox)
@@ -596,15 +596,15 @@ out=$(run show 1 Invites 1)
 expect "an inline invitation is a part, for ECal" "Attachment: invite.ics (text/calendar" "$out"
 expect "its summary: unescaped, unfolded, Hebrew in the Atari set" "Invitation: Team lunch, Friday .* and a very long title" "$out"
 expect "the inline invitation's text is still the message" "Lunch on Friday?" "$out"
-out=$(run invite 1 Invites 1 "$W/INVITE.ICS")
-cmp -s "$W/INVITE.ICS" "$D/invite1.ics" && { PASS=$((PASS+1)); echo "ok   INVITE.ICS is the inline invitation, byte for byte"; } \
+out=$(run invite 1 Invites 1 "$W/invite.ics")
+cmp -s "$W/invite.ics" "$D/invite1.ics" && { PASS=$((PASS+1)); echo "ok   INVITE.ICS is the inline invitation, byte for byte"; } \
   || { FAIL=$((FAIL+1)); echo "FAIL INVITE.ICS differs from the invitation sent"; echo "$out"; }
 out=$(run show 1 Invites 2)
 expect "an .ics attachment is an invitation" "Invitation: Design review" "$out"
-out=$(run invite 1 Invites 2 "$W/INVITE.ICS")
-cmp -s "$W/INVITE.ICS" "$D/invite2.ics" && { PASS=$((PASS+1)); echo "ok   INVITE.ICS overwritten by the attachment, byte for byte"; } \
+out=$(run invite 1 Invites 2 "$W/invite.ics")
+cmp -s "$W/invite.ics" "$D/invite2.ics" && { PASS=$((PASS+1)); echo "ok   INVITE.ICS overwritten by the attachment, byte for byte"; } \
   || { FAIL=$((FAIL+1)); echo "FAIL INVITE.ICS differs from the attachment"; echo "$out"; }
-out=$(run invite 1 Invites 3 "$W/INVITE.ICS")
+out=$(run invite 1 Invites 3 "$W/invite.ics")
 expect "a message without one has no invitation" "no invitation" "$out"
 
 if [ -n "${FALCON:-}" ]; then
@@ -612,17 +612,17 @@ if [ -n "${FALCON:-}" ]; then
   expect "message sent with SMTP STARTTLS" "sent: 1" "$out"
 
   # IMAP STARTTLS on the plain port
-  cp "$W/EMAIL.INF" "$W/EMAIL.INF.keep"
-  sed -i "0,/^dport=.*/s//dport=$IMAP/; 0,/^dsec=1/s//dsec=2/" "$W/EMAIL.INF"
+  cp "$W/email.inf" "$W/EMAIL.INF.keep"
+  sed -i "0,/^dport=.*/s//dport=$IMAP/; 0,/^dsec=1/s//dsec=2/" "$W/email.inf"
   out=$(run folders 1)
   expect "IMAP STARTTLS" "^Sent " "$out"
-  grep -q "^[0-9:.]* IMAP >> T[0-9]* STARTTLS" "$W/EMAIL.LOG" && { PASS=$((PASS+1)); echo "ok   IMAP sent STARTTLS"; } || { FAIL=$((FAIL+1)); echo "FAIL IMAP STARTTLS not in the log"; }
-  cp "$W/EMAIL.INF.keep" "$W/EMAIL.INF"
+  grep -q "^[0-9:.]* IMAP >> T[0-9]* STARTTLS" "$W/email.log" && { PASS=$((PASS+1)); echo "ok   IMAP sent STARTTLS"; } || { FAIL=$((FAIL+1)); echo "FAIL IMAP STARTTLS not in the log"; }
+  cp "$W/EMAIL.INF.keep" "$W/email.inf"
 
   # Falcon mode has its own password: a wrong one there fails in words,
   # and the log shows the login's shape but not the login
-  cp "$W/EMAIL.INF" "$W/EMAIL.INF.keep"
-  python3 - "$W/EMAIL.INF" <<'PY'
+  cp "$W/email.inf" "$W/EMAIL.INF.keep"
+  python3 - "$W/email.inf" <<'PY'
 import sys
 p = sys.argv[1]
 s = open(p, newline="").read()
@@ -632,66 +632,66 @@ open(p, "w", newline="").write(s)
 PY
   out=$(run folders 1)
   expect "wrong Falcon-mode password refused, in words" "refused the user name or password" "$out"
-  grep -q "^[0-9:.]* IMAP -- logging in: user name 4 characters without @, password 10 characters (1 '-'" "$W/EMAIL.LOG" \
+  grep -q "^[0-9:.]* IMAP -- logging in: user name 4 characters without @, password 10 characters (1 '-'" "$W/email.log" \
     && { PASS=$((PASS+1)); echo "ok   login shape in the log"; } || { FAIL=$((FAIL+1)); echo "FAIL no login shape in the log"; }
-  grep -q "wrong-pass" "$W/EMAIL.LOG" && { FAIL=$((FAIL+1)); echo "FAIL password in the log"; } || { PASS=$((PASS+1)); echo "ok   password not in the log"; }
-  grep -q "^pass=secret" "$W/EMAIL.INF" && { PASS=$((PASS+1)); echo "ok   the gateway's password kept apart"; } || { FAIL=$((FAIL+1)); echo "FAIL gateway password changed"; }
-  cp "$W/EMAIL.INF.keep" "$W/EMAIL.INF"
+  grep -q "wrong-pass" "$W/email.log" && { FAIL=$((FAIL+1)); echo "FAIL password in the log"; } || { PASS=$((PASS+1)); echo "ok   password not in the log"; }
+  grep -q "^pass=secret" "$W/email.inf" && { PASS=$((PASS+1)); echo "ok   the gateway's password kept apart"; } || { FAIL=$((FAIL+1)); echo "FAIL gateway password changed"; }
+  cp "$W/EMAIL.INF.keep" "$W/email.inf"
 
   # a server whose certificate no trusted authority signed
   openssl req -x509 -newkey rsa:2048 -nodes -days 2 -subj /CN=other -keyout "$D/k2.pem" -out "$D/c2.pem" 2>/dev/null
-  cp "$W/CACERT.PEM" "$W/CACERT.keep"; cp "$D/c2.pem" "$W/CACERT.PEM"
+  cp "$W/cacert.pem" "$W/CACERT.keep"; cp "$D/c2.pem" "$W/cacert.pem"
   out=$(run folders 1)
   expect "unknown authority refused, in words" "isn't signed by any authority in CACERT.PEM" "$out"
-  cp "$W/CACERT.keep" "$W/CACERT.PEM"
+  cp "$W/CACERT.keep" "$W/cacert.pem"
 
   # the right authority, the wrong name: 127.0.0.1 against localhost's
   # certificate (TLS.OVL 1.1 checks the chain after the handshake, the
   # name too, before anything is sent)
-  cp "$W/EMAIL.INF" "$W/EMAIL.INF.keep"
-  sed -i "0,/^dhost=localhost/s//dhost=127.0.0.1/" "$W/EMAIL.INF"
+  cp "$W/email.inf" "$W/EMAIL.INF.keep"
+  sed -i "0,/^dhost=localhost/s//dhost=127.0.0.1/" "$W/email.inf"
   out=$(run folders 1)
   expect "a certificate for another name refused, in words" "a different server name" "$out"
-  grep -q "^[0-9:.]* TLS -- the server's [0-9]* certificates\?, [0-9]* bytes: kept, to be checked after the handshake" "$W/EMAIL.LOG" \
+  grep -q "^[0-9:.]* TLS -- the server's [0-9]* certificates\?, [0-9]* bytes: kept, to be checked after the handshake" "$W/email.log" \
     && { PASS=$((PASS+1)); echo "ok   the chain kept during the handshake, checked after it"; } \
     || { FAIL=$((FAIL+1)); echo "FAIL the chain not checked after the handshake"; }
-  cp "$W/EMAIL.INF.keep" "$W/EMAIL.INF"
+  cp "$W/EMAIL.INF.keep" "$W/email.inf"
 
   # a server with only an ECDSA certificate: refused for RSA-only, then accepted
   openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:prime256v1 -nodes -days 2 -subj /CN=localhost \
     -addext subjectAltName=DNS:localhost -keyout "$D/eck.pem" -out "$D/ecc.pem" 2>/dev/null
   chmod 644 "$D/eck.pem"
-  cat "$D/ecc.pem" >> "$W/CACERT.PEM"
+  cat "$D/ecc.pem" >> "$W/cacert.pem"
   python3 "$ROOT/tests/smtp_server.py" $((SMTP + 441)) "$D" dana secret "$D/ecc.pem" "$D/eck.pem" & SMTPPID="$SMTPPID $!"
   sleep 1
-  sed -i "0,/^dsmtpport=.*/s//dsmtpport=$((SMTP + 441))/" "$W/EMAIL.INF"
+  sed -i "0,/^dsmtpport=.*/s//dsmtpport=$((SMTP + 441))/" "$W/email.inf"
   out=$(run send 1 "$W/msg.txt")
   expect "ECDSA-only server: sent after the retry" "sent: 1" "$out"
-  grep -q "^[0-9:.]* SMTP -- secure: TLS 1.2, ECDHE-ECDSA" "$W/EMAIL.LOG" && { PASS=$((PASS+1)); echo "ok   ECDSA certificate accepted on the second try"; } || { FAIL=$((FAIL+1)); echo "FAIL no ECDSA session"; }
-  cp "$W/EMAIL.INF.keep" "$W/EMAIL.INF"
+  grep -q "^[0-9:.]* SMTP -- secure: TLS 1.2, ECDHE-ECDSA" "$W/email.log" && { PASS=$((PASS+1)); echo "ok   ECDSA certificate accepted on the second try"; } || { FAIL=$((FAIL+1)); echo "FAIL no ECDSA session"; }
+  cp "$W/EMAIL.INF.keep" "$W/email.inf"
 
   # a server without ChaCha20: refused with ChaCha20 alone, then AES-GCM
   CIPHERS=ECDHE-RSA-AES128-GCM-SHA256 python3 "$ROOT/tests/smtp_server.py" $((SMTP + 442)) "$D" dana secret \
     "$D/cert.pem" "$D/key.pem" & SMTPPID="$SMTPPID $!"
   sleep 1
-  sed -i "0,/^dsmtpport=.*/s//dsmtpport=$((SMTP + 442))/" "$W/EMAIL.INF"
+  sed -i "0,/^dsmtpport=.*/s//dsmtpport=$((SMTP + 442))/" "$W/email.inf"
   out=$(run send 1 "$W/msg.txt")
   expect "AES-only server: sent after offering every cipher" "sent: 1" "$out"
-  grep -q "^[0-9:.]* SMTP -- no ChaCha20 here" "$W/EMAIL.LOG" && grep -q "^[0-9:.]* SMTP -- secure: TLS 1.2, ECDHE-RSA, AES-128-GCM" "$W/EMAIL.LOG" \
+  grep -q "^[0-9:.]* SMTP -- no ChaCha20 here" "$W/email.log" && grep -q "^[0-9:.]* SMTP -- secure: TLS 1.2, ECDHE-RSA, AES-128-GCM" "$W/email.log" \
     && { PASS=$((PASS+1)); echo "ok   AES-GCM after ChaCha20 alone was refused"; } || { FAIL=$((FAIL+1)); echo "FAIL no fallback to AES-GCM"; }
-  cp "$W/EMAIL.INF.keep" "$W/EMAIL.INF"
+  cp "$W/EMAIL.INF.keep" "$W/email.inf"
   # every protocol went over EMail's own TLS, both ways of starting it
   for p in IMAP POP3 SMTP; do
-    if grep -q "^[0-9:.]* $p -- secure: TLS 1.2" "$W/EMAIL.LOG" 2>/dev/null; then PASS=$((PASS+1)); echo "ok   $p over TLS: $(grep -m1 "^[0-9:.]* $p -- secure" "$W/EMAIL.LOG" | cut -c29-)"
+    if grep -q "^[0-9:.]* $p -- secure: TLS 1.2" "$W/email.log" 2>/dev/null; then PASS=$((PASS+1)); echo "ok   $p over TLS: $(grep -m1 "^[0-9:.]* $p -- secure" "$W/email.log" | cut -c29-)"
     else FAIL=$((FAIL+1)); echo "FAIL $p not over TLS"; fi
   done
-  if grep -q "^[0-9:.]* IMAP >> T[0-9]* STARTTLS\|^[0-9:.]* POP3 >> STLS" "$W/EMAIL.LOG" && grep -q "^[0-9:.]* SMTP >> STARTTLS" "$W/EMAIL.LOG"; then
+  if grep -q "^[0-9:.]* IMAP >> T[0-9]* STARTTLS\|^[0-9:.]* POP3 >> STLS" "$W/email.log" && grep -q "^[0-9:.]* SMTP >> STARTTLS" "$W/email.log"; then
     PASS=$((PASS+1)); echo "ok   STARTTLS used where asked"
   else FAIL=$((FAIL+1)); echo "FAIL STARTTLS not used"; fi
-  if grep -q " >> .*\(LOGIN\|AUTH\|PASS\)" "$W/EMAIL.LOG" && ! grep -q "secret" "$W/EMAIL.LOG"; then
+  if grep -q " >> .*\(LOGIN\|AUTH\|PASS\)" "$W/email.log" && ! grep -q "secret" "$W/email.log"; then
     PASS=$((PASS+1)); echo "ok   password not in the log"
   else FAIL=$((FAIL+1)); echo "FAIL password check in the log"; fi
-  [ -s "$W/EMAIL/SEED.DAT" ] && { PASS=$((PASS+1)); echo "ok   random seed kept"; } || { FAIL=$((FAIL+1)); echo "FAIL no random seed"; }
+  [ -s "$W/email/seed.dat" ] && { PASS=$((PASS+1)); echo "ok   random seed kept"; } || { FAIL=$((FAIL+1)); echo "FAIL no random seed"; }
 fi
 # Gmail refuses a normal Google password: EMail says it takes an app
 # password, known by what Google's servers say (the gateway passes it on
@@ -700,7 +700,7 @@ G=$((IMAP + 700))
 python3 "$ROOT/tests/gmail_like.py" $G $((G + 1)) $((G + 2)) & GPID=$!
 python3 "$ROOT/tests/gmail_like.py" $((G + 3)) $((G + 4)) $((G + 5)) appspecific & GPID="$GPID $!"
 mkdir -p "$D/gmail"
-cat > "$D/gmail/EMAIL.INF" <<INF
+cat > "$D/gmail/email.inf" <<INF
 [account]
 name=Gmail IMAP
 email=dana@gmail.com
@@ -756,11 +756,11 @@ mkdir -p "$D/strict"
 for n in 0 1 2 3; do
   printf '[account]\r\nname=Strict %d\r\nemail=dana@test.local\r\nin=pop3\r\nhost=127.0.0.1\r\nport=%d\r\nuser=dana\r\npass=wrong\r\n' \
     $n $((S + n))
-done > "$D/strict/EMAIL.INF"
+done > "$D/strict/email.inf"
 sleep 1
 srun() { ASAN_OPTIONS=detect_leaks=0 timeout 150 "$CLI" "$D/strict" "$@" 2>&1; }
 # the slow one (61 s) alongside the others, in a folder of its own
-mkdir -p "$D/strict-slow"; cp "$D/strict/EMAIL.INF" "$D/strict-slow/"
+mkdir -p "$D/strict-slow"; cp "$D/strict/email.inf" "$D/strict-slow/"
 ASAN_OPTIONS=detect_leaks=0 timeout 150 "$CLI" "$D/strict-slow" check 4 > "$D/strict-slow/out.txt" 2>&1 & SLOW=$!
 t0=$SECONDS; out=$(srun check 1)
 expect "POP3 server that hangs up after a refused PASS: the refusal (GMX)" "login failed: authentication failed" "$out"

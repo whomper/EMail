@@ -834,7 +834,7 @@ static int pop_check(ACCOUNT *a, long *newmsgs)
 		c.f->bulk = 1;		/* gathered: on disk once, before QUIT */
 		first = c.f->uidnext;
 	}
-	path_join(path, sizeof(path), a->dir, "UIDL.DAT");
+	path_join(path, sizeof(path), a->dir, "uidl.dat");
 	{
 		char *k = pf_load(path, 0);
 		SBUF kb;

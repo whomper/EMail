@@ -49,7 +49,7 @@ short vdi_h, cw, ch, scr_w, scr_h, desk_x, desk_y, desk_w, desk_h, planes, gl_wc
 extern short _is_acc;		/* crt0.S */
 
 static short is_acc, menu_id = -1;
-static char inf[16] = "C:\\EMAILCHK.INF";
+static char inf[16] = "C:\\emailchk.inf";
 static char folder[200];	/* EMail's, with EMAIL.INF; "" not known */
 static char start_v[16] = "60", heapkb_v[12], memkb_v[12];
 static unsigned long inf_stamp;	/* EMAIL.INF's date and size when read */
@@ -325,7 +325,7 @@ static void mem_short(void)
 
 static void prg_path(char *out, int size)
 {
-	path_join(out, size, folder, "EMAIL.PRG");
+	path_join(out, size, folder, "email.prg");
 }
 
 /* EMAIL.INF's date and size against those it was read with: 1 changed
@@ -337,7 +337,7 @@ static int inf_changed(void)
 	unsigned long stamp;
 	if (!folder[0])
 		return -1;
-	path_join(path, sizeof(path), folder, "EMAIL.INF");
+	path_join(path, sizeof(path), folder, "email.inf");
 	stamp = pf_info(path, &size);
 	if (!stamp)
 		return -1;
@@ -354,7 +354,7 @@ static void settings_done(void)
 	if (is_acc && naccts < MAXACCT && naccts < store_inf_accounts)
 		mem_short();	/* an account that didn't fit */
 	memset(nm, 0, sizeof(nm));
-	path_join(tls_ovl_path, sizeof(tls_ovl_path), folder, "TLS.OVL");
+	path_join(tls_ovl_path, sizeof(tls_ovl_path), folder, "tls.ovl");
 	falcon_dsp_init();
 	/* EMail's protocol log on (LOG=1): the accessory's own beside
 	   its INF, EMAILCHK.LOG, written at the end of each check */
@@ -406,18 +406,18 @@ static int settings_step(void)
 /* the folder, from EMAIL.PRG chosen in the file selector */
 static int choose_folder(void)
 {
-	char path[200], name[20] = "EMAIL.PRG", *e;
+	char path[200], name[20] = "email.prg", *e;
 	short button = 0;
 	if (alert(1, "[2][EMail check needs to know|where EMail is.|Choose EMAIL.PRG.][Choose|Cancel]") != 1)
 		return 0;
-	snprintf(path, sizeof(path), "%c:\\*.PRG", 'A' + boot_drive());
+	snprintf(path, sizeof(path), "%c:\\*.prg", 'A' + boot_drive());
 	if (!fsel_exinput(path, name, &button, "Where is EMail (EMAIL.PRG)?") || !button || !name[0])
 		return 0;
 	if ((e = strrchr(path, '\\')) != 0)
 		*e = 0;
 	{
 		char inf_path[220];
-		path_join(inf_path, sizeof(inf_path), path, "EMAIL.INF");
+		path_join(inf_path, sizeof(inf_path), path, "email.inf");
 		if (!pf_exists(inf_path)) {
 			alert(1, "[1][There's no EMAIL.INF in|%s.|Start EMail there once to|set up your accounts.][ OK ]",
 			      path);

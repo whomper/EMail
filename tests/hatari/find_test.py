@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 # Copyright (C) 2026 AERA | Erez Yaary
 """Find (Erez, 31 Oct 2026), as net_test.py: Dovecot, FAKESTNG.PRG over
-the serial port, the test build (build/trace/EMAIL.PRG says on the
+the serial port, the test build (build/trace/email.prg says on the
 console "FIND on", "FIND off" and, each time the list follows the field,
 "FIND disk|server "text" N", N the rows listed).
 
@@ -12,7 +12,7 @@ empties the field and the whole folder is back; a word only in a body
 is found by Search server (Shift+Return), not on disk; Undo, Ctrl+F
 again and another folder leave Find. Screenshots of each.
 
-    find_test.py WORKDIR [MACHINE]   (make build/trace/EMAIL.PRG first)
+    find_test.py WORKDIR [MACHINE]   (make build/trace/email.prg first)
 """
 import os
 import re
@@ -58,9 +58,9 @@ smtp = subprocess.Popen([sys.executable, os.path.join(ROOT, "tests", "smtp_serve
 rig.stop_at_exit(srv, smtp)
 
 os.makedirs(os.path.join(hd, "AUTO"))
-rig.install_prg(hd, os.path.join(ROOT, "build", "trace", "EMAIL.PRG"))
+rig.install_prg(hd, os.path.join(ROOT, "build", "trace", "email.prg"))
 rig.fakesting(os.path.join(hd, "AUTO"))
-with open(os.path.join(hd, "EMAIL.INF"), "w", newline="") as f:
+with open(os.path.join(hd, "email.inf"), "w", newline="") as f:
     f.write("[options]\r\ntz=180\r\nlog=1\r\n[account]\r\nname=Dana\r\nfullname=Dana Falcon\r\n"
             "email=dana@test.local\r\nin=imap\r\nhost=127.0.0.1\r\nport=%d\r\nuser=dana\r\n"
             "pass=secret\r\nsmtphost=127.0.0.1\r\nsmtpport=%d\r\n" % (IMAP, SMTP))

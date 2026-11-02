@@ -7,7 +7,7 @@ Erez's videos of 26 Oct 2026, a stock Falcon (16 MHz, no DFB1X): one
 click on the message pane's scroll bar turned two pages; deleting a
 message from the right-click menu drew the three panes again and again;
 every page of a message took about a second to draw. EMAIL.PRG is the
-test build build/trace/EMAIL.PRG, which says on the emulator's console
+test build build/trace/email.prg, which says on the emulator's console
 what each pane drew and how long it took ("DRAW reader 0 400 ... ms
 840"), each new top row ("TOP reader 24") and how long showing a message
 took ("SHOW fetch .. parse .. body .. layout .."). As scroll_test.py
@@ -92,7 +92,7 @@ rig.stop_at_exit(srv, smtp)
 os.makedirs(os.path.join(hd, "AUTO"))
 rig.install_prg(hd, TRACE)
 rig.fakesting(os.path.join(hd, "AUTO"))
-with open(os.path.join(hd, "EMAIL.INF"), "w", newline="") as f:
+with open(os.path.join(hd, "email.inf"), "w", newline="") as f:
     font = os.environ.get("AERA_FONT")
     f.write("[options]\r\ntz=180\r\nlog=1\r\n" + ("font=%s\r\n" % font if font else "") +
             "[account]\r\nname=Dana\r\nfullname=Dana Falcon\r\n"

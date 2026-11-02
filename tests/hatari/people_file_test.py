@@ -98,10 +98,10 @@ if writer and mode == "file":
                  ["group-add", "Team Filed", "Avi Filed"],
                  ["group-add", "Team Filed", "Yael Filed"]):
         subprocess.run([wcli, book] + args, check=True, stdout=subprocess.DEVNULL)
-    print("CONTACTS.TXT by EContact %s:" % writer)
-    print(open(os.path.join(book, "CONTACTS.TXT"), "rb").read().decode("latin-1"))
+    print("contacts.txt by EContact %s:" % writer)
+    print(open(os.path.join(book, "contacts.txt"), "rb").read().decode("latin-1"))
 else:
-    with open(os.path.join(book, "CONTACTS.TXT"), "wb") as f:
+    with open(os.path.join(book, "contacts.txt"), "wb") as f:
         f.write(b"; EContact's contacts, for EMail and ECal when EContact isn't loaded\r\n"
                 b"P\tAvi Filed\tavi@example.org\twork\r\n"
                 b"P\tDana Filed\tdana@example.com\thome\r\n"
@@ -139,7 +139,7 @@ if mode == "econtact":
 os.makedirs(os.path.join(hd, "AUTO"))
 rig.install_prg(hd)
 rig.fakesting(os.path.join(hd, "AUTO"))
-with open(os.path.join(hd, "EMAIL.INF"), "w", newline="") as f:
+with open(os.path.join(hd, "email.inf"), "w", newline="") as f:
     f.write("[options]\r\ntz=180\r\nlog=1\r\npeoplefile=1\r\npeopledir=C:\\ECONTACT\r\n[account]\r\nname=Dana\r\nfullname=Dana Falcon\r\n"
             "email=dana@test.local\r\nin=imap\r\nhost=127.0.0.1\r\nport=%d\r\nuser=dana\r\n"
             "pass=secret\r\nsmtphost=127.0.0.1\r\nsmtpport=%d\r\n"

@@ -420,7 +420,7 @@ static void t_zone(void)
 	char dir[64], path[100];
 	snprintf(dir, sizeof(dir), "/tmp/mail-unit-tz.%d", (int)getpid());
 	mkdir(dir, 0755);
-	snprintf(path, sizeof(path), "%s/EMAIL.INF", dir);
+	snprintf(path, sizeof(path), "%s/email.inf", dir);
 	pf_save(path, "[OPTIONS]\r\nTIMEZONE=Asia/Jerusalem\r\n", 34);
 	forget_accounts();
 	store_init(dir);
@@ -449,7 +449,7 @@ static void t_inf(void)
 	int blank_after = 1;
 	snprintf(dir, sizeof(dir), "/tmp/mail-unit-inf.%d", (int)getpid());
 	mkdir(dir, 0755);
-	snprintf(path, sizeof(path), "%s/EMAIL.INF", dir);
+	snprintf(path, sizeof(path), "%s/email.inf", dir);
 	{
 		static const char old[] = "[options]\r\ntz=180\r\nsignature=Dana\\nTel Aviv\r\n"
 			"peoplefile=1\r\npeopledir=C:\\ECONTACT\r\n[account]\r\nname=Home\r\n"
@@ -558,7 +558,7 @@ static void t_inf(void)
 	/* another key: the password is gone, and EMail says so */
 	{
 		char kf[120];
-		snprintf(kf, sizeof(kf), "%s/EMAIL.KEY", dir);
+		snprintf(kf, sizeof(kf), "%s/email.key", dir);
 		unlink(kf);
 		forget_accounts();
 		store_init(dir);

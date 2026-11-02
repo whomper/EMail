@@ -82,7 +82,7 @@ rig.stop_at_exit(srv, smtp)
 os.makedirs(os.path.join(hd, "AUTO"))
 rig.install_prg(hd)
 rig.fakesting(os.path.join(hd, "AUTO"))
-with open(os.path.join(hd, "EMAIL.INF"), "w", newline="") as f:
+with open(os.path.join(hd, "email.inf"), "w", newline="") as f:
     f.write("[options]\r\ntz=180\r\nlog=0\r\n[account]\r\nname=Dana\r\nfullname=Dana Falcon\r\n"
             "email=dana@test.local\r\nin=imap\r\nhost=127.0.0.1\r\nport=%d\r\nuser=dana\r\n"
             "pass=secret\r\nsmtphost=127.0.0.1\r\nsmtpport=%d\r\n" % (IMAP, SMTP))
@@ -103,7 +103,7 @@ def index_records(folder):
     """{uid: (offset, length)} of the bodies INDEX.DAT has in the pack"""
     out = {}
     try:
-        lines = open(os.path.join(folder, "INDEX.DAT"), encoding="latin-1").read().split("\n")[1:]
+        lines = open(rig.ci_path(folder, "index.dat"), encoding="latin-1").read().split("\n")[1:]
     except OSError:
         return out
     for line in lines:
@@ -165,12 +165,12 @@ try:
     # its last record (the newest message's), as if the power went
     r.click(40, 105)                     # Inbox
     time.sleep(10)
-    inbox = os.path.join(hd, "EMAIL", "ACCT1", "FD53E5C5")
+    inbox = rig.ci_path(hd, "email/acct1/fd53e5c5")
     recs = index_records(inbox)
     last = max(recs.values(), key=lambda v: v[0]) if recs else None
     cut_uid = [u for u, v in recs.items() if v == last][0] if last else None
     if last:
-        with open(os.path.join(inbox, "MESSAGES.DAT"), "r+b") as f:
+        with open(rig.ci_path(inbox, "messages.dat"), "r+b") as f:
             f.truncate(last[0] + 20)
     r.click(330, 156)                    # "New 49", the last downloaded: its record is the cut one
     time.sleep(15)
@@ -212,7 +212,7 @@ def pack_writes(job):
             last = None
             continue
         m = re.match(r"GEMDOS 0x40 Fwrite\((\d+), (\d+),", line)
-        if m and fd.get(m.group(1), "").endswith("MESSAGES.DAT"):
+        if m and fd.get(m.group(1), "").endswith("messages.dat"):
             n += int(m.group(2))
     return n
 
@@ -243,7 +243,7 @@ for job in ("A1", "A2", "B1", "B2"):
         if path and OTHERS.match(path[0]):
             continue                     # the family's accessories (AERA_WITH_ACCS): theirs, not EMail's
         count[OPS[m.group(1)]] += 1
-        files[re.sub(r"^C:\\EMAIL\\ACCT1\\", "", path[0]) if path else "?"] += 1
+        files[re.sub(r"^C:\\email\\acct1\\", "", path[0]) if path else "?"] += 1
     total = sum(count.values())
     ok = total <= BUDGET[job]
     fails += not ok
@@ -253,8 +253,8 @@ for job in ("A1", "A2", "B1", "B2"):
         print("         %3d  %s" % (n, f))
 
 # ---- the reset ----
-recs = index_records(os.path.join(hd, "EMAIL", "ACCT1", "FD53E5C5"))
-pack = open(os.path.join(hd, "EMAIL", "ACCT1", "FD53E5C5", "MESSAGES.DAT"), "rb").read()
+recs = index_records(rig.ci_path(hd, "email/acct1/fd53e5c5"))
+pack = open(rig.ci_path(hd, "email/acct1/fd53e5c5/messages.dat"), "rb").read()
 rec = recs.get(cut_uid) if cut_uid else None
 whole = bool(rec) and pack[rec[0]:rec[0] + 2] == b"EM" and \
     struct.unpack(">II", pack[rec[0] + 2:rec[0] + 10]) == (cut_uid, rec[1]) and \

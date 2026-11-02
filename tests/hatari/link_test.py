@@ -102,7 +102,7 @@ shutil.copy(os.path.join(ROOT, "build", "fakeweb.acc"), os.path.join(hd, "EWEB.A
 rig.fakesting(os.path.join(hd, "AUTO"))
 eweb = os.path.join(hd, "EWEB")
 print("EWeb", rig.release("EWeb", eweb, "EWEB.PRG", "EWEB.FNT"), flush=True)
-with open(os.path.join(hd, "EMAIL.INF"), "w", newline="") as f:
+with open(os.path.join(hd, "email.inf"), "w", newline="") as f:
     f.write("[options]\r\ntz=180\r\nbrowser=C:\\EWEB\\EWEB.PRG\r\n[account]\r\nname=Dana\r\nfullname=Dana Falcon\r\n"
             "email=dana@test.local\r\nin=imap\r\nhost=127.0.0.1\r\nport=%d\r\nuser=dana\r\n"
             "pass=secret\r\nsmtphost=127.0.0.1\r\nsmtpport=%d\r\n" % (IMAP, SMTP))
@@ -197,8 +197,8 @@ for part, (row, url, look) in enumerate(((0, PLAIN, "example.com/show"), (3, LON
           " | ".join(eweb_lines[:2]))
     check("... on the link", any(look in l for l in eweb_lines), " | ".join(eweb_lines[-3:]))
     if url == LONG:
-        page = open(os.path.join(hd, "LINK.HTM"), errors="replace").read() if os.path.exists(
-            os.path.join(hd, "LINK.HTM")) else ""
+        page = open(os.path.join(hd, "link.htm"), errors="replace").read() if os.path.exists(
+            os.path.join(hd, "link.htm")) else ""
         check("... by LINK.HTM, which names it", ("url=" + url) in page, page[:80])
 bridge.terminate()
 smtp.terminate()

@@ -4,12 +4,12 @@
 """EMail's speed on the family's stock machines (the guidelines' Speed:
 the stock machines set it; Erez, 26 Oct 2026), with common's speed rig
 (common/tests/speed/speed.py): the longest stretch between event calls of
-each action, from build/speed/EMAIL.PRG (-DAES_PROFILE=20), against the
+each action, from build/speed/email.prg (-DAES_PROFILE=20), against the
 guidelines' times.
 
 The mail is on disk, as a user's is: this computer's mail-cli mirrors an
 Inbox of 500 short messages, a long letter and a long Hebrew one from a
-Dovecot of its own, with every body, into C:\\EMAIL\\EMAIL; EMail starts
+Dovecot of its own, with every body, into C:\\EMAIL\\email; EMail starts
 offline (STARTOFFLINE=1), so no network is needed. The actions, by keys
 (an ST has no Page Down: Shift+arrow):
 
@@ -30,7 +30,7 @@ offline (STARTOFFLINE=1), so no network is needed. The actions, by keys
     speed.py WORK [MACHINE] [nvdi]     (Falcon-4:16 without; ST:mono,
                                         ST:med, ST-1, Falcon-4:16 ...)
 
-With ACC=1, EMail check (build/speed/EMAILCHK.ACC) is opened from the
+With ACC=1, EMail check (build/speed/emailchk.acc) is opened from the
 Desk menu instead.
 """
 import os
@@ -44,10 +44,10 @@ ROOT = os.path.normpath(os.path.join(HERE, "..", ".."))
 sys.path.insert(0, os.path.join(ROOT, "common", "tests", "speed"))
 import speed  # noqa: E402
 
-# SPEED_PRG: another build in the same place (build/trace/EMAIL.PRG says
+# SPEED_PRG: another build in the same place (build/trace/email.prg says
 # what each pane drew and how long showing a message took, step by step)
-PRG = os.environ.get("SPEED_PRG") or os.path.join(ROOT, "build", "speed", "EMAIL.PRG")
-ACC = os.path.join(ROOT, "build", "speed", "EMAILCHK.ACC")
+PRG = os.environ.get("SPEED_PRG") or os.path.join(ROOT, "build", "speed", "email.prg")
+ACC = os.path.join(ROOT, "build", "speed", "emailchk.acc")
 CLI = os.path.join(ROOT, "build", "mail-cli")
 IMAP = 11143                     # not the other rigs' 10143
 
@@ -114,7 +114,7 @@ def mirror(dest):
         inf = ("[options]\r\ntz=180\r\n[account]\r\nname=Dana\r\nfullname=Dana Falcon\r\n"
                "email=dana@test.local\r\nin=imap\r\nhost=127.0.0.1\r\nport=%d\r\nuser=dana\r\npass=secret\r\n"
                "smtphost=127.0.0.1\r\nsmtpport=10025\r\n" % IMAP)
-        with open(os.path.join(host, "EMAIL.INF"), "w", newline="") as f:
+        with open(os.path.join(host, "email.inf"), "w", newline="") as f:
             f.write(inf)
         env = dict(os.environ, TZ="UTC", ASAN_OPTIONS="detect_leaks=0")
         for args in (["check", "1"], ["getall", "1", "INBOX"]):
@@ -139,20 +139,20 @@ def undo():
     with open(fifo, "w") as f:
         f.write("hatari-event keypress 0x61\n")
 host, inf = mirror(os.path.join(r.work, "fixture"))
-shutil.copytree(os.path.join(host, "EMAIL"), os.path.join(r.hd, "EMAIL", "EMAIL"))
+shutil.copytree(os.path.join(host, "email"), os.path.join(r.hd, "EMAIL", "email"))
 r.put(PRG, "EMAIL")
 # FONT=ID,PT: the text in that font (a GDOS font under NVDI, as Erez's
 # EMAIL.INF has it: font_test.py with AERA_WITH_NVDI=1 writes the first
 # monospaced one's FONT= there)
 font = os.environ.get("FONT")
-r.write("EMAIL\\EMAIL.INF".replace("\\", os.sep),
+r.write("EMAIL\\email.inf".replace("\\", os.sep),
         inf.replace("\r\n", "\n").replace("tz=180\n", "tz=180\nstartoffline=1\n" +
                                             ("font=%s\n" % font if font else "")))
 acc = os.environ.get("ACC") == "1"
 try:
     if acc:
         r.put(ACC)
-        r.write("EMAILCHK.INF", "FOLDER=C:\\EMAIL\\\n")
+        r.write("emailchk.inf", "FOLDER=C:\\EMAIL\\\n")
         r.start(ready="AESSTART")       # the accessory's own start, then the desktop
         time.sleep(15)
         r.still()
@@ -162,7 +162,7 @@ try:
         r.act("EMail check opened", speed.ACC, lambda: r.menu(40, row + 2 * row + row // 2 + 3))
         r.act("EMail check closed", speed.WINDOW, lambda: r.key("Escape"))
     else:
-        r.start("C:\\EMAIL\\EMAIL.PRG", ready="AESSTART")
+        r.start("C:\\EMAIL\\email.prg", ready="AESSTART")
         r.act("the long letter shown (Down)", speed.PAGE, lambda: r.key("Down"))
         r.act("the long Hebrew letter shown (Down)", speed.PAGE, lambda: r.key("Down"))
         r.act("a short message shown (Down)", speed.PAGE, lambda: r.key("Down"))

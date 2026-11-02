@@ -63,7 +63,7 @@ rig.stop_at_exit(srv, smtp)
 os.makedirs(os.path.join(hd, "AUTO"))
 rig.install_prg(hd)
 rig.fakesting(os.path.join(hd, "AUTO"))
-with open(os.path.join(hd, "EMAIL.INF"), "w", newline="") as f:
+with open(os.path.join(hd, "email.inf"), "w", newline="") as f:
     f.write("[options]\r\ntz=180\r\nlog=1\r\nsignature=Sent from my Falcon\r\n[account]\r\nname=Dana\r\nfullname=Dana Falcon\r\n"
             "email=dana@test.local\r\nin=imap\r\nhost=127.0.0.1\r\nport=%d\r\nuser=dana\r\n"
             "pass=secret\r\nsmtphost=127.0.0.1\r\nsmtpport=%d\r\n"
@@ -88,7 +88,7 @@ def check(what, good):
 
 
 def inf():
-    return open(os.path.join(hd, "EMAIL.INF"), "rb").read()
+    return open(os.path.join(hd, "email.inf"), "rb").read()
 
 
 def fetches():
@@ -97,7 +97,7 @@ def fetches():
     late, in pieces)"""
     n = 0
     for d, _, fs in os.walk(hd):
-        n += sum(os.path.getsize(os.path.join(d, f)) for f in fs if f.upper() == "MESSAGES.DAT")
+        n += sum(os.path.getsize(os.path.join(d, f)) for f in fs if f.lower() == "messages.dat")
     return n
 
 

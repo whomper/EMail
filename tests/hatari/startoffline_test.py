@@ -61,7 +61,7 @@ rig.stop_at_exit(srv, smtp)
 os.makedirs(os.path.join(hd, "AUTO"))
 rig.install_prg(hd)
 rig.fakesting(os.path.join(hd, "AUTO"))
-log = os.path.join(hd, "EMAIL.LOG")
+log = os.path.join(hd, "email.log")
 fails = []
 
 
@@ -72,7 +72,7 @@ def check(what, good, detail=""):
 
 
 def inf(startoffline):
-    with open(os.path.join(hd, "EMAIL.INF"), "w", newline="") as f:
+    with open(os.path.join(hd, "email.inf"), "w", newline="") as f:
         f.write("[options]\r\ntz=180\r\ncheck=1\r\nlog=1\r\n%s[account]\r\nname=Dana\r\nfullname=Dana Falcon\r\n"
                 "email=dana@test.local\r\nin=imap\r\nhost=127.0.0.1\r\nport=%d\r\nuser=dana\r\n"
                 "pass=secret\r\nsmtphost=127.0.0.1\r\nsmtpport=%d\r\n"

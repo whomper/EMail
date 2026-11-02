@@ -109,11 +109,11 @@ if real:
 else:
     shutil.copy(os.path.join(ROOT, "build", "fakecal.acc"), os.path.join(hd, "ECAL.ACC"))
 rig.fakesting(os.path.join(hd, "AUTO"))
-with open(os.path.join(hd, "EMAIL.INF"), "w", newline="") as f:
+with open(os.path.join(hd, "email.inf"), "w", newline="") as f:
     f.write("[options]\r\ntz=180\r\n[account]\r\nname=Dana\r\nfullname=Dana Falcon\r\n"
             "email=dana@test.local\r\nin=imap\r\nhost=127.0.0.1\r\nport=%d\r\nuser=dana\r\n"
             "pass=secret\r\nsmtphost=127.0.0.1\r\nsmtpport=%d\r\n" % (IMAP, SMTP))
-INVITE = os.path.join(hd, "INVITE.ICS")         # next to EMAIL.PRG, as ADDRESS.TXT is
+INVITE = os.path.join(hd, "invite.ics")         # next to EMAIL.PRG, as ADDRESS.TXT is
 LOG = os.path.join(hd, "ECAL.LOG")
 
 fifo_out, fifo_in = os.path.join(work, "st_out"), os.path.join(work, "st_in")
@@ -165,7 +165,7 @@ try:
 finally:
     r.stop()
 data = open(INVITE, "rb").read() if os.path.exists(INVITE) else b""
-check("INVITE.ICS is the invitation, byte for byte", data == ICS, "%d bytes, %d sent" % (len(data), len(ICS)))
+check("invite.ics is the invitation, byte for byte", data == ICS, "%d bytes, %d sent" % (len(data), len(ICS)))
 if real:
     saved = []
     for d, _, fs in os.walk(os.path.join(hd, "ECAL")):
@@ -177,7 +177,7 @@ if real:
     check("... without the invitation's METHOD", saved and not any(m for _, m in saved))
 else:
     log = open(LOG, errors="replace").read() if os.path.exists(LOG) else ""
-    check("ECal was named it with VA_START", "start C:\\INVITE.ICS, %d bytes, SUMMARY:Team lunch" % len(ICS) in log,
+    check("ECal was named it with VA_START", "start C:\\invite.ics, %d bytes, SUMMARY:Team lunch" % len(ICS) in log,
           log.strip().replace("\r\n", " | ").replace("\r", ""))
 
 # 2. without ECal: it says so, and writes nothing

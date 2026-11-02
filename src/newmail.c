@@ -38,7 +38,7 @@ static int inbox_seen(ACCOUNT *a, unsigned long *validity, unsigned long *next)
 	if (!in || in->local)
 		return 0;
 	folder_path(a, in, dir, sizeof(dir));
-	path_join(path, sizeof(path), dir, "INDEX.DAT");
+	path_join(path, sizeof(path), dir, "index.dat");
 	h = pf_open(path, PF_READ);
 	if (h < 0)
 		return 0;
@@ -141,7 +141,7 @@ static int pop_new(ACCOUNT *a, NEWMAIL *n, char *err, int errlen)
 		       err, errlen);
 	if (!p)
 		return 0;
-	path_join(path, sizeof(path), a->dir, "UIDL.DAT");
+	path_join(path, sizeof(path), a->dir, "uidl.dat");
 	sb_init(&kb);
 	sb_adds(&kb, "\n");
 	if ((k = pf_load(path, 0)) != 0) {

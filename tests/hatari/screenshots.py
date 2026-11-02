@@ -102,7 +102,7 @@ rig.stop_at_exit(srv, smtp)
 os.makedirs(os.path.join(hd, "AUTO"))
 rig.install_prg(hd)
 rig.fakesting(os.path.join(hd, "AUTO"))
-with open(os.path.join(hd, "EMAIL.INF"), "w", newline="") as f:
+with open(os.path.join(hd, "email.inf"), "w", newline="") as f:
     f.write("[OPTIONS]\r\nTIMEZONE=Europe/London\r\nHEBREW=0\r\nSIGNATURE=Sent from my Falcon\r\n"
             "PANES=144,0\r\n[ACCOUNT]\r\nNAME=Home\r\n"
             "FULLNAME=Dana Falcon\r\nEMAIL=dana@test.local\r\nIN=imap\r\nHOST=127.0.0.1\r\nPORT=%d\r\n"

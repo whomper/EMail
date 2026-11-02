@@ -3,13 +3,13 @@
 # Copyright (C) 2026 AERA | Erez Yaary
 """Tooltips over text cut short (Erez, 27 Oct 2026), as net_test.py:
 Dovecot, FAKESTNG.PRG over the serial port, the test build
-(build/trace/EMAIL.PRG says each tooltip on the console: "TIP text").
+(build/trace/email.prg says each tooltip on the console: "TIP text").
 The mouse rests on the list's From and Subject of a message whose name
 and subject don't fit (the tooltip shows them whole), on a name that
 fits (none), and down the folder pane, where one folder's name is longer
 than the pane (its tooltip, none for the others). Screenshots of each.
 
-    tip_test.py WORKDIR [MACHINE]   (make build/trace/EMAIL.PRG first)
+    tip_test.py WORKDIR [MACHINE]   (make build/trace/email.prg first)
 """
 import email
 import email.header
@@ -61,9 +61,9 @@ rig.stop_at_exit(srv, smtp)
 
 # drive C:
 os.makedirs(os.path.join(hd, "AUTO"))
-rig.install_prg(hd, os.path.join(ROOT, "build", "trace", "EMAIL.PRG"))
+rig.install_prg(hd, os.path.join(ROOT, "build", "trace", "email.prg"))
 rig.fakesting(os.path.join(hd, "AUTO"))
-with open(os.path.join(hd, "EMAIL.INF"), "w", newline="") as f:
+with open(os.path.join(hd, "email.inf"), "w", newline="") as f:
     f.write("[options]\r\ntz=180\r\nlog=1\r\nsignature=Sent from my Falcon\r\n[account]\r\nname=Dana\r\nfullname=Dana Falcon\r\n"
             "email=dana@test.local\r\nin=imap\r\nhost=127.0.0.1\r\nport=%d\r\nuser=dana\r\n"
             "pass=secret\r\nsmtphost=127.0.0.1\r\nsmtpport=%d\r\n"

@@ -76,7 +76,7 @@ rig.stop_at_exit(srv, smtp)
 os.makedirs(os.path.join(hd, "AUTO"))
 rig.install_prg(hd)
 rig.fakesting(os.path.join(hd, "AUTO"))
-INF = os.path.join(hd, "EMAIL.INF")
+INF = os.path.join(hd, "email.inf")
 with open(INF, "w", newline="") as f:
     f.write("[options]\r\ntz=180\r\n[account]\r\nname=Dana\r\nfullname=Dana Falcon\r\n"
             "email=dana@test.local\r\nin=imap\r\nhost=127.0.0.1\r\nport=%d\r\nuser=dana\r\n"
@@ -267,9 +267,9 @@ finally:
 
 fl = font_line()
 if skipped:
-    check("EMAIL.INF keeps the system font", fl.split(",")[0].strip() in ("", "1"), "FONT=" + fl)
+    check("email.inf keeps the system font", fl.split(",")[0].strip() in ("", "1"), "FONT=" + fl)
 else:
-    check("EMAIL.INF says FONT= the GDOS font", bool(fl) and fl.split(",")[0].strip() not in ("", "1"),
+    check("email.inf says FONT= the GDOS font", bool(fl) and fl.split(",")[0].strip() not in ("", "1"),
           "FONT=" + fl)
 
 # 2. started again in that font, offline: from what is on disk

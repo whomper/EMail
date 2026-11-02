@@ -81,7 +81,7 @@ int main(int argc, char **argv)
 	atexit(conn_log_flush);
 	signal(SIGPIPE, SIG_IGN);	/* a dropped connection is an error, not the end */		/* every way out, error returns too */
 	if (getenv("MAIL_LOG")) {
-		path_join(conn_logfile, sizeof(conn_logfile), argv[1], "EMAIL.LOG");
+		path_join(conn_logfile, sizeof(conn_logfile), argv[1], "email.log");
 	}
 	net_init();
 	mail_status = st;
@@ -192,7 +192,7 @@ int main(int argc, char **argv)
 		}
 		if (!strcmp(cmd, "pack")) {
 			/* the folder's pack, and where this message's record is */
-			path_join(path, sizeof(path), f->dir, "MESSAGES.DAT");
+			path_join(path, sizeof(path), f->dir, "messages.dat");
 			printf("%s %ld %ld\n", path, h->off, h->plen);
 		} else if (!strcmp(cmd, "garble")) {
 			/* a copy that came wrong, as a bad line would leave it */

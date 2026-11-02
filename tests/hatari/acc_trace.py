@@ -12,7 +12,7 @@ lines = open(sys.argv[1], "rb").read().decode("latin-1").splitlines()
 lo = hi = None
 reg = first_evnt = None
 for i, l in enumerate(lines):
-    if lo is None and "now loading 'EMAILCHK.ACC'" in l:
+    if lo is None and "now loading 'emailchk.acc'" in l.lower():   # TOS says it in capitals
         for l2 in lines[i:i + 6]:
             m = re.search(r"Mshrink\(0x([0-9A-F]+), 0x([0-9A-F]+)\)", l2)
             if m:

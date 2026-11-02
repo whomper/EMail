@@ -10,7 +10,7 @@ main page with the contents. ST-Guide shows text as it is written, so
 tables are laid out in columns here and every line is kept within the
 page width; bold becomes @{B}, links between sections become ST-Guide
 links. The text is written in the Atari character set. Compile with HCP
-(the hypview project): hcp -o binary/EMAIL.HYP build/EMAIL.STG
+(the hypview project): hcp -o binary/email.hyp build/EMAIL.STG
 """
 import re
 import sys

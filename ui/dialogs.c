@@ -749,7 +749,7 @@ static void pdir_pick(void)
 	/* copied, not an initialised array: GCC cleared its tail with a
 	   clr.w at an odd frame offset, an address error on a 68000
 	   (common/tools/oddaccess.py) */
-	str_copy(name, "CONTACTS.TXT", sizeof(name));
+	str_copy(name, "contacts.txt", sizeof(name));
 	if (s_pdir[0])
 		path_join(path, sizeof(path), s_pdir, "*.*");
 	else

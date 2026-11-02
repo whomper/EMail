@@ -6,8 +6,8 @@
 Erez's video of 20 Oct 2026 showed panes drawn again for no reason: every
 row of the list at each scroll step and again when EContact's names came,
 the whole folder pane when a message was chosen, the reader blank while
-a message was laid out. EMAIL.PRG is the test build build/trace/EMAIL.PRG
-(make build/trace/EMAIL.PRG), which says on the emulator's console what
+a message was laid out. EMAIL.PRG is the test build build/trace/email.prg
+(make build/trace/email.prg), which says on the emulator's console what
 each pane draws ("DRAW list y h", "COPY list y h"). With 40 messages on
 Dovecot (as net_test.py: FAKESTNG.PRG and serial_bridge.py), it checks:
 
@@ -100,7 +100,7 @@ rig.stop_at_exit(srv, smtp)
 os.makedirs(os.path.join(hd, "AUTO"))
 rig.install_prg(hd, TRACE)
 rig.fakesting(os.path.join(hd, "AUTO"))
-with open(os.path.join(hd, "EMAIL.INF"), "w", newline="") as f:
+with open(os.path.join(hd, "email.inf"), "w", newline="") as f:
     font = os.environ.get("AERA_FONT")
     f.write("[options]\r\ntz=180\r\nlog=1\r\n" + ("font=%s\r\n" % font if font else "") + "[account]\r\nname=Dana\r\nfullname=Dana Falcon\r\n"
             "email=dana@test.local\r\nin=imap\r\nhost=127.0.0.1\r\nport=%d\r\nuser=dana\r\n"

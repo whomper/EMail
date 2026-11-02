@@ -60,7 +60,7 @@ rig.stop_at_exit(srv, smtp)
 os.makedirs(os.path.join(hd, "AUTO"))
 rig.install_prg(hd)
 rig.fakesting(os.path.join(hd, "AUTO"))
-with open(os.path.join(hd, "EMAIL.INF"), "w", newline="") as f:
+with open(os.path.join(hd, "email.inf"), "w", newline="") as f:
     # on an ST, EMail finds a Direct connection on, as a Falcon left it:
     # it must go through the gateway all the same (a 68000 can't load
     # TLS.OVL), and leave the setting as it was
@@ -125,7 +125,7 @@ try:
     print("in Sent:", len(data[0].split()))
     print("inbox subjects:", subjects)
     if ST:
-        inf = open(os.path.join(hd, "EMAIL.INF"), errors="replace").read()
+        inf = open(rig.ci_path(hd, "email.inf"), errors="replace").read()
         kept = "FALCON=1" in inf
         print("on an ST: the Direct connection kept for the Falcon:", kept)
         ok = ok and kept

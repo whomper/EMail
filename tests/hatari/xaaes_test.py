@@ -15,7 +15,7 @@ inside EMail's window is a part it didn't draw.
 2. With an account (EMAIL.INF): the check at the start, as the tester's
    (POP3); it can't connect here, and its box comes over the window.
 3. BGEM.NG's stand-in running (common/tests/notify's BUBBLE.PRG, `make
-   prg` there once), the test build (make build/trace/EMAIL.PRG) sends a
+   prg` there once), the test build (make build/trace/email.prg) sends a
    notification as for new mail (the guidelines, 4.5) and its Open brings
    EMail up.
 
@@ -38,7 +38,7 @@ CYAN = (0, 255, 255)
 
 work = sys.argv[1] if len(sys.argv) > 1 else "/tmp/email-xaaes"
 os.makedirs(work, exist_ok=True)
-prg = os.environ.get("EMAIL_PRG", os.path.join(ROOT, "binary", "EMAIL.PRG"))
+prg = os.environ.get("EMAIL_PRG", os.path.join(ROOT, "binary", "email.prg"))
 fails = []
 
 
@@ -78,7 +78,7 @@ if os.path.exists(shot):
     check("behind the welcome box, EMail's window is drawn whole", n < 20, "%d desktop pixels" % n)
 
 # 2. an account: the check at the start, then its box
-inf = os.path.join(work, "EMAIL.INF")
+inf = os.path.join(work, "email.inf")
 with open(inf, "w", newline="") as f:
     f.write("[options]\r\n[account]\r\nname=Dana\r\nemail=dana@example.com\r\nin=pop3\r\n"
             "host=192.168.1.2\r\nport=110\r\nuser=dana\r\npass=secret\r\n")
@@ -96,9 +96,9 @@ if os.path.exists(shot):
 #    notification: EMail asks BUBBLE first, sends it once answered, and
 #    the stand-in's click on Open brings EMail's window up on the Inbox
 bubble = os.path.join(ROOT, "common", "tests", "notify", "build", "BUBBLE.PRG")
-trace = os.path.join(ROOT, "build", "trace", "EMAIL.PRG")
+trace = os.path.join(ROOT, "build", "trace", "email.prg")
 if os.path.exists(bubble) and os.path.exists(trace):
-    inf3 = os.path.join(work, "inf3", "EMAIL.INF")
+    inf3 = os.path.join(work, "inf3", "email.inf")
     os.makedirs(os.path.dirname(inf3), exist_ok=True)
     with open(inf3, "w", newline="") as f:
         f.write("[options]\r\nstartoffline=1\r\n[account]\r\nname=Dana\r\nemail=dana@example.com\r\n"
@@ -116,7 +116,7 @@ if os.path.exists(bubble) and os.path.exists(trace):
     check("... as BGEM.NG wants it", want in log, want)
     check("Open brings EMail up on the Inbox", "NOTIFY opened" in log)
 else:
-    check("BUBBLE.PRG and build/trace/EMAIL.PRG built", False)
+    check("BUBBLE.PRG and build/trace/email.prg built", False)
 
 print("screenshots in %s/*/shots" % work)
 print("%d failed" % len(fails) if fails else "all passed")

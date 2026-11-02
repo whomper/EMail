@@ -49,7 +49,7 @@ void editor_init(void);
    can show the keys instead */
 static void help_key_pressed(void)
 {
-	if (help_key(opt.workdir, "EMAIL.HYP", 0, "Keys"))
+	if (help_key(opt.workdir, "email.hyp", 0, "Keys"))
 		dlg_keys();
 }
 
@@ -237,7 +237,7 @@ static void set_logging(void)
 	conn_log_flush();
 	if (opt.log) {
 		const char *clock = tos_clock();
-		path_join(conn_logfile, sizeof(conn_logfile), opt.workdir, "EMAIL.LOG");
+		path_join(conn_logfile, sizeof(conn_logfile), opt.workdir, "email.log");
 		if (*clock)		/* a 200 Hz timer that isn't: the times are corrected */
 			conn_log("EMail", " -- ", clock, (long)strlen(clock));
 	} else {
@@ -414,7 +414,7 @@ static const char *link_page(const char *url)
 	SBUF b;
 	const char *p;
 	int ok;
-	path_join(path, sizeof(path), opt.workdir, "LINK.HTM");
+	path_join(path, sizeof(path), opt.workdir, "link.htm");
 	sb_init(&b);
 	sb_adds(&b, "<html><head><meta http-equiv=\"refresh\" content=\"0;url=");
 	for (p = url; *p; p++) {
@@ -436,7 +436,7 @@ static const char *link_page(const char *url)
 static int find_browser(char *out, int size)
 {
 	/* EWeb's ST edition first on a 68000 */
-	static const char *const names[2][2] = { { "EWEBST.PRG", "EWEB.PRG" }, { "EWEB.PRG", "EWEBST.PRG" } };
+	static const char *const names[2][2] = { { "ewebst.prg", "eweb.prg" }, { "eweb.prg", "ewebst.prg" } };
 	int big = get_cookie(0x5F435055L) >= 20;	/* _CPU: a 68020 or better */
 	char path[200], name[16];
 	short button = 0, k;
@@ -451,7 +451,7 @@ static int find_browser(char *out, int size)
 			return 1;
 	}
 	str_copy(path, opt.workdir[0] ? opt.workdir : "C:", sizeof(path) - 4);
-	strcat(path, "\\*.PRG");
+	strcat(path, "\\*.prg");
 	strcpy(name, names[big][0]);
 	if (!fsel_exinput(path, name, &button, "Where is EWeb (EWEB.PRG)?") || !button || !name[0])
 		return 0;
@@ -706,7 +706,7 @@ static void cmd_reply(int all, int forward)
 		char path[220];
 		int have = 0;
 		if (cur_msg->nparts) {
-			path_join(path, sizeof(path), cur_folder->dir, "FORWARD.EML");
+			path_join(path, sizeof(path), cur_folder->dir, "forward.eml");
 			have = msg_export(cur_folder, cur_uid, path) == 0;
 		}
 		text = compose_forward(a, cur_msg, have ? path : 0);
@@ -1744,7 +1744,7 @@ int main(void)
 	falcon_usable = get_cookie(0x5F435055L) >= 20;	/* _CPU: TLS.OVL needs a 68020 */
 	store_init(dir);
 	start_mark("store");
-	path_join(tls_ovl_path, sizeof(tls_ovl_path), dir, "TLS.OVL");	/* beside CACERT.PEM */
+	path_join(tls_ovl_path, sizeof(tls_ovl_path), dir, "tls.ovl");	/* beside CACERT.PEM */
 	crash_install(dir, "EMail", mail_version);
 	help_init();			/* memory the help viewer may read */
 	av_init("EMAIL");		/* the desktop's AV server, if there is one */

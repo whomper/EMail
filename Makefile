@@ -10,9 +10,9 @@
 #   make test       builds the mail core for this computer and runs the
 #                   unit tests (tests/); `make itest` also runs the
 #                   protocol tests against a local Dovecot.
-#   make help       binary/EMAIL.HYP, the guide for ST-Guide (needs hcp:
+#   make help       binary/email.hyp, the guide for ST-Guide (needs hcp:
 #                   common/tools/build-hcp.sh builds it)
-#   make dist       a release's files in dist/: each file, and EMAIL-x.y.zip
+#   make dist       a release's files in dist/: each file, and email-x.y.zip
 #
 # binary/ is what make builds, never committed: releases carry the
 # program (.github/workflows/release.yml).
@@ -57,13 +57,13 @@ HDRS    := $(wildcard src/*.h atari/*.h atari/include/*.h ui/*.h \
            common/src/*.h common/atari/*.h common/atari/include/*.h common/ui/*.h common/dsp/*.h)
 
 # what goes onto the Atari: binary/ (built, never committed)
-all: binary/EMAIL.PRG binary/EMAILCHK.ACC binary/TLS.OVL binary/ROOTS.DAT
+all: binary/email.prg binary/emailchk.acc binary/tls.ovl binary/roots.dat
 
-binary/EMAIL.PRG: $(OBJDIR)/mail.elf common/tools/elf2tos.py | binary
+binary/email.prg: $(OBJDIR)/mail.elf common/tools/elf2tos.py | binary
 	PRGFLAGS=7 python3 common/tools/elf2tos.py $< $@
 
 # the family's TLS.OVL as AERA-Atari built it: copied, never built here
-binary/TLS.OVL: common/tlsovl/TLS.OVL | binary
+binary/tls.ovl: common/tlsovl/tls.ovl | binary
 	cp $< $@
 
 # the version: VERSION holds the last release (major.minor, e.g. 1.30),
@@ -123,7 +123,7 @@ CHKDIR  := build/chk
 CHKOBJ  := sting_s nf util charset mime links conn imap pop3 store newmail futil bidi secret ctime tz \
            ovl libc tos plat_tos net_tos sting gem tls_ovl bigbuf \
            emailchk notify aboutline dsp_ovl av alert dialog aboutbox accmem bgwork twin busy field clip clipedit crash crash_s
-binary/EMAILCHK.ACC: FORCE | binary
+binary/emailchk.acc: FORCE | binary
 	$(MAKE) OBJDIR=$(CHKDIR) TRACECF="-ffunction-sections -fdata-sections" $(CHKDIR)/emailchk.elf
 	PRGFLAGS=7 python3 common/tools/elf2tos.py $(CHKDIR)/emailchk.elf $@
 $(OBJDIR)/emailchk.elf: $(OBJDIR)/crt0chk.o $(addprefix $(OBJDIR)/,$(addsuffix .o,$(CHKOBJ))) $(OBJDIR)/build.o common/atari/link.ld
@@ -135,24 +135,24 @@ $(OBJDIR)/crt0chk.o: common/atari/crt0.S | $(OBJDIR)
 # EMail saying on the emulator's console what each pane draws ("DRAW
 # list y h", "COPY list ..."), for tests/hatari/scroll_test.py (never
 # released): its own objects, so binary/ is left as it is
-$(OBJDIR)/trace/EMAIL.PRG: FORCE
+$(OBJDIR)/trace/email.prg: FORCE
 	$(MAKE) OBJDIR=$(OBJDIR)/trace TRACECF=-DDRAW_TRACE $(OBJDIR)/trace/mail.elf
 	PRGFLAGS=7 python3 common/tools/elf2tos.py $(OBJDIR)/trace/mail.elf $@
 
 # EMail and EMail check saying how long they kept the AES waiting
 # (-DAES_PROFILE=20: each stretch of 20 ms or more as "AESGAP <ms> ms",
 # the start as "AESSTART"), for tests/hatari/speed.py (never released)
-$(OBJDIR)/speed/EMAIL.PRG: FORCE
+$(OBJDIR)/speed/email.prg: FORCE
 	$(MAKE) OBJDIR=$(OBJDIR)/speed TRACECF=-DAES_PROFILE=20 $(OBJDIR)/speed/mail.elf
 	PRGFLAGS=7 python3 common/tools/elf2tos.py $(OBJDIR)/speed/mail.elf $@
-$(OBJDIR)/speed/EMAILCHK.ACC: FORCE
+$(OBJDIR)/speed/emailchk.acc: FORCE
 	$(MAKE) OBJDIR=$(OBJDIR)/speed/chk TRACECF="-ffunction-sections -fdata-sections -DAES_PROFILE=20" \
 		$(OBJDIR)/speed/chk/emailchk.elf
 	PRGFLAGS=7 python3 common/tools/elf2tos.py $(OBJDIR)/speed/chk/emailchk.elf $@
 
 # EMail crashing on purpose with F1 to F5 (-DCRASH_TEST), for
 # common/tests/crash/app_crash.py (never released)
-$(OBJDIR)/crashtest/EMAIL.PRG: FORCE
+$(OBJDIR)/crashtest/email.prg: FORCE
 	$(MAKE) OBJDIR=$(OBJDIR)/crashtest TRACECF=-DCRASH_TEST $(OBJDIR)/crashtest/mail.elf
 	PRGFLAGS=7 python3 common/tools/elf2tos.py $(OBJDIR)/crashtest/mail.elf $@
 
@@ -213,10 +213,10 @@ $(OBJDIR)/mkroots: common/tools/mkroots.c $(HOSTSRC) $(HDRS) $(HOSTLIB) | $(OBJD
 	$(HOSTCC) $(HOSTCFLAGS) -I$(BSSL)/inc -o $@ common/tools/mkroots.c $(HOSTSRC) $(HOSTLIB)
 
 # (Mozilla's list, kept in common/, next to the program)
-binary/CACERT.PEM: common/certs/CACERT.PEM | binary
+binary/cacert.pem: common/certs/CACERT.PEM | binary
 	cp $< $@
-binary/ROOTS.DAT: binary/CACERT.PEM $(OBJDIR)/mkroots
-	$(OBJDIR)/mkroots binary/CACERT.PEM $@
+binary/roots.dat: binary/cacert.pem $(OBJDIR)/mkroots
+	$(OBJDIR)/mkroots binary/cacert.pem $@
 
 # ---- fuzzing (the AERA guidelines, 7.1): what servers send, from
 # libFuzzer, with AddressSanitizer and UBSan. The network is
@@ -255,7 +255,7 @@ $(OBJDIR)/replay_%: tests/fuzz/fuzz_%.c $(HOSTSRC) $(HDRS) $(HOSTLIB) $(REPLAYSR
 # the 68000 builds looked at for word and long accesses at an odd stack
 # or frame offset, an address error on a 68000 (the guidelines, The
 # machines: common/tools/oddaccess.py)
-test: $(OBJDIR)/unit $(addprefix $(OBJDIR)/replay_,$(FUZZERS)) binary/EMAIL.PRG binary/EMAILCHK.ACC
+test: $(OBJDIR)/unit $(addprefix $(OBJDIR)/replay_,$(FUZZERS)) binary/email.prg binary/emailchk.acc
 	python3 common/tools/oddaccess.py $(OBJDIR)/mail.elf $(CHKDIR)/emailchk.elf
 	$(OBJDIR)/unit
 	@for f in $(FUZZERS); do \
@@ -270,24 +270,26 @@ itest: $(OBJDIR)/mail-cli
 # the ST-Guide help file from the user guide (HCP from github.com/th-otto/hypview)
 HCP ?= hcp
 # (and EMAIL.REF, its page names for ST-Guide's reference list)
-help: binary/EMAIL.HYP
-binary/EMAIL.HYP: docs/GUIDE.md tools/mkhelp.py VERSION docs/front.json docs/help/WINDOW.IMG \
+help: binary/email.hyp
+binary/email.hyp: docs/GUIDE.md tools/mkhelp.py VERSION docs/front.json docs/help/WINDOW.IMG \
                   common/help/EMAIL.IMG common/tools/helpfront.py common/tools/gemimg.py | $(OBJDIR) binary
 	python3 tools/mkhelp.py docs/GUIDE.md VERSION $(OBJDIR)/EMAIL.STG
 	python3 common/tools/helpfront.py page docs/front.json $(OBJDIR)/EMAIL.STG $(OBJDIR)/EMAIL.STG
 	$(HCP) --references -o $@ $(OBJDIR)/EMAIL.STG >/dev/null
 
 # a release's files: each one in dist/, and all of them in
-# dist/EMAIL-x.y.zip (the icons in icons/), for the release workflow
-DIST    := binary/EMAIL.PRG binary/EMAILCHK.ACC binary/TLS.OVL binary/CACERT.PEM binary/ROOTS.DAT binary/EMAIL.HYP binary/EMAIL.REF
+# dist/email-x.y.zip (the icons in icons/), for the release workflow;
+# every name in lowercase (the guidelines' 6.6: MiNT's ext2 drives tell
+# EMAIL.PRG and email.prg apart)
+DIST    := binary/email.prg binary/emailchk.acc binary/tls.ovl binary/cacert.pem binary/roots.dat binary/email.hyp binary/email.ref
 ICONS   := icons/EMAIL.RSC icons/EMAILNV.RSC icons/EMAIL.ICN icons/EMAILMK.ICN
 dist: all help
 	rm -rf dist
 	mkdir -p dist/zip/icons
-	cp $(DIST) $(ICONS) dist/
+	cp $(DIST) dist/
 	cp $(DIST) dist/zip/
-	cp $(ICONS) dist/zip/icons/
-	cd dist/zip && zip -q -9 -r ../EMAIL-$(VERSION_STR).zip .
+	for f in $(ICONS); do b=$$(basename $$f | tr A-Z a-z); cp $$f dist/$$b; cp $$f dist/zip/icons/$$b; done
+	cd dist/zip && zip -q -9 -r ../email-$(VERSION_STR).zip .
 	rm -rf dist/zip
 
 clean:

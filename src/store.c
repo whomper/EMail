@@ -271,7 +271,7 @@ const char google_app_password[] =
 void acct_dirs(ACCOUNT *a)
 {
 	char name[16];
-	snprintf(name, sizeof(name), "ACCT%d", a->id);
+	snprintf(name, sizeof(name), "acct%d", a->id);
 	path_join(a->dir, sizeof(a->dir), mail_dir, name);
 	pf_mkdir(a->dir);
 }
@@ -501,21 +501,21 @@ int store_begin(const char *workdir)
 	defaults();
 	pf_size_open = pf_handle_size;	/* one look per file read */
 	str_copy(opt.workdir, workdir, sizeof(opt.workdir));
-	path_join(inf_path, sizeof(inf_path), workdir, "EMAIL.INF");
+	path_join(inf_path, sizeof(inf_path), workdir, "email.inf");
 	{
 		char kf[220];
-		path_join(kf, sizeof(kf), workdir, "EMAIL.KEY");
+		path_join(kf, sizeof(kf), workdir, "email.key");
 		secret_init(kf);
 		store_lost_passwords = store_plain_passwords = 0;
 	}
-	path_join(mail_dir, sizeof(mail_dir), workdir, "EMAIL");
+	path_join(mail_dir, sizeof(mail_dir), workdir, "email");
 	pf_mkdir(mail_dir);
 	/* a Direct connection: the root certificates next to EMAIL.PRG, the random
 	   seed with the mail */
-	path_join(conn_cacert, sizeof(conn_cacert), workdir, "CACERT.PEM");
-	path_join(tls_seed_path, sizeof(tls_seed_path), mail_dir, "SEED.DAT");
-	path_join(tls_sigs_path, sizeof(tls_sigs_path), mail_dir, "SIGS.DAT");
-	path_join(tls_roots_cache, sizeof(tls_roots_cache), workdir, "ROOTS.DAT");
+	path_join(conn_cacert, sizeof(conn_cacert), workdir, "cacert.pem");
+	path_join(tls_seed_path, sizeof(tls_seed_path), mail_dir, "seed.dat");
+	path_join(tls_sigs_path, sizeof(tls_sigs_path), mail_dir, "sigs.dat");
+	path_join(tls_roots_cache, sizeof(tls_roots_cache), workdir, "roots.dat");
 
 	startoffline_given = offline_inf = 0;
 	free(rd_buf);
@@ -796,7 +796,7 @@ FINFO *folder_add(ACCOUNT *a, const char *server, char delim, short role, short 
 		f = &a->folders[a->nfolders++];
 		memset(f, 0, sizeof(*f));
 		str_copy(f->server, server, sizeof(f->server));
-		snprintf(f->dir, sizeof(f->dir), "F%07lX", (str_hash(server) + (local ? 1 : 0)) & 0xFFFFFFFL);
+		snprintf(f->dir, sizeof(f->dir), "f%07lx", (str_hash(server) + (local ? 1 : 0)) & 0xFFFFFFFL);
 	}
 	f->role = role;
 	f->noselect = noselect;
@@ -871,7 +871,7 @@ int folders_save(ACCOUNT *a)
 		sb_printf(&b, "%d\t%d\t%d\t%ld\t%ld\t%s\t%s\r\n", f->role, f->noselect, f->local,
 			  f->total, f->unread, f->server, f->dir);
 	}
-	path_join(path, sizeof(path), a->dir, "FOLDERS.LST");
+	path_join(path, sizeof(path), a->dir, "folders.lst");
 	r = pf_save(path, b.s ? b.s : "", b.len);
 	a->fdirty = 0;
 	sb_free(&b);
@@ -893,7 +893,7 @@ int folders_load(ACCOUNT *a)
 {
 	char path[220], *buf, *line, *next;
 	a->nfolders = 0;
-	path_join(path, sizeof(path), a->dir, "FOLDERS.LST");
+	path_join(path, sizeof(path), a->dir, "folders.lst");
 	buf = pf_load(path, 0);
 	if (buf) {
 		for (line = buf; line && *line; line = next) {
@@ -917,8 +917,10 @@ int folders_load(ACCOUNT *a)
 				if (fi) {
 					fi->total = atol(f[3]);
 					fi->unread = atol(f[4]);
-					/* older lists have no directory: it follows from the name */
-					if (n == 7 && f[6][0] == 'F' && strlen(f[6]) < sizeof(fi->dir))
+					/* older lists have no directory: it follows from the name.
+					   f and a hex number (6.6), or F from before: on TOS's
+					   FAT the same folder */
+					if (n == 7 && (f[6][0] == 'f' || f[6][0] == 'F') && strlen(f[6]) < sizeof(fi->dir))
 						str_copy(fi->dir, f[6], sizeof(fi->dir));
 				}
 			}
@@ -1033,13 +1035,13 @@ HDR *fold_add(FOLDER *f, unsigned long uid)
 void msg_path(FOLDER *f, unsigned long uid, char *out, int size)
 {
 	char name[16];
-	snprintf(name, sizeof(name), "%08lX.EML", uid);
+	snprintf(name, sizeof(name), "%08lx.eml", uid);
 	path_join(out, size, f->dir, name);
 }
 
 static void pack_path(FOLDER *f, char *out, int size)
 {
-	path_join(out, size, f->dir, "MESSAGES.DAT");
+	path_join(out, size, f->dir, "messages.dat");
 }
 
 /* a body no longer wanted: its record becomes a gap, gone at the next
@@ -1189,7 +1191,7 @@ FOLDER *fold_open(ACCOUNT *a, FINFO *fi)
 	made = !fi->opened && pf_mkdir(f->dir) == 1;
 	fi->opened = 1;
 	f->uidnext = 1;
-	path_join(path, sizeof(path), f->dir, "INDEX.DAT");
+	path_join(path, sizeof(path), f->dir, "index.dat");
 	buf = made ? 0 : pf_load(path, 0);
 	if (!buf)
 		return f;
@@ -1662,7 +1664,7 @@ int fold_save(FOLDER *f)
 		sb_adds(&b, h->to ? h->to : "");
 		sb_printf(&b, "\t%ld\t%ld\n", h->off, h->plen);
 	}
-	path_join(path, sizeof(path), f->dir, "INDEX.DAT");
+	path_join(path, sizeof(path), f->dir, "index.dat");
 	r = pf_save(path, b.s, b.len);
 	sb_free(&b);
 	f->dirty = 0;
@@ -1766,7 +1768,7 @@ void cache_clear_all(void (*each)(const char *account, const char *folder), int 
 char *abook_load(long *len)
 {
 	char path[220];
-	path_join(path, sizeof(path), opt.workdir, "ADDRESS.TXT");
+	path_join(path, sizeof(path), opt.workdir, "address.txt");
 	return pf_load(path, len);
 }
 
@@ -1790,7 +1792,7 @@ int abook_add_list(char addr[][160], int n)
 	}
 	free(buf);
 	if (added) {
-		path_join(path, sizeof(path), opt.workdir, "ADDRESS.TXT");
+		path_join(path, sizeof(path), opt.workdir, "address.txt");
 		h = pf_open(path, PF_APPEND);
 		if (h < 0) {
 			added = -1;

@@ -7,7 +7,7 @@ connection needs only from TT RAM, so it leaves the account unchecked;
 Erez's Falcon without its DFB1X said only "no memory for a Direct
 connection here: HEAPKB= in EMAILCHK.INF" (26 Oct 2026). Now Check now
 says what it is and the two ways out: the gateway, or HEAPKB=300 in
-C:\\EMAILCHK.INF and a restart.
+C:\\emailchk.inf and a restart.
 
 Nothing is reached on the network (the account is never connected to),
 so no server runs: the accessory from the Desk menu, Check now, and the
@@ -42,10 +42,10 @@ def check(what, good, detail=""):
 
 r = speed.Rig(work, machine, display=os.environ.get("SPEED_DISPLAY", ":91"))
 try:
-    r.put(os.path.join(ROOT, "binary", "EMAILCHK.ACC"))
-    r.put(os.path.join(ROOT, "binary", "TLS.OVL"), "EMAIL")
-    r.write("EMAILCHK.INF", "FOLDER=C:\\EMAIL\\\n")
-    r.write(os.path.join("EMAIL", "EMAIL.INF"),
+    r.put(os.path.join(ROOT, "binary", "emailchk.acc"))
+    r.put(os.path.join(ROOT, "binary", "tls.ovl"), "EMAIL")
+    r.write("emailchk.inf", "FOLDER=C:\\EMAIL\\\n")
+    r.write(os.path.join("EMAIL", "email.inf"),
             "[options]\ntz=0\ncheck=1\nfalcon=1\n[account]\nname=Dana\nemail=dana@test.local\nin=imap\n"
             "host=192.168.1.2\nport=143\nuser=dana\npass=secret\nsmtphost=192.168.1.2\nsmtpport=587\n"
             "dhost=imap.example.org\ndport=993\ndsec=1\n")
@@ -77,11 +77,11 @@ finally:
 # account (the server isn't there: an error, but not the memory)
 r = speed.Rig(work + "-heap", machine, display=os.environ.get("SPEED_DISPLAY", ":91"))
 try:
-    r.put(os.path.join(ROOT, "binary", "EMAILCHK.ACC"))
-    r.put(os.path.join(ROOT, "binary", "TLS.OVL"), "EMAIL")
-    r.put(os.path.join(ROOT, "binary", "ROOTS.DAT"), "EMAIL")
-    r.write("EMAILCHK.INF", "FOLDER=C:\\EMAIL\\\nHEAPKB=300\n")
-    r.write(os.path.join("EMAIL", "EMAIL.INF"),
+    r.put(os.path.join(ROOT, "binary", "emailchk.acc"))
+    r.put(os.path.join(ROOT, "binary", "tls.ovl"), "EMAIL")
+    r.put(os.path.join(ROOT, "binary", "roots.dat"), "EMAIL")
+    r.write("emailchk.inf", "FOLDER=C:\\EMAIL\\\nHEAPKB=300\n")
+    r.write(os.path.join("EMAIL", "email.inf"),
             "[options]\ntz=0\ncheck=1\nfalcon=1\n[account]\nname=Dana\nemail=dana@test.local\nin=imap\n"
             "host=192.168.1.2\nport=143\nuser=dana\npass=secret\nsmtphost=192.168.1.2\nsmtpport=587\n"
             "dhost=imap.example.org\ndport=993\ndsec=1\n")

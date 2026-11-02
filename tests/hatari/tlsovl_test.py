@@ -48,8 +48,8 @@ def run(name, machine, ovl, option_y):
     hd = os.path.join(w, "hd")
     os.makedirs(hd)
     rig.install_prg(hd, ovl=ovl)
-    shutil.copy(os.path.join(rig.ROOT, "binary", "CACERT.PEM"), hd)
-    with open(os.path.join(hd, "EMAIL.INF"), "w", newline="") as f:
+    shutil.copy(os.path.join(rig.ROOT, "binary", "cacert.pem"), hd)
+    with open(os.path.join(hd, "email.inf"), "w", newline="") as f:
         f.write("[options]\r\ntz=180\r\noffline=1\r\nlog=1\r\n[account]\r\nname=Dana\r\nfullname=Dana\r\n"
                 "email=dana@test.local\r\nin=imap\r\nhost=192.168.1.2\r\nport=143\r\nuser=dana\r\npass=x\r\n"
                 "smtphost=192.168.1.2\r\nsmtpport=587\r\ndhost=imap.test.local\r\ndport=993\r\n"
@@ -70,10 +70,10 @@ def run(name, machine, ovl, option_y):
         time.sleep(6)
     finally:
         r.stop()
-    inf = open(os.path.join(hd, "EMAIL.INF"), errors="replace").read()
-    log = open(os.path.join(hd, "EMAIL.LOG"), errors="replace").read() if os.path.exists(
-        os.path.join(hd, "EMAIL.LOG")) else ""
-    return changed(before, after), inf, log, os.path.exists(os.path.join(hd, "CRASH.LOG"))
+    inf = open(os.path.join(hd, "email.inf"), errors="replace").read()
+    log = open(os.path.join(hd, "email.log"), errors="replace").read() if os.path.exists(
+        os.path.join(hd, "email.log")) else ""
+    return changed(before, after), inf, log, os.path.exists(os.path.join(hd, "crash.log"))
 
 
 # the Options menu and its Direct connection item (640x480 and 640x400:

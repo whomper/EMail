@@ -63,7 +63,7 @@ def main():
     threading.Thread(target=silent_server, args=(stop,), daemon=True).start()
     rig.install_prg(hd)
     rig.fakesting(os.path.join(hd, "AUTO"))
-    with open(os.path.join(hd, "EMAIL.INF"), "w", newline="") as f:
+    with open(os.path.join(hd, "email.inf"), "w", newline="") as f:
         f.write("[options]\r\ntz=180\r\nlog=1\r\n[account]\r\nname=Dana\r\nfullname=Dana Falcon\r\n"
                 "email=dana@test.local\r\nin=imap\r\nhost=127.0.0.1\r\nport=%d\r\nuser=dana\r\n"
                 "pass=secret\r\nsmtphost=127.0.0.1\r\nsmtpport=10026\r\n" % IMAP)
@@ -72,7 +72,7 @@ def main():
         os.mkfifo(p)
     bridge = rig.bridge(work, fifo_out, fifo_in)
     r = rig.Rig(work, machine, serial=(fifo_out, fifo_in))
-    log = os.path.join(hd, "EMAIL.LOG")
+    log = rig.ci_path(hd, "email.log")
     try:
         time.sleep(30)                  # boot; connected, waiting for the greeting
         r.shot("s1-waiting")

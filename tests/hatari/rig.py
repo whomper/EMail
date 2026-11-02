@@ -28,21 +28,25 @@ COMMON_TOOLS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".
 sys.path.insert(0, COMMON_TOOLS)
 import machines  # noqa: E402  the family's test machines (guidelines, The machines)
 
+# a file EMail wrote, whatever its case on Hatari's drive (the guidelines,
+# 6.6: EMail writes lowercase names, a rig's fixtures may be capitals)
+ci_path = machines.ci_path
+
 # FAKESTNG.PRG and its bridge are common's: make -C common/tools/fakesting
 FAKESTING = os.path.join(COMMON_TOOLS, "fakesting")
 
 # the program under test, one for every Atari (the AERA guidelines, 7.4)
-PRG = "EMAIL.PRG"
+PRG = "email.prg"
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..")
 
 
 def install_prg(hd, src=None, ovl=True):
-    """EMAIL.PRG onto drive C: (work/hd), from binary/ (or src, a test
-    build such as build/trace/EMAIL.PRG), and TLS.OVL next to it as the
+    """email.prg onto drive C: (work/hd), from binary/ (or src, a test
+    build such as build/trace/email.prg), and TLS.OVL next to it as the
     release has it (ovl=False: without, for the alert it gives)"""
     shutil.copy(src or os.path.join(ROOT, "binary", PRG), os.path.join(hd, PRG))
     if ovl:
-        shutil.copy(os.path.join(ROOT, "binary", "TLS.OVL"), os.path.join(hd, "TLS.OVL"))
+        shutil.copy(os.path.join(ROOT, "binary", "tls.ovl"), os.path.join(hd, "tls.ovl"))
     print("program:", PRG, "from", src or "binary/", "with TLS.OVL" if ovl else "without TLS.OVL", flush=True)
 
 

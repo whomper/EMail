@@ -54,7 +54,7 @@ cert, key = os.path.join(srv, "cert.pem"), os.path.join(srv, "key.pem")
 # REUSE=1: the certificate and EMail's ROOTS.DAT from the last run, to
 # test a start with the roots cached
 keep = os.path.join(work, "keep")
-reuse = os.environ.get("REUSE") == "1" and os.path.exists(os.path.join(keep, "ROOTS.DAT"))
+reuse = os.environ.get("REUSE") == "1" and os.path.exists(os.path.join(keep, "roots.dat"))
 if reuse:
     shutil.copy(os.path.join(keep, "cert.pem"), cert)
     shutil.copy(os.path.join(keep, "key.pem"), key)
@@ -83,17 +83,17 @@ rig.stop_at_exit(srv, smtp)
 os.makedirs(os.path.join(hd, "AUTO"))
 rig.install_prg(hd)
 # the full Mozilla list EMail ships, plus the test certificate
-with open(os.path.join(hd, "CACERT.PEM"), "wb") as f:
-    f.write(open(os.path.join(ROOT, "binary", "CACERT.PEM"), "rb").read() + open(cert, "rb").read())
+with open(os.path.join(hd, "cacert.pem"), "wb") as f:
+    f.write(open(os.path.join(ROOT, "binary", "cacert.pem"), "rb").read() + open(cert, "rb").read())
 rig.fakesting(os.path.join(hd, "AUTO"))
 if reuse:
-    shutil.copy(os.path.join(keep, "ROOTS.DAT"), hd)
+    shutil.copy(os.path.join(keep, "roots.dat"), hd)
 elif os.environ.get("NOCACHE") != "1":
     # decoded on this computer by tools/mkroots, as EMail ships it
     # (NOCACHE=1: let EMail decode CACERT.PEM itself, over a minute)
-    subprocess.run([os.path.join(ROOT, "build", "mkroots"), os.path.join(hd, "CACERT.PEM"),
-                    os.path.join(hd, "ROOTS.DAT")], check=True)
-with open(os.path.join(hd, "EMAIL.INF"), "w", newline="") as f:
+    subprocess.run([os.path.join(ROOT, "build", "mkroots"), os.path.join(hd, "cacert.pem"),
+                    os.path.join(hd, "roots.dat")], check=True)
+with open(os.path.join(hd, "email.inf"), "w", newline="") as f:
     # tz=0: the emulator's clock is this computer's, which runs on UTC
     f.write("[options]\r\ntz=0\r\nlog=1\r\nfalcon=1\r\nsignature=Sent from my Falcon\r\n[account]\r\nname=Dana\r\nfullname=Dana Falcon\r\n"
             "email=dana@test.local\r\nin=imap\r\nhost=127.0.0.1\r\nport=%d\r\nuser=dana\r\n"
@@ -116,7 +116,7 @@ r = rig.Rig(work, machine, serial=(fifo_out, fifo_in), extra=extra)
 def wait_log(pattern, timeout):
     """wait until EMAIL.LOG has a line containing pattern"""
     t0 = time.time()
-    path = os.path.join(hd, "EMAIL.LOG")
+    path = os.path.join(hd, "email.log")
     while time.time() - t0 < timeout:
         if os.path.exists(path) and pattern in open(path, "rb").read().decode("latin-1"):
             return True
@@ -170,7 +170,7 @@ try:
     print("inbox subjects:", subjects)
 finally:
     r.stop()
-    log = os.path.join(hd, "EMAIL.LOG")
+    log = os.path.join(hd, "email.log")
     if os.path.exists(log):
         for line in open(log, "rb").read().decode("latin-1").splitlines():
             if " -- " in line or " !! " in line:
@@ -179,7 +179,7 @@ finally:
     smtp.terminate()
     subprocess.run(["doveadm", "-c", os.path.join(srv, "dovecot.conf"), "stop"])
     shutil.rmtree(run_dir, ignore_errors=True)
-    roots = os.path.join(hd, "ROOTS.DAT")
+    roots = os.path.join(hd, "roots.dat")
     if os.path.exists(roots):
         os.makedirs(keep, exist_ok=True)
         for f in (cert, key, roots):

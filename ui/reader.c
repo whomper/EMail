@@ -764,7 +764,8 @@ static void draw(WIN *w, GRECT *clip)
 	}
 }
 
-/* an 8.3 name for saving: the ASCII letters of the original */
+/* an 8.3 name for saving: the ASCII letters of the original, in
+   lowercase (the guidelines' 6.6: a name EMail gives a file) */
 static void short_name(const char *name, char *out)
 {
 	const char *dot = strrchr(name, '.');
@@ -772,13 +773,13 @@ static void short_name(const char *name, char *out)
 	const char *p;
 	for (p = name; *p && p != dot && n < 8; p++) {
 		unsigned char c = (unsigned char)*p;
-		if ((c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_' || c == '-')
+		if ((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '_' || c == '-')
 			out[n++] = (char)c;
-		else if (c >= 'a' && c <= 'z')
-			out[n++] = (char)(c - 32);
+		else if (c >= 'A' && c <= 'Z')
+			out[n++] = (char)(c + 32);
 	}
 	if (!n) {
-		strcpy(out, "ATTACH");
+		strcpy(out, "attach");
 		n = 6;
 	}
 	if (dot) {
@@ -786,7 +787,7 @@ static void short_name(const char *name, char *out)
 		for (p = dot + 1; *p && e < 3; p++) {
 			unsigned char c = (unsigned char)*p;
 			if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')) {
-				out[n++] = (char)(c >= 'a' ? c - 32 : c);
+				out[n++] = (char)(c >= 'A' && c <= 'Z' ? c + 32 : c);
 				e++;
 			}
 		}
@@ -860,7 +861,7 @@ void reader_to_ecal(short i)
 		alert(1, "[1][ECal isn't running: open it|and try again, or save the|invitation.][ OK ]");
 		return;
 	}
-	path_join(path, sizeof(path), opt.workdir, "INVITE.ICS");
+	path_join(path, sizeof(path), opt.workdir, "invite.ics");
 	busy(1);
 	data = mime_part_data(cur_raw, &cur_msg->parts[i], &len);
 	ok = data && pf_save(path, data, len) >= 0;
