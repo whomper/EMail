@@ -31,7 +31,9 @@ offline (STARTOFFLINE=1), so no network is needed. The actions, by keys
                                         ST:med, ST-1, Falcon-4:16 ...)
 
 With ACC=1, EMail check (build/speed/emailchk.acc) is opened from the
-Desk menu instead.
+Desk menu instead, on ST-1, TT or Falcon (Falcon:16 without): the
+accessories are not tested on the 4 MB machines, ST and Falcon-4 (Erez,
+4 Nov 2026).
 """
 import os
 import shutil
@@ -55,7 +57,10 @@ a = sys.argv[1:]
 if not a:
     sys.exit(__doc__)
 work = os.path.abspath(a[0])
-machine = a[1] if len(a) > 1 else "Falcon-4:16"
+acc = os.environ.get("ACC") == "1"
+machine = a[1] if len(a) > 1 else ("Falcon:16" if acc else "Falcon-4:16")
+if acc and machine.partition(":")[0] in ("ST", "Falcon-4"):
+    sys.exit("speed.py: no accessory runs on ST or Falcon-4 (Erez, 4 Nov 2026): use ST-1, TT or Falcon")
 nvdi = "nvdi" in a[2:]
 for f in (PRG, CLI):
     if not os.path.exists(f):
@@ -148,7 +153,6 @@ font = os.environ.get("FONT")
 r.write("EMAIL\\email.inf".replace("\\", os.sep),
         inf.replace("\r\n", "\n").replace("tz=180\n", "tz=180\nstartoffline=1\n" +
                                             ("font=%s\n" % font if font else "")))
-acc = os.environ.get("ACC") == "1"
 try:
     if acc:
         r.put(ACC)

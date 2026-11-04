@@ -301,6 +301,8 @@ make build/fakecal.acc && tests/hatari/invite_test.py /tmp/mail-inv   # an invit
 tests/hatari/invite_test.py /tmp/mail-inv Falcon ECal  # the same with ECal's latest release, its New Event saved
 tests/hatari/help_test.py /tmp/mail-help           # EMAIL.HYP in EHypView's latest release
 tests/hatari/emailchk_test.py /tmp/mail-chk        # EMAILCHK.ACC: new mail told at the desktop, none while EMail runs
+                                                   # (Falcon; also ST-1 or TT, never ST or Falcon-4: no accessory
+                                                   # is tested on the 4 MB machines, Erez, 4 Nov 2026)
 AERA_WITH_NVDI=1 tests/hatari/font_test.py /tmp/mail-font   # a GDOS font under NVDI (Falcon, Falcon-4)
 tests/hatari/net_test.py /tmp/mail-st ST-1         # the same EMAIL.PRG on a 1 MB ST, through the gateway
 make build/trace/EMAIL.PRG && tests/hatari/scroll_test.py /tmp/mail-scroll   # what the panes draw while scrolling and choosing

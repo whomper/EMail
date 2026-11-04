@@ -104,7 +104,8 @@ These come from AERA-Atari's repo template and are the same in every app's CLAUD
   `tests/hatari/disk_test.py` (each job's opens within its budget,
   guidelines 6.5) in Hatari with EmuTOS, and `tests/hatari/xaaes_test.py`
   (FreeMiNT with XaAES, a multitasking AES: common's rig in
-  `common/tests/xaaes`, `make base` there once); `emailchk_test.py` when the
+  `common/tests/xaaes`, `make base` there once); `emailchk_test.py` (on `ST-1`, `TT` or `Falcon`: no accessory
+  runs on the 4 MB machines, `ST` and `Falcon-4`; Erez, 4 Nov 2026) when the
   accessory or `src/newmail.c` changes. With EContact: `econtact_test.py` (its latest release);
   the help file: `help_test.py` (EHypView's latest release).
 - `gateway/` is a read-only copy of

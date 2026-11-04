@@ -24,8 +24,7 @@ The console lines ("EMAILCHK checked ...") say what each check found.
 With "direct" after the machine, the account is a Direct connection
 (FALCON=1, IMAPS with the test certificate the root it trusts): the
 accessory loads TLS.OVL into its own memory and does TLS itself. That
-memory is taken only in TT RAM (Falcon, TT; not Falcon-4, where such an
-account is left unchecked and the check says why).
+memory is taken only in TT RAM (Falcon, TT).
 
 With "pop3", the account is POP3 (Dovecot's, port 10110), the accessory's
 own POP3 path: new is what EMail hasn't downloaded (UIDL.DAT), so the
@@ -39,6 +38,9 @@ guidelines, 2.2). CHK_ACC names another build of the accessory to test,
 such as an AES_PROFILE one (its stretches go to hatari.log as AESGAP).
 
     emailchk_test.py WORKDIR [MACHINE] [direct] [pop3] [trace]
+
+MACHINE is ST-1, TT or Falcon: the accessories are not tested on the
+4 MB machines, ST and Falcon-4 (Erez, 4 Nov 2026).
 """
 import imaplib
 import os
@@ -56,6 +58,8 @@ ROOT = os.path.normpath(os.path.join(HERE, "..", ".."))
 IMAP, SMTP = 10143, 10025
 
 work, machine, more = rig.cli("Falcon")
+if machine.partition(":")[0] in ("ST", "Falcon-4"):
+    sys.exit("emailchk_test.py: no accessory runs on ST or Falcon-4 (Erez, 4 Nov 2026): use ST-1, TT or Falcon")
 direct = "direct" in more
 trace = "trace" in more
 pop = "pop3" in more
