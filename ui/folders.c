@@ -304,6 +304,16 @@ static void rclick(WIN *w, short mx, short my)
 		return;
 	a = ent[i].a;
 	fi = ent[i].fi;
+	/* the folder the menu is for selected first, as a click would
+	   (Erez, 4 Nov 2026: the item is selected before the action) */
+	if (fi && !fi->noselect && fi != cur_finfo) {
+		folders_select(a, fi);
+		for (i = 0; i < nent && ent[i].fi != fi; i++)
+			;
+		if (i == nent)
+			return;		/* gone from the list meanwhile */
+		a = ent[i].a;
+	}
 	if (!fi) {
 		const char *lab[] = { "Check mail", "New message", "Edit account...", "-", "Refresh folder list" };
 		r = popup(mx, my, lab, 5);

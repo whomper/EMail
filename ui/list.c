@@ -710,11 +710,17 @@ static void load_more(void)
 	folders_build();
 }
 
-/* the selected message shown, and its row drawn as it now looks */
+/* the selected message shown, and its row drawn again if showing it
+   changed its look (read now) */
 static void show_sel(void)
 {
-	reader_show(&cur_folder->h[view[sel]]);
-	win_redraw_lines(&w_list, sel, 1);
+	HDR *h = &cur_folder->h[view[sel]];
+	unsigned long uid = h->uid;
+	unsigned short flags = h->flags;
+	reader_show(h);
+	if (sel >= 0 && sel < nview &&
+	    (cur_folder->h[view[sel]].uid != uid || cur_folder->h[view[sel]].flags != flags))
+		win_redraw_lines(&w_list, sel, 1);
 	list_titles();
 	folders_build();	/* draws only the rows that changed */
 }
@@ -775,8 +781,10 @@ static void select_row(long i, int open)
 		return;
 	}
 	show_step = 0;
-	/* its row drawn once, after the message is shown: reading marks it
-	   read, and its look changes */
+	/* the row the user chose highlighted first, then the message shown
+	   (Erez, 4 Nov 2026: the item is selected before the action behind
+	   it); the row drawn again only if reading it changed its look */
+	win_redraw_lines(&w_list, sel, 1);
 	show_sel();
 	if (open)
 		win_focus(&w_reader);
@@ -920,6 +928,12 @@ static int drag_messages(long i, short mx, short my)
 			break;
 		evnt_timer_(10);
 	}
+	/* the row dragged is selected first, highlighted at once and shown
+	   after the drag (Erez, 4 Nov 2026) */
+	if (!several && i != sel) {
+		later = 1;
+		select_row(i, 0);
+	}
 	/* the outline rides below and right of the pointer, clear of the
 	   folder it points at */
 	box.w = 16 * cw;
@@ -1014,7 +1028,12 @@ static void click(WIN *w, short mx, short my, short clicks, short kstate)
 	}
 	if (clicks < 2 && i >= 0 && i < nview && drag_messages(i, mx, my))
 		return;
+	/* a single click: the row highlighted at once, the message shown in
+	   the next turns, as a key does (Erez, 4 Nov 2026: the item chosen
+	   is selected before the action behind it) */
+	later = clicks < 2;
 	select_row(i, clicks > 1);
+	later = 0;
 }
 
 /* the message menu, shared with the reader */

@@ -14,6 +14,7 @@ offline (STARTOFFLINE=1), so no network is needed. The actions, by keys
 (an ST has no Page Down: Shift+arrow):
 
     the program started            (the Inbox shown)
+    a message chosen with a click  (the list's third row)
     the long letter shown          (Down in the list)
     the long Hebrew letter shown   (Down)
     a short message shown          (Down)
@@ -167,6 +168,14 @@ try:
         r.act("EMail check closed", speed.WINDOW, lambda: r.key("Escape"))
     else:
         r.start("C:\\EMAIL\\email.prg", ready="AESSTART")
+        from PIL import Image
+        row = 16 if Image.open(r.shot("start")).size[1] >= 400 else 8
+        # the list's third row clicked: highlighted first, then shown
+        # (Erez, 4 Nov 2026); Home goes back to the first for the keys
+        r.act("a message chosen with a click", speed.PAGE, lambda: r.click(400, 103 + 2 * row if row == 16 else 51 + 2 * row))
+        r.key("Home")
+        time.sleep(3)
+        r.still()
         r.act("the long letter shown (Down)", speed.PAGE, lambda: r.key("Down"))
         r.act("the long Hebrew letter shown (Down)", speed.PAGE, lambda: r.key("Down"))
         r.act("a short message shown (Down)", speed.PAGE, lambda: r.key("Down"))
