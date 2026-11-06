@@ -81,6 +81,13 @@ void dlg_close(void);
    front (a click outside it rings the bell). Elsewhere evnt_multi_. */
 short dlg_evnt(short flags, short clicks, short mask, short state,
 	       unsigned long timer, short *msg, AEVENT *e);
+/* the app's work while a dialog waits for the user (a player's queue
+   that must go on being fed while Settings or About is open): when set,
+   a wait with no timer of its own (dlg_do, the About box, any dlg_evnt
+   without MU_TIMER) wakes every 20 ms and calls it, short work (a
+   Speed turn: well under 50 ms). NULL by default; set it while the app's
+   job runs and clear it when the job ends. */
+extern void (*dlg_idle)(void);
 /* what the app draws itself over the open dialog's tree (lists, a
    sample, with the VDI): draw(x, y, w, h) draws that piece of it again,
    called after the tree when the AES asks for a piece of the window (on
@@ -146,6 +153,56 @@ int dlg_3d_ok(void);
    setting for it (a tester, Erez 27 Oct 2026: an AES without 3D ignores
    the flags anyway). The tests set 0 to see the flat look on a 3D AES */
 extern int dlg_3d_on;
+
+/* Built with -DDLG_CPU only (a program for the ST; not an accessory, nor a
+   program for the 68030 alone: 5 KB more for nothing there). Then
+   dlg_open and dlg_draw over TOS's own screen, in an app with text.c:
+   the root's fill, flat G_BOXTEXTs and plain G_STRINGs by the CPU where
+   text.c draws into the screen and the look is flat, the rest by
+   objc_draw, the screen the same as objc_draw's (tests/dialog: make cmp).
+   1, the default; the tests set 0 for objc_draw alone. dlg_fast_count:
+   the draws done so (each one, and each object the CPU drew) */
+extern int dlg_fast_on;
+/* dlg_draw: the fast way from this share of the dialog on, in 1/8ths
+   (4: half of it; smaller parts are objc_draw's, which is as fast there).
+   The tests set 0 */
+extern int dlg_fast_part;
+long dlg_fast_count(void);
+
+/* Built with -DDLG_CLICK (the app links click.c; the guidelines, 5.8):
+   dlg_do asks the AES for one click, so a press comes at once (asking for
+   two held every press back for the double-click time). DLG_CLICKS is
+   what a dialog loop asks dlg_evnt for. A loop of the app's own calls
+   dlg_touch after form_button ended the dialog on a press at x, y:
+   on a TOUCHEXIT object (a list's row) *next is the object, handed back
+   on the press, or the object | 0x8000 when the press was the second of
+   a double click and was let go over it, as form_button gave for two
+   clicks. The next dlg_evnt first waits for a row's press to be let go
+   (the AES would give a button still down as another press).
+   dlg_touch_up waits for it now, for a loop that acts on the release
+   (5.8: the row drawn on the press, the rest on the release): PRESS_IN,
+   PRESS_OUT or PRESS_DRAG (click.h), or -1 when no row is held */
+#ifdef DLG_CLICK
+#define DLG_CLICKS 1
+void dlg_touch(OBJECT *tree, short *next, short x, short y);
+int dlg_touch_up(void);
+/* the same, idle() called at each turn of the wait (press_track's): the
+   old row drawn in the next turn after the pressed one (5.8, 1bad614).
+   Not called when the button was let go before the first turn: the
+   caller calls it once more after */
+int dlg_touch_up_idle(void (*idle)(void));
+#else
+#define DLG_CLICKS 2
+#endif
+
+/* a window's own object tree (not a dialog: a program's main window of
+   buttons, EConvert's): a press on its EXIT button o taken as a dialog's
+   are, only when let go over it, shown pressed meanwhile (graf_watchbox).
+   1: let go over it (its SELECTED taken off again; the caller redraws o
+   and acts); 0: not one, the button already up (a click a file selector
+   left: fsel.h), or let go elsewhere. A button that acted on the press
+   emptied EConvert's list on a click it never had (5 Nov 2026) */
+int dlg_win_button(OBJECT *tree, short o);
 
 /* the pen of the first npens (16 at most: the UI's) whose colour is nearest
    r, g, b (VDI's 0-1000), read with vq_color; text: one dark enough to read

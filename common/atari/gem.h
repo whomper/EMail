@@ -170,6 +170,8 @@ short graf_rubberbox(short x, short y, short minw, short minh, short *w, short *
 short graf_dragbox(short w, short h, short x, short y, short bx, short by, short bw, short bh,
 		   short *nx, short *ny);
 void evnt_set_m1(short leave, short x, short y, short w, short h);
+short evnt_dclick(short rate, short setit);
+short graf_watchbox(OBJECT *tree, short obj, short instate, short outstate);
 short menu_bar(OBJECT *tree, short show);
 short menu_tnormal(OBJECT *tree, short title, short normal);
 short menu_register(short apid, const char *name);
@@ -179,6 +181,7 @@ short wind_x8(short kind, short x, short y, short w, short h);	/* border x: work
 short form_alert(short def, const char *str);
 short rsrc_load(const char *name);
 short aes_version(void);
+extern short aes_double;	/* the last press evnt_multi_ gave came as the second of a double click the AES counted (a multitasking AES) */
 short aes_count(void);		/* global[1]: 1 on TOS, -1 on a multitasking AES */
 short appl_getinfo(short type, short *o1, short *o2, short *o3, short *o4);	/* 0: not known, or no appl_getinfo (AES < 4.0 without ?AGI or MagiC) */
 short fsel_exinput(char *path, char *name, short *button, const char *title);
@@ -223,6 +226,7 @@ const char *app_dir(void);
 short wind_find(short x, short y);
 OBJECT *rsrc_tree(short index);
 short objc_draw(OBJECT *tree, short start, short depth, short x, short y, short w, short h);
+short objc_change(OBJECT *tree, short obj, short x, short y, short w, short h, short state, short redraw);
 short form_dial(short flag, short x, short y, short w, short h);
 #define FMD_START  0
 #define FMD_FINISH 3
@@ -267,6 +271,7 @@ typedef struct {
 void vro_cpyfm(short h, short mode, const short *pxy, MFDB *src, MFDB *dst);
 void vrt_cpyfm(short h, short mode, const short *pxy, MFDB *src, MFDB *dst, const short *colors);
 void vq_extnd(short h, short owflag, short *work_out);
+void vq_mouse(short h, short *b, short *x, short *y);
 short vq_scrninfo(short h, short *work_out);	/* NVDI: 272 words; 0 without */
 short vq_gdos(void);			/* 1 if a GDOS (NVDI, SpeedoGDOS...) is loaded */
 short vst_load_fonts(short h, short select);
@@ -299,6 +304,7 @@ short vqt_width(short h, short c);	/* cell width of character c */
    counts from 0 in TOS 1.04 (replace 0, transparent 1) and from 1 in
    EmuTOS 1.4, as the books have it (ClaudeST, 26 Oct 2026): to read it,
    set a known mode once and see what comes back */
+void vqf_attributes(short h, short *a);
 void vqt_attributes(short h, short *a);
 short vqt_extent_n(short h, const char *s, short n);	/* width n characters draw, effects in force */
 /* n characters drawn to len pixels wide, the gaps between characters

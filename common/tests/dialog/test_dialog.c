@@ -270,10 +270,34 @@ short wind_update(short mode)
 	return 1;
 }
 
+#ifdef DLG_CLICK
+/* click.c stood in for (common/tests/click tests it): what press_double
+   says, what press_track gives back, and what dlg_touch asked */
+#include "click.h"
+static int fake_dbl, fake_track, tracks;
+static GRECT tracked;
+static void (*tracked_idle)(void);
+int press_double(short id, short x, short y) { (void)id, (void)x, (void)y; return fake_dbl; }
+int press_track(const GRECT *r, short x, short y, void (*idle)(void), void (*msg)(short *m), short *dx, short *dy)
+{
+	(void)x, (void)y, (void)msg, (void)dx, (void)dy;
+	tracks++;
+	tracked = *r;
+	tracked_idle = idle;
+	return fake_track;
+}
+#endif
+static short asked_clicks;
+#ifdef DLG_CLICK
+static void idle_mark(void) { }
+#endif
+
 short evnt_multi_(short flags, short clicks, short mask, short state,
 		  unsigned long timer, short *msg, AEVENT *ev)
 {
-	(void)clicks, (void)mask, (void)state, (void)timer;
+	(void)mask, (void)state, (void)timer;
+	if (!(flags & MU_TIMER))
+		asked_clicks = clicks;
 	memset(ev, 0, sizeof(*ev));
 	if (!(flags & MU_TIMER))
 		evnt_updates = updates;
@@ -467,6 +491,22 @@ short form_dial(short flag, short x, short y, short w, short h)
 	if (flag == FMD_FINISH)
 		dial_finish++;
 	return 1;
+}
+
+/* dlg_win_button's: the button's state now, and where it is let go */
+static short fake_mb, fake_watch, watches;
+short graf_mkstate(short *mx, short *my, short *mb, short *ks)
+{
+	*mx = *my = *ks = 0;
+	*mb = fake_mb;
+	return 1;
+}
+
+short graf_watchbox(OBJECT *t, short obj, short instate, short outstate)
+{
+	watches++;
+	t[obj].ob_state = fake_watch ? instate : outstate;
+	return fake_watch;
 }
 
 short graf_handle(short *wchar, short *hchar, short *wbox, short *hbox)
@@ -894,12 +934,68 @@ int main(void)
 		check(r == OK && bells == 1, "a click outside: the bell, and the dialog stays");
 	}
 
+#ifndef DLG_CLICK
 	setup();
 	{
 		static const STEP s[] = { DCLICK(ROW), END };
 		r = run(0, CANCEL, s);
 		check(r == (short)(ROW | 0x8000), "a double click on a TOUCHEXIT row: its number with the high bit");
+		check(asked_clicks == 2, "the AES asked for two clicks");
 	}
+#else
+	/* -DDLG_CLICK (the guidelines, 5.8): one click asked for, the double
+	   click timed by click.c and counted when let go over the row */
+	setup();
+	{
+		static const STEP s[] = { CLICK(ROW), END }, s2[] = { KEY(KEY_RETURN), END };
+		short x, y;
+		fake_dbl = 0, fake_track = PRESS_IN, tracks = 0;
+		r = run(0, CANCEL, s);
+		check(asked_clicks == 1, "DLG_CLICK: the AES asked for one click, so a press comes at once");
+		check(r == ROW && tracks == 0, "a first press on a TOUCHEXIT row: its number at once, on the press");
+		setup();
+		r = run(0, CANCEL, s2);
+		objc_offset(tree, ROW, &x, &y);
+		check(r == OK && tracks == 1 && tracked.x == x && tracked.y == y && tracked.w == tree[ROW].ob_width &&
+		      tracked.h == tree[ROW].ob_height,
+		      "... its release waited for over the row before the next press is asked for");
+	}
+	setup();
+	{
+		static const STEP s[] = { CLICK(ROW), END }, s2[] = { KEY(KEY_RETURN), END };
+		fake_dbl = 1, fake_track = PRESS_IN, tracks = 0;
+		r = run(0, CANCEL, s);
+		check(r == (short)(ROW | 0x8000) && tracks == 1,
+		      "a double click's second, let go over the row: its number with the high bit");
+		setup();
+		run(0, CANCEL, s2);
+		check(tracks == 1, "... its release already waited for: nothing more to wait for");
+	}
+	setup();
+	{
+		static const STEP s[] = { CLICK(ROW), END };
+		fake_dbl = 0, fake_track = PRESS_IN, tracks = 0;
+		run(0, CANCEL, s);
+		check(dlg_touch_up_idle(idle_mark) == PRESS_IN && tracks == 1 && tracked_idle == idle_mark,
+		      "dlg_touch_up_idle: the release waited for now, idle() handed to press_track");
+		check(dlg_touch_up() == -1, "... and then nothing held");
+	}
+	setup();
+	{
+		static const STEP s[] = { CLICK(ROW), END };
+		fake_dbl = 1, fake_track = PRESS_OUT;
+		r = run(0, CANCEL, s);
+		check(r == ROW, "a double click's second let go elsewhere: the row alone, no double click");
+	}
+	setup();
+	{
+		static const STEP s[] = { CLICK(OK), END };
+		fake_dbl = 1, fake_track = PRESS_IN, tracks = 0;
+		r = run(0, CANCEL, s);
+		check(r == OK && tracks == 0, "a button (EXIT, not TOUCHEXIT): as before");
+		fake_dbl = 0;		/* the cases below: single presses */
+	}
+#endif
 
 	setup();
 	{
@@ -1202,6 +1298,21 @@ int main(void)
 	check(pen_nearest(1, 16, 1000, 1000, 500, 0) == 14, "pen_nearest: pale yellow, not for text: pen 14");
 	check(pen_nearest(1, 2, 1000, 0, 0, 1) == 1, "pen_nearest: two pens, text: black");
 	check(pen_nearest(1, 256, 0, 0, 1000, 1) == 4, "pen_nearest: 256 pens: only the first 16");
+	/* a window's button (dlg_win_button): taken only on a press let go over it */
+	setup();
+	fake_mb = 0, fake_watch = 1, watches = 0;
+	check(!dlg_win_button(tree, OK) && !watches, "dlg_win_button: the button already up: nothing (a selector's click)");
+	fake_mb = 1;
+	check(dlg_win_button(tree, OK) && watches == 1 && !(tree[OK].ob_state & SELECTED),
+	      "dlg_win_button: pressed and let go over it: taken, SELECTED off again");
+	fake_watch = 0;
+	check(!dlg_win_button(tree, OK), "dlg_win_button: let go elsewhere: nothing");
+	fake_watch = 1;
+	tree[OK].ob_state |= DISABLED;
+	check(!dlg_win_button(tree, OK), "dlg_win_button: a disabled button: nothing");
+	tree[OK].ob_state &= ~DISABLED;
+	check(!dlg_win_button(tree, TITLE) && !dlg_win_button(tree, -1), "dlg_win_button: not an EXIT object: nothing");
+	fake_mb = 0;
 printf("%d checks, %d failed\n", checks, failed);
 	return failed != 0;
 }

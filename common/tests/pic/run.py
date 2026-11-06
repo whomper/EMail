@@ -345,12 +345,26 @@ def main():
     if r.returncode != 0:
         fails += 1
         print("FAIL in slices")
+    # a JPEG a row at a time (pic_jpeg_rows), read in pieces: the same rows
+    r = subprocess.run(shlex.split(cmd) + ["-R"] + pictures(), capture_output=True, text=True)
+    checks += 1
+    print(r.stdout.strip()[-3000:], r.stderr.strip()[-2000:])
+    if r.returncode != 0:
+        fails += 1
+        print("FAIL a row at a time")
     r = subprocess.run(shlex.split(cmd) + ["-r"] + pictures(), capture_output=True, text=True)
     checks += 1
     print(r.stdout.strip(), r.stderr.strip()[-2000:])
     if r.returncode != 0:
         fails += 1
         print("FAIL robustness")
+    # Sharp: each pixel its nearest pen (pic_dither_sharp)
+    r = subprocess.run(shlex.split(cmd) + ["-S"], capture_output=True, text=True)
+    checks += 1
+    print(r.stdout.strip(), r.stderr.strip()[-2000:])
+    if r.returncode != 0:
+        fails += 1
+        print("FAIL sharp")
     print("%d checks, %d failed" % (checks, fails))
     sys.exit(1 if fails else 0)
 

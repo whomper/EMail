@@ -486,6 +486,29 @@ short menu_ienable(OBJECT *tree, short item, short enable)
 	return aes(32, 2, 1, 1, 0);
 }
 
+/* a button the program draws itself, held: shown in instate while the
+   mouse is over it, outstate when not, until the button comes up; 1 let
+   go over it (the guidelines' 5.8: done on release, as GEM's own buttons
+   in a dialog) */
+short graf_watchbox(OBJECT *tree, short obj, short instate, short outstate)
+{
+	aintin[0] = 0;
+	aintin[1] = obj;
+	aintin[2] = instate;
+	aintin[3] = outstate;
+	addrin[0] = tree;
+	return aes(75, 4, 1, 1, 0);
+}
+
+/* the double click's speed, 0 (slow) to 4 (fast), the desktop's own;
+   setit 1 sets it to rate */
+short evnt_dclick(short rate, short setit)
+{
+	aintin[0] = rate;
+	aintin[1] = setit;
+	return aes(26, 2, 1, 0, 0);
+}
+
 short evnt_timer_(unsigned long ms)
 {
 	aintin[0] = (short)(ms & 0xffff);
@@ -647,6 +670,22 @@ short objc_draw(OBJECT *tree, short start, short depth, short x, short y, short 
 	return aes(42, 6, 1, 1, 0);
 }
 
+/* an object's state set and drawn: where only SELECTED changes on a
+   flat object, the AES inverts it in place rather than drawing it */
+short objc_change(OBJECT *tree, short obj, short x, short y, short w, short h, short state, short redraw)
+{
+	aintin[0] = obj;
+	aintin[1] = 0;
+	aintin[2] = x;
+	aintin[3] = y;
+	aintin[4] = w;
+	aintin[5] = h;
+	aintin[6] = state;
+	aintin[7] = redraw;
+	addrin[0] = tree;
+	return aes(47, 8, 1, 1, 0);
+}
+
 short form_alert(short def, const char *str)
 {
 	aintin[0] = def;
@@ -765,6 +804,15 @@ short wind_calc(short type, short kind, short x, short y, short w, short h,
    with it down and are kept. Not on MagiC or MiNT, nor on EmuTOS, which
    do otherwise */
 static short arr_win = -1, arr_what;
+
+/* A multitasking AES (XaAES, in the hub's rig, 4 Nov 2026) holds a double
+   click's presses back and hands the pair to no one who asked for one click
+   (EFTP's lists on a CT63 under MiNT: not even the first press selected).
+   Programs ask for one click, 0x101 (TOS 4's way of waiting for a press at
+   once); there the AES is asked for two, 0x102 as the accessories ask under
+   TOS, and a pair it counted as two is left for click.c's press_double in
+   aes_double. TOS is asked as before. */
+short aes_double;
 static unsigned long os_magic;
 
 static void sup_magic(void)
@@ -794,9 +842,12 @@ short evnt_multi_(short flags, short clicks, short mask, short state,
 	for (;;) {
 		short last = arr_win, which;	/* only the very next event can be its echo */
 		u32 t0 = last >= 0 ? tos_ms() : 0;
+		short two = clicks == 0x101 && aes_count() < 0;
 		if (flags & MU_MESAG)
 			arr_win = -1;
-		which = evnt_multi_aes(flags, clicks, mask, state, timer, msg, ev);
+		which = evnt_multi_aes(flags, two ? 0x102 : clicks, mask, state, timer, msg, ev);
+		if (two && (which & MU_BUTTON))
+			aes_double = ev->breturn >= 2;
 		if (!(which & MU_MESAG) || msg[0] != WM_ARROWED || !arrow_echoes())
 			return which;
 		if (msg[3] == last && msg[4] == arr_what && !(ev->mbutton & 1) && tos_ms() - t0 < 40) {
@@ -877,6 +928,16 @@ short v_opnvwk_(short phys, short *work_out)
 }
 
 void v_clsvwk(short h) { vdi(101, 0, 0, h); }
+
+/* the mouse as the VDI has it: its buttons in *b, where it is in *x, *y (a
+   VDI call, no AES dispatch: TOS 1.04's graf_mkstate took an ST 4.9 ms) */
+void vq_mouse(short h, short *b, short *x, short *y)
+{
+	vdi(124, 0, 0, h);
+	*b = vintout[0];
+	*x = ptsout[0];
+	*y = ptsout[1];
+}
 
 void vq_extnd(short h, short owflag, short *work_out)
 {
@@ -969,6 +1030,15 @@ void vst_height(short h, short height, short *cw_, short *ch_)
 	vdi(12, 1, 0, h);
 	*cw_ = ptsout[2];
 	*ch_ = ptsout[3];
+}
+
+/* the fill's interior, colour, style, writing mode and perimeter */
+void vqf_attributes(short h, short *a)
+{
+	short i;
+	vdi(37, 0, 0, h);
+	for (i = 0; i < 5; i++)
+		a[i] = vintout[i];
 }
 
 void vqt_attributes(short h, short *a)
