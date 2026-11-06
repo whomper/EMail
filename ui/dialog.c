@@ -36,6 +36,21 @@ extern int dlg_fast_on;
 LFIELD *lf_of(OBJECT *tree, short obj) __attribute__((weak));
 void lf_enter(LFIELD *f, short *idx) __attribute__((weak));
 int lf_key(LFIELD *f, short key, short ch, short kstate, short *idx) __attribute__((weak));
+/* the Hebrew keyboard (hebkey.c), in an app that has it: a key types what key_char
+   says; without it, the key's own character */
+unsigned char key_char(short kstate, short key) __attribute__((weak));
+short hebrew_kbd __attribute__((weak));
+void set_hebrew_kbd(short on) __attribute__((weak));
+
+/* F10 in a dialog: the Hebrew keyboard on or off, where the app has it
+   (hebkey.c); the app's hebrew_kbd_hook shows it */
+static int heb_f10(short key)
+{
+	if (((key >> 8) & 0xff) != 0x44 || !set_hebrew_kbd)
+		return 0;
+	set_hebrew_kbd(!hebrew_kbd);
+	return 1;
+}
 
 #define BEG_MCTRL 3
 #define END_MCTRL 2
@@ -910,7 +925,14 @@ static void fast_draw(OBJECT *tree, short cx, short cy, short cw, short cch, int
 			}
 			sh[n].i = i;
 			reach(tree, i, x, y, &sh[n]);
-			sh[n].kind = i ? (unsigned char)fast_kind(tree, i, ch) : K_AES;
+			/* an object that doesn't reach the piece drawn: nothing to do
+			   with it here (objc_draw cuts it away, and it can't cover
+			   anything there); a small piece, a tab, is then left most
+			   of the walk's and the CPU's work */
+			if (i && (sh[n].x2 < cx || sh[n].y2 < cy || sh[n].x1 >= cx + cw || sh[n].y1 >= cy + cch))
+				sh[n].kind = K_NOTHING;
+			else
+				sh[n].kind = i ? (unsigned char)fast_kind(tree, i, ch) : K_AES;
 			if (!sh[n].kind && (tree[i].ob_type & 0xff) == G_IBOX && !tree[i].ob_state &&
 			    (signed char)(tree[i].ob_spec >> 16) == 0)
 				sh[n].kind = K_NOTHING;
@@ -1255,13 +1277,18 @@ static struct {
 
 int dlg_touch_up(void)
 {
+	return dlg_touch_up_idle(0);
+}
+
+int dlg_touch_up_idle(void (*idle)(void))
+{
 	short m[8];
 	AEVENT e;
 	int r;
 	if (!held.on)
 		return -1;
 	held.on = 0;
-	r = press_track(&held.r, held.x, held.y, 0, held_msg, 0, 0);
+	r = press_track(&held.r, held.x, held.y, idle, held_msg, 0, 0);
 	if (r == PRESS_DRAG)
 		evnt_multi_(MU_BUTTON, 1, 1, 0, 0, m, &e);	/* moved off: just its release */
 	return r;
@@ -1294,8 +1321,8 @@ void dlg_touch(OBJECT *tree, short *next, short x, short y)
 }
 #endif
 
-short dlg_evnt(short flags, short clicks, short mask, short state,
-	       unsigned long timer, short *msg, AEVENT *e)
+static short dlg_evnt_(short flags, short clicks, short mask, short state,
+		       unsigned long timer, short *msg, AEVENT *e)
 {
 	short i, k, top, d1;
 #ifdef DLG_CLICK
@@ -1364,6 +1391,30 @@ short dlg_evnt(short flags, short clicks, short mask, short state,
 	}
 }
 
+void (*dlg_idle)(void);
+
+#define DLG_IDLE_MS 20
+
+/* dlg_evnt_, with the app's work done meanwhile: while dlg_idle is set
+   and the caller asks for no timer of its own, the wait wakes every
+   DLG_IDLE_MS (AES time, not CPU) and calls dlg_idle, then waits on; what
+   the caller gets is as without it (no MU_TIMER). A caller with its own
+   timer (a held press, a blinking cursor) keeps it and its own idle. */
+short dlg_evnt(short flags, short clicks, short mask, short state,
+	       unsigned long timer, short *msg, AEVENT *e)
+{
+	if (!dlg_idle || (flags & MU_TIMER))
+		return dlg_evnt_(flags, clicks, mask, state, timer, msg, e);
+	for (;;) {
+		short r = dlg_evnt_(flags | MU_TIMER, clicks, mask, state, DLG_IDLE_MS, msg, e);
+		e->which = r & ~MU_TIMER;
+		if (e->which)
+			return e->which;
+		if (dlg_idle)
+			dlg_idle();
+	}
+}
+
 short dlg_do(OBJECT *tree, short start, short cancel)
 {
 	short next, edit = 0, idx = 0, cont = 1, m[8];
@@ -1391,7 +1442,9 @@ short dlg_do(OBJECT *tree, short start, short cancel)
 		if (e.which & MU_KEYBD) {
 			if (dlg_esc(e.kreturn) && !dlg_undo(e.kreturn))
 				e.kreturn = 0x011b;	/* ^[ too: the key objc_edit empties a field on */
-			if (lf && !dlg_undo(e.kreturn) && lf_key(lf, e.kreturn, e.kreturn & 0xff, e.kstate, &idx)) {
+			if (heb_f10(e.kreturn)) {
+				/* the Hebrew keyboard switched */
+			} else if (lf && !dlg_undo(e.kreturn) && lf_key(lf, e.kreturn, key_char ? key_char(e.kstate, e.kreturn) : e.kreturn & 0xff, e.kstate, &idx)) {
 				/* the long field took it (Esc empties it) */
 			} else if (dlg_cancel_key(e.kreturn, edit > 0)) {
 				/* Cancel: the field isn't given the key, so it keeps its text */
@@ -1404,8 +1457,12 @@ short dlg_do(OBJECT *tree, short start, short cancel)
 			} else {
 				short kr;
 				cont = form_keybd(tree, edit, next, e.kreturn, &next, &kr);
-				if (kr && edit > 0 && !lf)	/* a long field's text isn't objc_edit's */
+				if (kr && edit > 0 && !lf) {	/* a long field's text isn't objc_edit's */
+					/* a letter key types its Hebrew letter while that keyboard is on */
+					if (key_char && (kr & 0xff) == (e.kreturn & 0xff))
+						kr = (short)((kr & 0xff00) | key_char(e.kstate, e.kreturn));
 					objc_edit(tree, edit, kr, &idx, ED_CHAR);
+				}
 			}
 		}
 		if ((e.which & MU_BUTTON) && cont) {
@@ -1429,6 +1486,20 @@ short dlg_do(OBJECT *tree, short start, short cancel)
 		wind_update(END_UPDATE);
 	}
 	return next;
+}
+
+int dlg_win_button(OBJECT *tree, short o)
+{
+	short mx, my, mb, ks;
+	if (o < 0 || !(tree[o].ob_flags & EXIT) || (tree[o].ob_state & DISABLED))
+		return 0;
+	graf_mkstate(&mx, &my, &mb, &ks);
+	if (!(mb & 1))
+		return 0;		/* the button already up: no press on it */
+	if (!graf_watchbox(tree, o, SELECTED, 0))
+		return 0;		/* let go elsewhere */
+	tree[o].ob_state &= ~SELECTED;
+	return 1;
 }
 
 #ifdef DLG_TRACE
