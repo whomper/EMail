@@ -34,7 +34,6 @@
 short vdi_h, cw, ch, scr_w, scr_h, desk_x, desk_y, desk_w, desk_h, planes;
 short gl_wchar, gl_hchar;
 short ap_id;
-short hebrew_kbd;
 static unsigned long last_check;
 
 void folders_init(void);
@@ -245,30 +244,12 @@ static void set_logging(void)
 	}
 }
 
-/* Israeli SI-1452 layout by key position (scancode 0x10-0x35), giving
- * Atari character codes; 0 = key not remapped. From Claude ST. */
-static const u8 hebrew_keys[0x36 - 0x10] = {
-	/* 10 q..p */ '/', '\'', 0xD4, 0xD5, 0xC2, 0xCA, 0xC7, 0xD8, 0xDA, 0xD2,
-	/* 1a [ ] ret ctrl */ 0, 0, 0, 0,
-	/* 1e a..' */ 0xD6, 0xC5, 0xC4, 0xCC, 0xD1, 0xCB, 0xC9, 0xCD, 0xD9, 0xDB, ',',
-	/* 29 ` lshift \ */ 0, 0, 0,
-	/* 2c z../ */ 0xC8, 0xD0, 0xC3, 0xC6, 0xCF, 0xCE, 0xD3, 0xD7, 0xDC, '.'
-};
-
-unsigned char key_char(short kstate, short key)
+/* the Hebrew keyboard (common/ui/hebkey.c) switched: the menu's tick and
+   the badge (guideline 5.3) */
+static void hebrew_changed(void)
 {
-	short scan = KEY_SCAN(key);
-	unsigned char ascii = KEY_ASCII(key);
-	if (hebrew_kbd && !(kstate & (K_LSHIFT | K_RSHIFT | K_ALT)) && !key_ctrl(kstate, key) &&
-	    scan >= 0x10 && scan < 0x36 && hebrew_keys[scan - 0x10])
-		ascii = hebrew_keys[scan - 0x10];
-	return ascii;
-}
-
-void set_hebrew_kbd(short on)
-{
-	hebrew_kbd = on;
 	menu_update();
+	win_badge_redraw();
 }
 
 /* folder lists can be rebuilt by the server: find the open one again */
@@ -1439,8 +1420,8 @@ static void command(short cmd)
 			people_setup();
 			set_logging();
 			store_save_settings();
-			if (w_editor.h <= 0)
-				hebrew_kbd = opt.hebrew;
+			if (w_editor.h <= 0 && hebrew_kbd != opt.hebrew)
+				set_hebrew_kbd(opt.hebrew);
 			theme_init();
 			win_redraw_all();
 			list_refresh();
@@ -1757,6 +1738,7 @@ int main(void)
 	falcon_dsp_init();
 	theme_init();
 	font_apply();
+	hebrew_kbd_hook = hebrew_changed;
 	hebrew_kbd = opt.hebrew;
 	set_logging();
 	net_init();

@@ -243,16 +243,42 @@ static int bar_same(WIN *w, int note)
 	return same;
 }
 
+/* the pane whose header is the window's top row at its right end: there
+   the Hebrew keyboard's badge goes (guideline 5.3: the info line is the
+   AES's own, drawn again by it unasked, so not there) */
+static WIN *top_right(void)
+{
+	WIN *best = 0;
+	short i;
+	for (i = 0; i < NPANE; i++)
+		if (panes[i]->box.y <= mwork.y && panes[i]->box.w > 0 &&
+		    (!best || panes[i]->box.x > best->box.x))
+			best = panes[i];
+	return best;
+}
+
+static void redraw_header(WIN *w);
+
+void win_badge_redraw(void)
+{
+	WIN *w = top_right();
+	if (w && main_h > 0 && !main_iconified)
+		redraw_header(w);
+}
+
 static void draw_header(WIN *w)
 {
 	GRECT h;
 	short dark = (w == focus), cols = TEXT_COLS(w->box.w);
 	short il = (short)strlen(w->info), tl = (short)strlen(w->title), ix;
+	int badge = hebrew_kbd && w == top_right();
 	h.x = w->box.x;
 	h.y = w->box.y;
 	h.w = w->box.w;
 	h.h = header_h();
 	fill(&h, dark ? pen[P_HEAD] : pen[P_PANEL]);
+	if (badge)
+		cols -= 3;		/* the badge's room at the right */
 	if (il > cols - tl - 3)
 		il = 0;			/* a hint shows whole, two cells clear, or not at all */
 	text_at(TEXT_X(h.x), h.y + 2, w->title, tl, cols, TX_BOLD | TX_LTR | (dark ? TX_INVERSE : 0));
@@ -263,6 +289,10 @@ static void draw_header(WIN *w)
 			text_at(ix, h.y + 2, w->info, il, il, TX_LTR | (dark ? TX_INVERSE : TX_LIGHT));
 		else
 			text_pen_at(pen[P_DIM], ix, h.y + 2, w->info, il, il, TX_LTR);
+	}
+	if (badge) {
+		hebrew_badge_right(vdi_h, h.x, h.y, h.w, h.h - 1, dark ? 0 : 1);
+		attr_forget();
 	}
 	hline(h.x, h.x + h.w - 1, h.y + h.h - 1);
 }

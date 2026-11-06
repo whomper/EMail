@@ -295,6 +295,7 @@ tests/hatari/ui_tour.py WORKDIR                    # screenshots of the interfac
 tests/hatari/screenshots.py WORKDIR                # the pictures in docs/, English sample mail
 tests/hatari/falcon_test.py /tmp/mail-tls          # a Direct connection: TLS.OVL and the DSP (or: ... TT)
 tests/hatari/tlsovl_test.py /tmp/mail-ovl          # TLS.OVL missing (an alert), there (loaded), and on an ST
+tests/hatari/badge_test.py /tmp/mail-badge         # the Hebrew keyboard's badge (F10): top right and Settings
 tests/hatari/econtact_test.py /tmp/mail-ec         # names and ^B with EContact's latest release
 tests/hatari/people_file_test.py /tmp/mail-pf      # EContact's CONTACTS.TXT without EContact (or: ... Falcon econtact)
 make build/fakecal.acc && tests/hatari/invite_test.py /tmp/mail-inv   # an invitation to (a stand-in for) ECal

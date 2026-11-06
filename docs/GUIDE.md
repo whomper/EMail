@@ -626,7 +626,9 @@ right; numbers and Latin words inside them stay left to right.
 
 Press **F10** (or Options > Hebrew keyboard) to type Hebrew with the
 Israeli SI-1452 layout: the keys where the Hebrew letters are on an
-Israeli keyboard. Press F10 again for Latin letters. In a Hebrew line the
+Israeli keyboard. While it is on, the letters ayin and bet show at the
+right end of the message list's title bar and of the Settings title. Press
+F10 again for Latin letters. In a Hebrew line the
 Left arrow moves forward, as on Hebrew systems. Messages go out in UTF-8,
 which every modern program reads.
 

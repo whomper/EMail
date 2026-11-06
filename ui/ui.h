@@ -280,9 +280,8 @@ void busy(int on);
 void cmd_check_all(void);
 void refind_current(const char *server);	/* the open folder after a new folder list */
 extern int reader_missing;	/* the reader shows a note: the message isn't here */
-void set_hebrew_kbd(short on);
-extern short hebrew_kbd;
-unsigned char key_char(short kstate, short key);	/* honours the Hebrew layout */
+#include "hebkey.h"		/* the Hebrew keyboard and its badge: common/ui */
+void win_badge_redraw(void);	/* win.c: the badge's place drawn again (F10) */
 void menu_update(void);
 
 #define K_ALT 0x08

@@ -764,6 +764,31 @@ static void pdir_pick(void)
 		lf_end(lf_at(pdir_field));	/* the field shows the new one */
 }
 
+/* the Hebrew keyboard's badge at the right end of the title band, white
+   on the black (Erez, 6 Nov 2026; guideline 5.3). In a window the band is
+   hidden and the AES's title says it: no badge there */
+static void band_badge(void)
+{
+	GRECT b;
+	short keep_cw = cw, keep_ch = ch, dw, dh;
+	if (!band_obj || !hebrew_kbd || dlg_in_window())
+		return;
+	objc_offset(tree, band_obj, &b.x, &b.y);
+	b.w = tree[band_obj].ob_width;
+	b.h = tree[band_obj].ob_height;
+	graf_mouse(M_OFF, 0);
+	vst_font(vdi_h, 1);
+	vst_height(vdi_h, gl_hchar >= 16 ? 13 : 6, &dw, &dh);	/* the AES's font: the badge's size */
+	clip_on(&b);
+	hebrew_badge_right(vdi_h, b.x, b.y, b.w, b.h, 0);
+	clip_off();
+	font_reselect();
+	cw = keep_cw;
+	ch = keep_ch;
+	attr_forget();
+	graf_mouse(M_ON, 0);
+}
+
 /* the dialog stays open while ticks and pages change */
 static short settings_run(short pages_box)
 {
@@ -773,6 +798,7 @@ static short settings_run(short pages_box)
 	if (band_obj)
 		dlg_band(band_obj);	/* in a window its title says it (3.5) */
 	dlg_open(tree, &x, &y, &w, &h);
+	band_badge();
 	for (;;) {
 		r = form_loop(first_edit()) & 0x7fff;
 		for (k = 0; k < nticks; k++)
@@ -801,6 +827,7 @@ static short settings_run(short pages_box)
 			pdir_pick();
 			ui_redraws();
 			dlg_draw(tree, 0);
+			band_badge();
 			continue;
 		}
 		if (r == zone_btn) {
@@ -812,6 +839,7 @@ static short settings_run(short pages_box)
 				   window the AES asks for it) */
 				win_redraw_area(&pick_area);
 				dlg_draw(tree, 0);
+				band_badge();
 			}
 			continue;
 		}
