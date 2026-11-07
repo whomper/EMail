@@ -1318,7 +1318,7 @@ static void click(WIN *w, short mx, short my, short clicks, short kstate)
 
 static void rclick(WIN *w, short mx, short my)
 {
-	const char *lab[11];
+	const char *lab[9];
 	short r;
 	(void)w;
 	lab[0] = "Send now         \x01^D";
@@ -1327,21 +1327,18 @@ static void rclick(WIN *w, short mx, short my)
 	lab[3] = "Attach file...    ^T";
 	lab[4] = "Address book...   ^B";
 	lab[5] = "-";
-	lab[6] = hebrew_kbd ? "\x08Hebrew keyboard   F10" : "Hebrew keyboard   F10";
-	lab[7] = "-";
-	lab[8] = "Cut line          ^X";
-	lab[9] = "Copy line         ^C";
-	lab[10] = "Paste             ^V";
-	r = popup(mx, my, lab, 11);
+	lab[6] = "Cut line          ^X";	/* (no Hebrew keyboard: F10 only; Erez, 7 Nov 2026) */
+	lab[7] = "Copy line         ^C";
+	lab[8] = "Paste             ^V";
+	r = popup(mx, my, lab, 9);
 	switch (r) {
 	case 0: editor_send(1); break;
 	case 1: editor_send(0); break;
 	case 3: editor_attach(); break;
 	case 4: editor_insert_address(); break;
-	case 6: set_hebrew_kbd(!hebrew_kbd); break;
-	case 8: editor_clip(CLIP_CUT); break;
-	case 9: editor_clip(CLIP_COPY); break;
-	case 10: editor_clip(CLIP_PASTE); break;
+	case 6: editor_clip(CLIP_CUT); break;
+	case 7: editor_clip(CLIP_COPY); break;
+	case 8: editor_clip(CLIP_PASTE); break;
 	}
 }
 

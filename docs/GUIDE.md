@@ -362,7 +362,7 @@ folder with thousands of messages opens as quickly as a small one.
 | an account    | Check mail, New message, Edit account, Refresh folder list             |
 | an attachment | Save attachment; an invitation: Add to ECal, Save attachment           |
 | a link        | Open link, Copy link                                                   |
-| the editor    | Send now, Put in Outbox, Attach file, Address book, Hebrew keyboard, Cut line, Copy line, Paste |
+| the editor    | Send now, Put in Outbox, Attach file, Address book, Cut line, Copy line, Paste |
 
 Pick with a click, press-drag-release, or the arrow keys and Return;
 Esc closes the menu.
@@ -627,7 +627,7 @@ subjects and names (RFC 2047), Hebrew attachment names and Hebrew folder
 names. Hebrew paragraphs are laid out right to left and aligned to the
 right; numbers and Latin words inside them stay left to right.
 
-Press **F10** (or Options > Hebrew keyboard) to type Hebrew with the
+Press **F10** to type Hebrew with the
 Israeli SI-1452 layout: the keys where the Hebrew letters are on an
 Israeli keyboard. While it is on, the letters ayin and bet show at the
 right end of the message list's title bar and of the Settings title. F10

@@ -121,7 +121,6 @@ static const MBAR_ITEM m_opts[] = {
 	{ "-", 0, 0 },
 	{ "Work offline", 0, C_OFFLINE },
 	{ "Direct connection (TLS)", 0, C_FALCON },
-	{ "Hebrew keyboard", "F10", C_HEBREW },
 	{ "Translate", 0, C_TRANSLATE },
 	{ "Protocol log", 0, C_LOG },
 	{ 0, 0, 0 }
@@ -193,7 +192,6 @@ void menu_update(void)
 	enable(C_RENFOLDER, cur_finfo && !cur_finfo->local && !cur_finfo->role && !cur_finfo->noselect);
 	check(C_OFFLINE, opt.offline);
 	check(C_FALCON, opt.falcon);
-	check(C_HEBREW, hebrew_kbd);
 	check(C_TRANSLATE, opt.translate);
 	check(C_LOG, opt.log);
 }
@@ -246,14 +244,13 @@ static void set_logging(void)
 	}
 }
 
-/* the Hebrew keyboard (common/ui/hebkey.c) switched: the menu's tick and
-   the badge (guideline 5.3) */
+/* the Hebrew keyboard (common/ui/hebkey.c) switched (F10 only, no menu
+   entry: Erez, 7 Nov 2026): the badge (guideline 5.3) */
 static short badge_later;	/* switched in a dialog: drawn once it is gone */
 static short heb_start;		/* Settings' "Start with the Hebrew keyboard" as it was */
 
 static void hebrew_changed(void)
 {
-	menu_update();
 	if (dialog_up)
 		badge_later = 1;
 	else
@@ -1462,7 +1459,6 @@ static void command(short cmd)
 		else
 			cmd_check_all();
 		break;
-	case C_HEBREW: set_hebrew_kbd(!hebrew_kbd); break;
 	case C_TRANSLATE: xlate_toggle(); break;
 	case C_FONT: font_menu(); break;
 	case C_LOG:
