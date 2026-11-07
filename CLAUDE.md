@@ -129,7 +129,10 @@ These come from AERA-Atari's repo template and are the same in every app's CLAUD
   - `people_file_test.py` only when the people code changes;
   - the speed rig as one interleaved base/candidate pair, with a second and third pair only for a row
     the first flags;
-  - the NVDI rows (redraw, speed, `font_test.py`) are the hub's.
+  - the NVDI rows (redraw, speed, `font_test.py`) are the hub's;
+  - at least 60% of a candidate's boots run under NVDI (Erez, 7 Nov 2026; guidelines 1.2), with
+    the ST boots counted, though TOS 1.04 can't run NVDI: the Falcon and TT rigs with
+    `AERA_WITH_NVDI=1` once `~/.aera/nvdi/x` is in the session, and one run without NVDI.
 
   When those rigs are next touched, trim `disk_test.py`'s mailbox and merge select, esc, field,
   find, rename, scroll and tip into one boot.
