@@ -372,7 +372,13 @@ void cmd_check_all(void)
 	} else {
 		char m[120];
 		snprintf(m, sizeof(m), total == 1 ? "1 new message" : "%s new messages", num(total));
-		if (mail_new_folders == 1)
+		/* all of it outside the Inbox: where it went, not counted twice
+		   ("3 new in Junk"; Erez, 7 Nov 2026) */
+		if (mail_new_folders == 1 && mail_new_other == total)
+			snprintf(m, sizeof(m), "%s new in %s", num(total), mail_new_where);
+		else if (mail_new_folders > 1 && mail_new_other == total)
+			snprintf(m, sizeof(m), "%s new in %d folders", num(total), mail_new_folders);
+		else if (mail_new_folders == 1)
 			snprintf(m + strlen(m), sizeof(m) - strlen(m), ", %s in %s", num(mail_new_other), mail_new_where);
 		else if (mail_new_folders > 1)
 			snprintf(m + strlen(m), sizeof(m) - strlen(m), ", %s in %d other folders",

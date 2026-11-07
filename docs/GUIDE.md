@@ -758,7 +758,8 @@ seconds, and at the latest when you quit. A folder you opened in the last two
 minutes opens straight from disk; Check mail always asks the server. Check
 mail fetches the Inbox and asks for the counts of every other folder too,
 all the questions sent at once so it is one short wait, so mail the server
-filed elsewhere shows up: "3 new messages, 1 in Junk" (new mail in Trash,
+filed elsewhere shows up: "3 new messages, 1 in Junk", or "3 new in Junk"
+when all of it went there (new mail in Trash,
 Sent and Drafts doesn't count as new). The lists of those folders load
 when you open them. After a move or a delete no other message is chosen, so nothing is
 opened or downloaded that you didn't ask for. Deleting moves a message to Trash on the server;
