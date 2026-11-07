@@ -655,7 +655,13 @@ and the message is shown as it came. Esc stops a translation on its way.
 To translate a few words only, whether Translate is on or off: choose
 them in the message pane (drag over them, or double-click a word), then
 right-click on them and choose **Translate...**. A box shows their
-translation; the message stays as it is.
+translation; the message stays as it is. A single word, or a closing such
+as a signature line, can come back rough: a whole sentence translates
+better.
+
+While a message is with the Gateway the status line says where the time
+goes: "Sending to the Gateway...", "The Gateway is translating...",
+"Receiving from the Gateway...".
 
 With Translate off EMail never contacts the translation service. If the
 Gateway doesn't answer, EMail says so once and shows the message as it

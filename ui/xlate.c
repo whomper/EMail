@@ -46,6 +46,52 @@ static FOLDER *t_folder;
 static unsigned long t_uid;
 static int told;		/* the Gateway's silence said once in an alert */
 
+/* the three phases of work handed to the Gateway on the status line
+   (Erez, 7 Nov 2026; guideline 7.3): sending, translating, receiving;
+   then what it said before. A phase is drawn when it changes, not more
+   often than every 100 ms (a 2 KB piece on a home network is mostly
+   "translating") */
+static const char *phase_before = "";
+static int phase_shown;
+static unsigned long phase_at;
+
+static void phase(int ph, long bytes)
+{
+	char t[64];
+	unsigned long now = pf_ms();
+	if (ph == GATE_DONE) {
+		status(phase_before);
+		phase_shown = 0;
+		return;
+	}
+	if (ph == phase_shown || (phase_shown && now - phase_at < 100))
+		return;
+	if (ph == GATE_SEND)
+		snprintf(t, sizeof(t), "Sending to the Gateway... %ld KB", (bytes + 1023) / 1024);
+	else if (ph == GATE_RECEIVE && bytes >= 0)
+		snprintf(t, sizeof(t), "Receiving from the Gateway... %ld KB", (bytes + 1023) / 1024);
+	else if (ph == GATE_RECEIVE)
+		str_copy(t, "Receiving from the Gateway...", sizeof(t));
+	else
+		str_copy(t, "The Gateway is translating...", sizeof(t));
+	status(t);
+	phase_shown = ph;
+	phase_at = now;
+}
+
+/* the phases shown for one request, then the status line as `before` */
+static void phases_on(const char *before)
+{
+	phase_before = before;
+	phase_shown = 0;
+	conn_phase = phase;
+}
+
+static void phases_off(void)
+{
+	conn_phase = 0;
+}
+
 static struct {
 	FOLDER *f;
 	unsigned long uid;
@@ -170,7 +216,9 @@ void xlate_step(void)
 		return;
 	}
 	busy(1);
+	phases_on("Translating...");
 	r = translate_step(&t, &got);
+	phases_off();
 	busy(0);
 	conn_stop = 0;
 	if (r == 1)
@@ -231,7 +279,7 @@ void xlate_words(const char *atari, long n)
 {
 	long un, an;
 	char *u, *a, from[TR_LANG], err[160];
-	int same = 0;
+	int same = 0, r;
 	SBUF out;
 	const char *host = gateway();
 	if (!host[0]) {
@@ -249,7 +297,10 @@ void xlate_words(const char *atari, long n)
 	from[0] = 0;
 	err[0] = 0;
 	TRACE("TRANSLATE words");
-	if (!translate_piece(host, TR_PORT, opt.translate_to, 0, u, un, &out, from, &same, err, sizeof(err))) {
+	phases_on("Translating...");
+	r = translate_piece(host, TR_PORT, opt.translate_to, 0, u, un, &out, from, &same, err, sizeof(err));
+	phases_off();
+	if (!r) {
 		busy(0);
 		status("");
 		free(u);
