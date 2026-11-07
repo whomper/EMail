@@ -2,8 +2,8 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 # Copyright (C) 2026 AERA | Erez Yaary
 """Options > Translate and the reader's "Translate..." (Erez, 7 Nov 2026),
-with the Gateway's translategate in its stand-in form (AERA-Gateway's
-gateway/translategate.py: it answers "en: TEXT IN CAPITALS") on port 8480,
+with the Gateway's translategate (gateway/translategate.py, the released
+copy) and its stand-in engine (it answers "en: TEXT IN CAPITALS") on port 8480,
 as net_test.py otherwise (Dovecot, FAKESTNG.PRG over the serial port), on
 an emulated Falcon with the test build (build/trace/email.prg says
 "TRANSLATE ..." on the console each time the Gateway is asked).
@@ -20,8 +20,7 @@ an emulated Falcon with the test build (build/trace/email.prg says
 
     translate_test.py WORKDIR [MACHINE]   (make build/trace/email.prg first)
 
-TRANSLATEGATE names the stand-in's file (default: AERA-Gateway's, fetched
-at the commit below into WORKDIR).
+TRANSLATEGATE names another translategate.py to run.
 """
 import os
 import shutil
@@ -37,7 +36,6 @@ from rig import K
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.normpath(os.path.join(HERE, "..", ".."))
 IMAP, SMTP, TRANSLATE = 10143, 10025, 8480
-GATEWAY_AT = "3251a4b"          # AERA-Gateway: translategate's first cut, with its stand-in engine
 
 work, machine, more = rig.cli("Falcon")
 if not machine.startswith("Falcon"):
@@ -69,15 +67,8 @@ subprocess.run(["dovecot", "-c", os.path.join(srv, "dovecot.conf")], check=True)
 smtp = subprocess.Popen([sys.executable, os.path.join(ROOT, "tests", "smtp_server.py"), str(SMTP), srv, "dana", "secret"])
 rig.stop_at_exit(srv, smtp)
 
-# the stand-in translategate
-gate = os.environ.get("TRANSLATEGATE")
-if not gate:
-    ag = os.path.join(work, "aera-gateway")
-    if not os.path.exists(os.path.join(ag, "gateway", "translategate.py")):
-        shutil.rmtree(ag, ignore_errors=True)
-        subprocess.run(["git", "clone", "-q", "https://github.com/whomper/AERA-Gateway", ag], check=True)
-    subprocess.run(["git", "-C", ag, "-c", "advice.detachedHead=false", "checkout", "-q", GATEWAY_AT], check=True)
-    gate = os.path.join(ag, "gateway", "translategate.py")
+# translategate as released (gateway/, AERA-Gateway's copy), with its stand-in engine
+gate = os.environ.get("TRANSLATEGATE") or os.path.join(ROOT, "gateway", "translategate.py")
 gate_log = os.path.join(work, "translategate.log")
 tg = subprocess.Popen([sys.executable, gate, "--port", str(TRANSLATE), "--bind", "127.0.0.1"],
                       stdout=open(gate_log, "w"), stderr=subprocess.STDOUT)
