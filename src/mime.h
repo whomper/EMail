@@ -37,6 +37,8 @@ typedef struct {
 
 MSG  *mime_parse(const char *raw, long len);
 void  mime_free(MSG *m);
+/* the text mime_parse shows, in UTF-8 (for the Gateway's translation; malloc'd) */
+char *mime_text_utf8(const char *raw, long len, long *outlen);
 /* decoded bytes of an attachment, malloc'ed */
 char *mime_part_data(const char *raw, const MIMEPART *p, long *outlen);
 /* 1: a calendar invitation (text/calendar, application/ics, or *.ics), for ECal */

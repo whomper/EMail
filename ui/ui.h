@@ -186,6 +186,18 @@ int reader_show_begin(HDR *h);		/* reader_show in two steps: read and parse it, 
 void reader_show_end(void);		/* lay it out and draw it */
 int reader_half(void);			/* begun, not ended */
 void reader_clear(void);
+void reader_translation(const char *subject, const char *text, long n);	/* shown translated */
+void reader_original(void);		/* shown as it came again */
+int reader_translated(void);
+int reader_copy(void);			/* the words chosen in the reader to the clipboard; 0 if none */
+/* xlate.c: Options > Translate and the reader's "Translate..." */
+void xlate_shown(void);
+void xlate_cancel(void);
+void xlate_step(void);
+int xlate_running(void);
+void xlate_toggle(void);
+void xlate_words(const char *atari, long n);
+void words_box(const char *title, const char *text, long n);	/* dialogs.c */
 extern MSG *cur_msg;
 extern char *cur_raw;
 extern long cur_rawlen;
@@ -234,7 +246,7 @@ enum {
 	C_REPLY, C_REPLYALL, C_FORWARD, C_UNREAD, C_MARKREAD, C_FLAG, C_MOVE, C_DELETE,
 	C_SEND, C_SAVEOUT, C_ATTACH, C_ABOOK,
 	C_FOLDERS, C_REFRESH, C_NEWFOLDER, C_RENFOLDER, C_DELFOLDER,
-	C_ACCOUNTS, C_SETTINGS, C_FONT, C_OFFLINE, C_FALCON, C_HEBREW, C_LOG
+	C_ACCOUNTS, C_SETTINGS, C_FONT, C_OFFLINE, C_FALCON, C_HEBREW, C_TRANSLATE, C_LOG
 };
 void ui_command(short cmd);
 void cmd_new_folder(ACCOUNT *a);

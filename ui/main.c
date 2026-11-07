@@ -122,6 +122,7 @@ static const MBAR_ITEM m_opts[] = {
 	{ "Work offline", 0, C_OFFLINE },
 	{ "Direct connection (TLS)", 0, C_FALCON },
 	{ "Hebrew keyboard", "F10", C_HEBREW },
+	{ "Translate", 0, C_TRANSLATE },
 	{ "Protocol log", 0, C_LOG },
 	{ 0, 0, 0 }
 };
@@ -193,6 +194,7 @@ void menu_update(void)
 	check(C_OFFLINE, opt.offline);
 	check(C_FALCON, opt.falcon);
 	check(C_HEBREW, hebrew_kbd);
+	check(C_TRANSLATE, opt.translate);
 	check(C_LOG, opt.log);
 }
 
@@ -1295,8 +1297,8 @@ static void clip_command(short cmd)
 	} else if (what == CLIP_COPY && top == &w_folders && cur_finfo) {
 		if (clip_put(cur_finfo->disp, (long)strlen(cur_finfo->disp)))
 			main_status("Copied to the clipboard.");
-	} else if (what == CLIP_COPY) {
-		copy_message();
+	} else if (what == CLIP_COPY && !reader_copy()) {
+		copy_message();		/* nothing chosen in the reader: the message */
 	}
 }
 
@@ -1455,6 +1457,7 @@ static void command(short cmd)
 			cmd_check_all();
 		break;
 	case C_HEBREW: set_hebrew_kbd(!hebrew_kbd); break;
+	case C_TRANSLATE: xlate_toggle(); break;
 	case C_FONT: font_menu(); break;
 	case C_LOG:
 		opt.log = !opt.log;
@@ -1857,7 +1860,7 @@ int main(void)
 		} else {
 			which = busy_key(&ev) ? MU_KEYBD : evnt_multi_(MU_MESAG | MU_KEYBD | MU_BUTTON | MU_TIMER | MU_M1,
 									 0x101, 3, 0,
-									 list_show_waiting() || win_sliders_waiting() || list_later_waiting() ? 0 : find_waiting() ? 20 : hovering ? 100 : 1000,
+									 list_show_waiting() || win_sliders_waiting() || list_later_waiting() || xlate_running() ? 0 : find_waiting() ? 20 : hovering ? 100 : 1000,
 									 msg, &ev);
 		}
 		/* a message a key moved to is shown once no key is waiting, and
@@ -1878,6 +1881,8 @@ int main(void)
 				win_sliders_now();
 			else if (list_later_waiting())
 				list_later_now();
+			else if (xlate_running())
+				xlate_step();	/* Options > Translate: the next piece */
 		}
 		if (which & MU_M1) {
 			win_hover(ev.mx, ev.my);

@@ -18,6 +18,7 @@
 #include "av.h"
 #include "bidi.h"
 #include "clip.h"
+#include "textsel.h"
 
 MSG *cur_msg;
 char *cur_raw;
@@ -43,8 +44,14 @@ static long nlines;
 static MLINK *links;		/* on body, in its order */
 static long nlinks;
 
+static TSSEL sel;		/* the words chosen (below) */
+static long sel_gen;
+static void view_now(void);
+
 static void free_layout(void)
 {
+	sel_gen++;
+	ts_clear(&sel);
 	free(lines);
 	lines = 0;
 	nlines = 0;
@@ -57,12 +64,33 @@ static int half;		/* parsed, its head and body made, not yet laid out and drawn 
 /* the message shown is forgotten, not drawn: reader_show draws the next
    once it is laid out, so the pane doesn't go blank meanwhile (Erez's
    video, 20 Oct 2026: "No message selected" for the layout's time) */
+/* Options > Translate: the message shown translated (its subject and text
+   in place of the originals, which are kept to put back) */
+static char *keep_subject, *keep_text;
+static long keep_len;
+static short keep_nlinks;
+static int translated;
+
+static void put_back(void)
+{
+	if (!translated || !cur_msg)
+		return;
+	free(cur_msg->subject);
+	free(cur_msg->text);
+	cur_msg->subject = keep_subject;
+	cur_msg->text = keep_text;
+	cur_msg->textlen = keep_len;
+	cur_msg->nlinks = keep_nlinks;
+	translated = 0;
+}
+
 static void forget(void)
 {
 	half = 0;
 	reader_missing = 0;
 	selection = 0;
 	free_layout();
+	put_back();
 	mime_free(cur_msg);
 	cur_msg = 0;
 	free(cur_raw);
@@ -84,6 +112,8 @@ static void forget(void)
 void reader_clear(void)
 {
 	int blank = !cur_msg && !selection;
+	if (opt.translate)
+		xlate_cancel();
 	forget();
 	win_title(&w_reader, "Message");
 	win_info(&w_reader, "");
@@ -226,6 +256,9 @@ static void layout(void)
 	}
 	free(br);
 	show_mark(11);
+	sel_gen++;		/* new lines: a selection of the old ones is gone */
+	ts_clear(&sel);
+	view_now();
 	w_reader.total = nlines;
 	win_sliders(&w_reader);
 }
@@ -661,12 +694,246 @@ void reader_show_end(void)
 	show_trace();
 	status("");
 	win_redraw(&w_reader, 0);
+	if (opt.translate && !translated)
+		xlate_shown();		/* Options > Translate: the whole message to the Gateway */
+}
+
+/* the head, the text and the lines made again from cur_msg, and drawn */
+static void remake(void)
+{
+	free(head);
+	head = 0;
+	if (body_own)
+		free(body);
+	body = 0;
+	body_own = 0;
+	while (nlinks > 0)
+		free(links[--nlinks].url);
+	free(links);
+	links = 0;
+	make_head();
+	make_body();
+	half = 1;
+	reader_show_end();
+}
+
+int reader_translated(void)
+{
+	return translated;
+}
+
+/* the message shown in its translation (Atari text; subject NUL-terminated) */
+void reader_translation(const char *subject, const char *text, long n)
+{
+	char *su, *tx;
+	if (!cur_msg || reader_missing)
+		return;
+	su = strdup(subject);
+	tx = malloc(n + 1);
+	if (!su || !tx) {
+		free(su);
+		free(tx);
+		return;
+	}
+	memcpy(tx, text, n);
+	tx[n] = 0;
+	if (translated) {
+		free(cur_msg->subject);
+		free(cur_msg->text);
+	} else {
+		keep_subject = cur_msg->subject;
+		keep_text = cur_msg->text;
+		keep_len = cur_msg->textlen;
+		keep_nlinks = cur_msg->nlinks;
+		translated = 1;
+	}
+	cur_msg->subject = su;
+	cur_msg->text = tx;
+	cur_msg->textlen = n;
+	cur_msg->nlinks = 0;	/* the HTML's links were on the original */
+	remake();
+}
+
+/* the message as it came again (Translate switched off) */
+void reader_original(void)
+{
+	if (!translated)
+		return;
+	put_back();
+	remake();
 }
 
 void reader_show(HDR *h)
 {
 	if (reader_show_begin(h))
 		reader_show_end();
+}
+
+/* ---------------- words chosen with the mouse (common/ui/textsel.c) ----------------
+   A drag over the text chooses words (a double click a word), ^C copies
+   them, and the right-click on them offers Copy and "Translate..." (Erez,
+   7 Nov 2026). The layout's lines are the view; a new layout is a new
+   generation, and an old selection is never drawn. */
+static TSVIEW view;
+
+static short text_x0(void)
+{
+	return TEXT_X(w_reader.work.x);
+}
+
+static short text_cols(void)
+{
+	return TEXT_COLS(w_reader.work.w);
+}
+
+static const char *v_line(void *ud, long n, long *len)
+{
+	(void)ud;
+	if (n < 0 || n >= nlines || (lines[n].kind != L_BODY && lines[n].kind != L_HEAD)) {
+		*len = -1;
+		return 0;
+	}
+	*len = lines[n].n > text_cols() ? text_cols() : lines[n].n;
+	return lines[n].s;
+}
+
+/* a body line with Hebrew is drawn in visual order, right aligned: pos[i]
+   is where its logical character i is drawn, in columns from x0; 0 when
+   the line is drawn as it is stored */
+static int vis_map(long n, short *pos)
+{
+	char vis[BIDI_MAX];
+	unsigned char odd[BIDI_MAX];
+	LINE *l = &lines[n];
+	short len = (short)(l->n > text_cols() ? text_cols() : l->n), rtl, i;
+	if (len > BIDI_MAX)
+		len = BIDI_MAX;
+	if (l->kind != L_BODY || len <= 0 || !bidi_has_rtl(l->s, len))
+		return 0;
+	rtl = bidi_is_rtl(l->s, len);
+	bidi_visual_map(l->s, len, rtl, vis, pos, odd);
+	if (rtl)
+		for (i = 0; i < len; i++)
+			pos[i] += text_cols() - len;
+	return 1;
+}
+
+static long v_col_at(void *ud, long n, long x)
+{
+	short pos[BIDI_MAX], i;
+	long len, c = (x - text_x0() + cw / 2) / cw;
+	(void)ud;
+	v_line(ud, n, &len);
+	if (len < 0)
+		return 0;
+	if (vis_map(n, pos)) {
+		/* the character drawn in that column, or the nearer end */
+		long vc = (x - text_x0()) / cw;
+		for (i = 0; i < len; i++)
+			if (pos[i] == vc)
+				return i;
+		return vc < pos[0] ? 0 : len;
+	}
+	return c < 0 ? 0 : c > len ? len : c;
+}
+
+static long v_x_of(void *ud, long n, long col)
+{
+	short pos[BIDI_MAX];
+	long len;
+	(void)ud;
+	v_line(ud, n, &len);
+	if (len > 0 && col < len && vis_map(n, pos))
+		return text_x0() + (long)pos[col] * cw;
+	return text_x0() + col * cw;
+}
+
+static int v_runs(void *ud, long n, long c0, long c1, TSRUN *out, int max)
+{
+	short pos[BIDI_MAX];
+	char on[BIDI_MAX];
+	long len, i;
+	int k = 0;
+	(void)ud;
+	v_line(ud, n, &len);
+	if (len <= 0 || !vis_map(n, pos)) {
+		out[0].x0 = text_x0() + c0 * cw;
+		out[0].x1 = text_x0() + c1 * cw;
+		return c1 > c0;
+	}
+	memset(on, 0, sizeof(on));
+	for (i = c0; i < c1 && i < len; i++)
+		if (pos[i] >= 0 && pos[i] < BIDI_MAX)
+			on[pos[i]] = 1;
+	for (i = 0; i < BIDI_MAX && k < max; i++)
+		if (on[i]) {
+			long j = i;
+			while (j < BIDI_MAX && on[j])
+				j++;
+			out[k].x0 = text_x0() + i * cw;
+			out[k].x1 = text_x0() + j * cw;
+			k++;
+			i = j;
+		}
+	return k;
+}
+
+static int v_wrapped(void *ud, long n)
+{
+	(void)ud;
+	/* the rest of a line the layout broke at a space */
+	return n > 0 && lines[n].kind == L_BODY && lines[n - 1].kind == L_BODY &&
+	       lines[n - 1].s + lines[n - 1].n < lines[n].s && lines[n].s[-1] == ' ' &&
+	       lines[n - 1].s[lines[n - 1].n] == ' ';
+}
+
+static void view_now(void)
+{
+	view.ud = 0;
+	view.nlines = nlines;
+	view.line = v_line;
+	view.col_at = v_col_at;
+	view.x_of = v_x_of;
+	view.runs = v_runs;
+	view.wrapped = v_wrapped;
+	view.is_word = 0;
+	ts_sync(&sel, sel_gen);
+}
+
+/* the lines whose selection changed, drawn again */
+static void sel_redraw(void)
+{
+	long a, b;
+	if (ts_dirty(&sel, &a, &b))
+		win_redraw_lines(&w_reader, a, b - a + 1);
+}
+
+/* the chosen words, if any, to the clipboard (^C); 0 if none */
+int reader_copy(void)
+{
+	long n;
+	char *t;
+	view_now();
+	if (!cur_msg || !ts_has(&sel, &view) || (t = ts_text(&sel, &view, &n)) == 0)
+		return 0;
+	main_status(clip_put(t, n) ? "Copied to the clipboard." : "Couldn't write the clipboard.");
+	free(t);
+	return 1;
+}
+
+static void invert(long x0, long x1, short y)
+{
+	short q[4];
+	q[0] = (short)x0;
+	q[1] = y;
+	q[2] = (short)x1 - 1;
+	q[3] = y + ch - 1;
+	vswr_mode(vdi_h, 3);
+	vsf_interior(vdi_h, 1);
+	vsf_color(vdi_h, 1);
+	vr_recfl(vdi_h, q);
+	vswr_mode(vdi_h, 1);
+	attr_forget();
 }
 
 static void draw(WIN *w, GRECT *clip)
@@ -760,6 +1027,15 @@ static void draw(WIN *w, GRECT *clip)
 					       marked ? mark : 0);
 			}
 		}
+		}
+		if (sel.on) {
+			TSRUN r[8];
+			int k, nr;
+			if (!view.line)
+				view_now();
+			nr = ts_rects(&sel, &view, i, r, 8);
+			for (k = 0; k < nr; k++)
+				invert(r[k].x0, r[k].x1, y);
 		}
 	}
 }
@@ -877,10 +1153,52 @@ void reader_to_ecal(short i)
 				 : "ECal didn't answer: try again when it's free");
 }
 
+/* the press on the text: words chosen while the button is held (the pane
+   scrolls when the pointer leaves it); 1 if something was chosen, 0 if it
+   was a click (a link's, an attachment's) */
+static int choose(WIN *w, long i, short mx, short clicks, short kstate)
+{
+	short x, y, b, k;
+	view_now();
+	if (i < 0 || i >= nlines)
+		return 0;
+	if (kstate & (K_LSHIFT | K_RSHIFT)) {
+		ts_extend(&sel, &view, i, mx);
+	} else if (!ts_press(&sel, &view, i, mx, clicks)) {
+		sel_redraw();
+		return 0;
+	}
+	sel_redraw();
+	for (;;) {
+		long line;
+		int scroll;
+		graf_mkstate(&x, &y, &b, &k);
+		if (!(b & 1))
+			break;
+		scroll = ts_autoscroll(y, w->work.y, w->work.y + w->work.h, ch);
+		if (scroll) {
+			win_scroll_to(w, w->top + scroll);
+			view_now();
+		}
+		line = w->top + (y - w->work.y) / ch;
+		if (line < 0)
+			line = 0;
+		if (line >= nlines)
+			line = nlines - 1;
+		if (ts_drag(&sel, &view, line, x))
+			sel_redraw();
+		evnt_timer_(scroll ? 60 : 20);
+	}
+	ts_release(&sel);
+	return ts_has(&sel, &view);
+}
+
 static void click(WIN *w, short mx, short my, short clicks, short kstate)
 {
-	long i = w->top + (my - w->work.y) / ch, k = link_at(mx, my);
-	(void)kstate;
+	long i = w->top + (my - w->work.y) / ch, k;
+	if (cur_msg && choose(w, i, mx, clicks, kstate))
+		return;			/* words chosen */
+	k = link_at(mx, my);
 	if (k >= 0) {
 		if (clicks == 1)		/* a double click's second opens it no more */
 			open_link(links[k].url);
@@ -901,6 +1219,26 @@ void message_menu(short mx, short my, int with_open);
 static void rclick(WIN *w, short mx, short my)
 {
 	long i = w->top + (my - w->work.y) / ch, k = link_at(mx, my);
+	view_now();
+	if (cur_msg && ts_has(&sel, &view) && ts_inside(&sel, &view, i, mx)) {
+		/* on the words chosen: copy them, or their translation in a box
+		   (Erez, 7 Nov 2026: whatever Options > Translate says) */
+		static const char *const lab[] = { "Copy              ^C", "Translate..." };
+		short r = popup(mx, my, lab, 2);
+		if (r >= 0 && !popup_put_back)
+			win_redraw_area(&popup_area);
+		if (r == 0) {
+			reader_copy();
+		} else if (r == 1) {
+			long n;
+			char *t = ts_text(&sel, &view, &n);
+			if (t) {
+				xlate_words(t, n);
+				free(t);
+			}
+		}
+		return;
+	}
 	if (k >= 0) {
 		static const char *const lab[] = { "Open link", "Copy link" };
 		short r = popup(mx, my, lab, 2);

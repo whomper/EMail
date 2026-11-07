@@ -24,7 +24,12 @@ static OBJECT tree[DMAX];
 static void make_eyes(void);
 static short nlf, npw;
 static TEDINFO ted[TMAX];
-static char tmpl[TMAX][64], valid[TMAX][64];
+/* a field's template and valid characters: every field's are the same
+   characters, so one string of each serves all, from its end (3 KB less
+   than a pair a field; the room for the translation, 7 Nov 2026) */
+#define S60(c) c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c \
+	c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c
+static const char t_line[] = S60("_"), v_any[] = S60("X"), v_digit[] = S60("9");
 static short nobj, nted, last_child;
 
 /* ---------------- builder ---------------- */
@@ -88,18 +93,12 @@ short d_text(short x, short y, const char *s)
 static short d_edit(short x, short y, char *buf, short len, char kind)
 {
 	TEDINFO *t = &ted[nted];
-	short i;
 	if (len > 60)
 		len = 60;
-	for (i = 0; i < len; i++) {
-		tmpl[nted][i] = '_';
-		valid[nted][i] = kind;
-	}
-	tmpl[nted][len] = valid[nted][len] = 0;
 	buf[len] = 0;
 	t->te_ptext = buf;
-	t->te_ptmplt = tmpl[nted];
-	t->te_pvalid = valid[nted];
+	t->te_ptmplt = (char *)t_line + (60 - len);
+	t->te_pvalid = (char *)(kind == '9' ? v_digit : v_any) + (60 - len);
 	t->te_font = 3;
 	t->te_just = 0;
 	t->te_color = 0x1180;
@@ -676,6 +675,23 @@ static short first_edit(void)
 /* the zone button: its name, the offset now, and "..." */
 static short zone_btn;
 
+/* Options > Translate's language (Erez, 7 Nov 2026: chosen in Settings) */
+static const char *const lang_name[] = { "English", "Hebrew", "German", "French", "Spanish", "Italian",
+					 "Portuguese", "Dutch", "Russian", "Arabic" };
+static const char *const lang_code[] = { "en", "he", "de", "fr", "es", "it", "pt", "nl", "ru", "ar" };
+#define NLANG ((short)(sizeof(lang_code) / sizeof(lang_code[0])))
+static short lang_btn, s_lang;
+static char s_llabel[16];
+
+static void lang_label(void)
+{
+	/* a pop-up's button: the name, a down arrow at the end (guidelines 5.7) */
+	memset(s_llabel, ' ', 14);
+	s_llabel[14] = 0;
+	memcpy(s_llabel + 1, lang_name[s_lang], strlen(lang_name[s_lang]));
+	s_llabel[13] = 2;
+}
+
 static void zone_label(void)
 {
 	const TZONE *z = tz_find(s_zone);
@@ -852,6 +868,26 @@ static short settings_run(short pages_box)
 			band_badge();
 			continue;
 		}
+		if (r == lang_btn) {
+			/* the languages, a pop-up at the button */
+			short bx, by, k;
+			tree[r].ob_state &= ~SELECTED;
+			objc_offset(tree, r, &bx, &by);
+			k = popup(bx, by + tree[r].ob_height, (const char **)lang_name, NLANG);
+			if (!popup_put_back)
+				win_redraw_area(&popup_area);
+			if (k >= 0) {
+				s_lang = k;
+				lang_label();
+			}
+			if (!dlg_in_window() && !popup_put_back) {
+				dlg_draw(tree, 0);
+				band_badge();
+			} else {
+				dlg_draw(tree, r);
+			}
+			continue;
+		}
 		if (r == zone_btn) {
 			/* the zone list over the settings, then the settings again */
 			tree[r].ob_state &= ~SELECTED;
@@ -886,6 +922,8 @@ static void settings_begin(short w, short h)
 static void settings_load(void)
 {
 	str_copy(s_zone, opt.tzname, sizeof(s_zone));
+	for (s_lang = NLANG - 1; s_lang > 0 && strcmp(lang_code[s_lang], opt.translate_to); s_lang--)
+		;
 	snprintf(s_check, sizeof(s_check), "%d", opt.check);
 	snprintf(s_page, sizeof(s_page), "%d", opt.page);
 	snprintf(s_wrap, sizeof(s_wrap), "%d", opt.wrap);
@@ -943,6 +981,10 @@ static void part_mail(short x, short y)
 	d_field(x + FX, ROW(1), s_page, 4, '9');
 	d_tick(x, ROW(2), "Keep read messages on disk", T_KEEP);
 	d_tick(x, ROW(3), "Start offline, with the mail on disk", T_START);
+	d_add(G_STRING, 0, 0, (long)"Translate messages into", x, ROW(4), 23, 1);
+	lang_label();
+	lang_btn = d_add(G_BOXTEXT, TOUCHEXIT, 0, (long)d_ted(s_llabel, 0, 0x1180), x + FX - 4, ROW(4), 14, 1);
+	((TEDINFO *)tree[lang_btn].ob_spec)->te_thickness = -1;
 }
 
 static void part_writing(short x, short y)
@@ -1056,6 +1098,7 @@ int dlg_settings(void)
 	if (r != ok)
 		return 0;
 	str_copy(opt.tzname, s_zone, sizeof(opt.tzname));
+	str_copy(opt.translate_to, lang_code[s_lang], sizeof(opt.translate_to));
 	opt.check = (short)atoi(s_check);
 	opt.page = (short)atoi(s_page);
 	if (opt.page < 20)
@@ -1363,6 +1406,53 @@ char *dlg_pick_address(void)
 }
 
 /* ---------------- the keys (Help) ---------------- */
+
+/* a text in a box of its own, wrapped, with OK (the reader's right-click
+   "Translate...": the chosen words' translation; Erez, 7 Nov 2026) */
+#define TB_W 44
+#define TB_ROWS 12
+void words_box(const char *title, const char *text, long n)
+{
+	char (*rows)[TB_W + 4] = malloc(TB_ROWS * sizeof(*rows));	/* only while it shows */
+	long br[TB_ROWS + 1], nb, i;
+	short nr = 0;
+	if (!rows)
+		return;
+	nb = wrap_text(text, n, TB_W, br, TB_ROWS + 1);
+	for (i = 0; i < nb && nr < TB_ROWS; i++) {
+		long s0 = br[i], e = i + 1 < nb ? br[i + 1] : n, k = 0;
+		while (e > s0 && (text[e - 1] == '\n' || text[e - 1] == ' '))
+			e--;
+		if (e - s0 > TB_W)
+			e = s0 + TB_W;
+		if (nr == TB_ROWS - 1 && i + 1 < nb) {
+			/* more than the box holds: the last row says so */
+			if (e - s0 > TB_W - 3)
+				e = s0 + TB_W - 3;
+			memcpy(rows[nr], text + s0, e - s0);
+			k = e - s0;
+			memcpy(rows[nr] + k, "...", 3);
+			k += 3;
+		} else {
+			memcpy(rows[nr], text + s0, e - s0);
+			k = e - s0;
+		}
+		rows[nr][k] = 0;
+		nr++;
+	}
+	if (!nr) {
+		str_copy(rows[0], "(nothing came back)", sizeof(rows[0]));
+		nr = 1;
+	}
+	d_begin(TB_W + 4, nr + 6);
+	d_add(G_STRING, 0, 0, (long)title, 2, 1, (short)strlen(title), 1);
+	for (i = 0; i < nr; i++)
+		d_text(2, (short)(3 + i), rows[i]);
+	d_button(TB_W - 8, nr + 4, 10, "OK", EXIT | DEFAULT);
+	d_end();
+	d_do_named(title, 0);
+	free(rows);
+}
 
 void dlg_keys(void)
 {

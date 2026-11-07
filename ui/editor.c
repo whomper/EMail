@@ -974,14 +974,19 @@ static char *join_text(long *len)
 /* the To and Cc addresses into the address book, which is read once */
 static void remember_rcpts(void)
 {
-	static char list[40][160];
+	/* from the heap, only while it runs: 6.4 KB EMail has all the time
+	   for the rest (the room for the translation, 7 Nov 2026) */
+	char (*list)[160] = malloc(40 * sizeof(*list));
 	long i, he = header_end();
 	int n = 0;
+	if (!list)
+		return;
 	for (i = 0; i < (he >= 0 ? he : nl) && n < 40; i++)
 		if (!strncasecmp(ln[i].s, "To:", 3) || !strncasecmp(ln[i].s, "Cc:", 3))
 			n += addr_list(ln[i].s + 3, list + n, 40 - n);
 	if (n)
 		abook_add_list(list, n);
+	free(list);
 }
 
 void editor_send(int now)

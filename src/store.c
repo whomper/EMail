@@ -46,6 +46,8 @@ static void defaults(void)
 	opt.peoplefile = 0;
 	opt.peopledir[0] = 0;
 	opt.browser[0] = 0;
+	opt.translate = 0;
+	str_copy(opt.translate_to, "en", sizeof(opt.translate_to));
 	opt.wrap = 72;
 	opt.font_id = 1;
 	opt.font_pt = 0;	/* the system font at the screen's size */
@@ -485,6 +487,11 @@ static void set_opt(const char *k, const char *v)
 	else if (!strcmp(k, "peoplefile")) opt.peoplefile = n != 0;
 	else if (!strcmp(k, "peopledir")) str_copy(opt.peopledir, v, sizeof(opt.peopledir));
 	else if (!strcmp(k, "browser")) str_copy(opt.browser, v, sizeof(opt.browser));
+	else if (!strcmp(k, "translate")) opt.translate = n != 0;
+	else if (!strcmp(k, "translateto")) {
+		if (v[0] && strlen(v) < sizeof(opt.translate_to))
+			str_copy(opt.translate_to, v, sizeof(opt.translate_to));
+	}
 	else if (!strcmp(k, "colour") || !strcmp(k, "color")) opt.colour = n != 0;
 	else if (!strcmp(k, "hebfont")) opt.hebfont = n >= 0 && n <= 2 ? n : 0;
 }
@@ -717,6 +724,10 @@ int store_save_settings(void)
 	put_path(&b, "EContact's folder, where its contacts file is (C:\\ECONTACT)", "PEOPLEDIR", opt.peopledir);
 	put_path(&b, "EWeb, started on a link when no web browser runs (C:\\EWEB\\EWEB.PRG; empty: asked once)",
 		 "BROWSER", opt.browser);
+	put_fmt(&b, "1 = each message is shown translated by the Gateway (Options > Translate), 0 = as it came",
+		"TRANSLATE", "%d", opt.translate);
+	put_str(&b, "the language messages are translated into, a two-letter code (en English, he Hebrew)",
+		"TRANSLATETO", opt.translate_to);
 	for (i = 0; i < naccts; i++) {
 		ACCOUNT *a = accts[i];
 		sb_adds(&b, "; one [ACCOUNT] part per account, up to 8; Options > Accounts edits them\r\n"

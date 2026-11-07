@@ -102,6 +102,8 @@ typedef struct {
 	short peoplefile;	/* EContact not loaded: names from its CONTACTS.TXT (guidelines 4.1) */
 	char peopledir[200];	/* EContact's folder, where CONTACTS.TXT is */
 	char browser[200];	/* EWeb's program, started on a link when no browser runs */
+	short translate;	/* Options > Translate: each message shown in translate_to (the Gateway's translategate) */
+	char translate_to[8];	/* the language translated into, an ISO 639-1 code ("en") */
 } OPTIONS;
 
 typedef struct {

@@ -601,6 +601,7 @@ typedef struct {
 	MSG *m;
 	SBUF text;
 	short have_plain, have_html;
+	SBUF *utf8;		/* mime_text_utf8's: the same text in UTF-8, else NULL */
 } WALK;
 
 static char *decode_body(const char *body, long n, short enc, long *outlen)
@@ -622,6 +623,13 @@ static void add_text(WALK *w, const char *body, long n, short enc, const char *c
 		if ((dec = decode_body(body, n, enc, &dl)) == 0)
 			return;
 		body = dec;
+	}
+	if (w->utf8 && !html && cs_id(charset) == CS_UTF8) {
+		/* a UTF-8 part as it is: the letters the Atari has no place for
+		   (Cyrillic, Greek...) are what is to be translated */
+		if (w->utf8->len && dl)
+			sb_adds(w->utf8, "\n\n");
+		sb_add(w->utf8, body, dl);
 	}
 	at = cs_to_atari(body, dl, cs_id(charset), &al);
 	free(dec);
@@ -675,6 +683,17 @@ static void add_text(WALK *w, const char *body, long n, short enc, const char *c
 	if (w->text.len && tl)
 		sb_adds(&w->text, "\n\n");
 	sb_add(&w->text, txt, tl);
+	if (w->utf8 && (html || cs_id(charset) != CS_UTF8)) {
+		/* another charset, or HTML: the text shown, in UTF-8 */
+		long ul;
+		char *u = atari_to_utf8(txt, tl, &ul);
+		if (u) {
+			if (w->utf8->len && ul)
+				sb_adds(w->utf8, "\n\n");
+			sb_add(w->utf8, u, ul);
+			free(u);
+		}
+	}
 	free(txt);
 }
 
@@ -906,6 +925,7 @@ MSG *mime_parse(const char *raw, long len)
 
 	w.raw = raw;
 	w.m = m;
+	w.utf8 = 0;
 	sb_init(&w.text);
 	walk(&w, 0, len, 0, 0);
 	m->textlen = w.text.len;
@@ -927,6 +947,40 @@ MSG *mime_parse(const char *raw, long len)
 			}
 	}
 	return m;
+}
+
+/* the text mime_parse shows, in UTF-8 (a UTF-8 part as it came, any other
+   through the Atari text), for the Gateway's translation; malloc'd; NULL if
+   there is none or no memory. Only called with Translate on. */
+char *mime_text_utf8(const char *raw, long len, long *outlen)
+{
+	MSG *m = calloc(1, sizeof(MSG));
+	SBUF u;
+	WALK w;
+	if (!m)
+		return 0;
+	sb_init(&u);
+	w.raw = raw;
+	w.m = m;
+	w.utf8 = &u;
+	w.have_plain = w.have_html = 0;
+	sb_init(&w.text);
+	walk(&w, 0, len, 0, 0);
+	free(sb_steal(&w.text));
+	m->text = 0;
+	mime_free(m);
+	/* CRs out, as in the text shown */
+	{
+		long i, o = 0;
+		for (i = 0; i < u.len; i++)
+			if (u.s[i] != '\r')
+				u.s[o++] = u.s[i];
+		u.len = o;
+		if (u.s)
+			u.s[o] = 0;
+	}
+	*outlen = u.len;
+	return sb_steal(&u);
 }
 
 void mime_free(MSG *m)
