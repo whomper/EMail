@@ -1482,7 +1482,7 @@ int falcon_mode_set(int on)
 		int i;
 		char err[160];
 		if (get_cookie(0x5F435055L) < 20) {	/* _CPU */
-			alert(1, "[3][A Direct connection needs a|68020 or better (Falcon, TT):|this Atari is too slow for|TLS. The Pi gateway does it.][ OK ]");
+			alert(1, "[3][A Direct connection needs a|68020 or better (Falcon, TT):|this Atari is too slow for|TLS. The Gateway does it.][ OK ]");
 			return 0;
 		}
 		/* TLS.OVL, said at once rather than at the first connection */

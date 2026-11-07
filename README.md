@@ -7,7 +7,7 @@ An e-mail program for the Atari ST, STE, TT and Falcon, written in C for GEM.
 **Highlights**
 
 - **IMAP and POP3 in, SMTP out,** with an Outbox for sending later and copies in Sent.
-- **Secure, two ways:** a Raspberry Pi gateway for any Atari, or a **Direct connection**, with TLS 1.2 on the
+- **Secure, two ways:** the Gateway (a Raspberry Pi) for any Atari, or a **Direct connection**, with TLS 1.2 on the
   Atari itself and RSA on the Falcon's DSP.
 - **Hebrew throughout:** UTF-8, ISO-8859-8 and windows-1255 mail, right-to-left layout, the Israeli
   keyboard on F10, Hebrew in vector fonts through NVDI.
@@ -20,6 +20,8 @@ An e-mail program for the Atari ST, STE, TT and Falcon, written in C for GEM.
 - **Find:** Ctrl+F narrows the message list to what you type, by sender or subject, as you type; **Search
   server** looks through the messages' text on the IMAP server too.
 - **Folders:** create, rename and delete; an alphabetical folder picker for moving messages.
+- **Translate:** Options > Translate shows each message translated by the Gateway's translation service, on
+  your own network; a right-click on chosen words translates just those.
 - **New mail while EMail isn't running:** EMail check (`EMAILCHK.ACC`), a small desk accessory, looks
   in each account's Inbox as often as EMail would and says how many new messages have come; under MiNT
   with BGEM.NG, new mail is a notification with Open and Later, from EMail check and from EMail itself
@@ -77,7 +79,7 @@ one is there on its own, and all of them together in `EMAIL-x.y.zip`.
    your Atari in; without it, any computer on your home network may use the gateway.
    After `update-pi.sh` has run once, `sudo aera-gateway` works too, from any folder.
    To update: `cd ~/AERA-Gateway && ./update-pi.sh`. To check: `gateway/aera-gateway status`.
-3. Start EMail and fill in your account in **Options > Accounts**: the Pi's IP address (`PI_IP`;
+3. Start EMail and fill in your account in **Options > Accounts**: the Gateway's IP address (`PI_IP`;
    `aera-gateway` prints it) as the server, port 143 for IMAP (110 for POP3) and 587 for SMTP, and your
    login: for Gmail, iCloud, Yahoo and Fastmail an app password (below).
 4. Optionally, copy `EMAILCHK.ACC` to the root of the boot drive (`C:\`) and restart: open **EMail
@@ -101,17 +103,17 @@ and you can delete the app password there at any time.
 
 The user guide's [App passwords](docs/GUIDE.md#app-passwords-gmail-icloud-yahoo-fastmail) has the steps for each.
 
-On a Falcon or TT with 4 MB you can skip the Pi: copy `TLS.OVL`, `CACERT.PEM` and `ROOTS.DAT` next to
+On a Falcon or TT with 4 MB you can skip the Gateway: copy `TLS.OVL`, `CACERT.PEM` and `ROOTS.DAT` next to
 `EMAIL.PRG` and switch on **Options > Direct connection**. EMail fills in the servers for the big providers.
 
 **Updating:** copy the new release's files over the old ones. `EMAIL.INF`, `EMAIL.KEY` and your mail stay
-as they are. Coming from 1.55 or before on an ST, delete `EMAILST.PRG`: `EMAIL.PRG` is for every Atari now. On the Pi, `./update-pi.sh` in `AERA-Gateway` updates the gateway.
+as they are. Coming from 1.55 or before on an ST, delete `EMAILST.PRG`: `EMAIL.PRG` is for every Atari now. On the Gateway, `./update-pi.sh` in `AERA-Gateway` updates it.
 
 **Needs:** TOS 1.04 or newer (TOS 4 on the Falcon), EmuTOS, MagiC or MiNT; 640×200 (ST medium) or
 larger; 1 MB of memory (EMail itself takes about 332 KB, and about 140 KB more on a TT or Falcon while
 `TLS.OVL` is loaded for a Direct connection; more memory holds bigger folders; the accessory EMail check about 180 KB more), 2 MB or more with
 EContact's accessory (on a 1 MB ST, use EContact as a program, `ECONTACT.PRG`); network: STinG (or STiK), MiNTnet or
-MagiC-Net; for providers that need encryption (nearly all), the Pi gateway or a Direct connection (a
+MagiC-Net; for providers that need encryption (nearly all), the Gateway or a Direct connection (a
 Falcon or TT, a 68020 or better, with 4 MB or more).
 
 **Under TOS, put Atari's `FOLDR100.PRG` first in `AUTO`**, renamed for more room (`FOLDR400.PRG`).
@@ -164,10 +166,10 @@ Mail providers want encrypted connections. EMail reaches them one of two ways, s
 ```
 ST, STE:     Atari (EMAIL.PRG) --plain, home LAN--> Raspberry Pi (emailgate.py) --TLS--> provider
 Falcon, TT:  Atari (EMAIL.PRG + TLS.OVL: TLS 1.2, RSA on the DSP) ---------------TLS--> provider
-             (a Direct connection; or through the Pi, as an ST)
+             (a Direct connection; or through the Gateway, as an ST)
 ```
 
-- **Off** (the default), on any Atari: a Raspberry Pi on your network does the encryption.
+- **Off** (the default), on any Atari: the Gateway, a Raspberry Pi on your network, does the encryption.
   `gateway/emailgate.py` is standard Python, set up as a service by `gateway/aera-gateway`. A server that
   accepts plain connections can be used directly.
 - **On**, a Direct connection, on a Falcon or TT with 4 MB or more (TT RAM helps): EMail does TLS 1.2
@@ -182,16 +184,16 @@ between them keeps both.
 The gateway's own README, with every provider and option: [AERA-Gateway](https://github.com/whomper/AERA-Gateway)
 (the same text is in this repository's copy, [gateway/README.md](gateway/README.md)).
 
-### Performance: Pi, 68030 and DSP
+### Performance: Gateway, 68030 and DSP
 
 What costs time is the TLS handshake, once per connection: EMail keeps its IMAP connection open, so that
 is once per session, plus once for each batch of mail sent.
 
-| | Pi gateway | Direct connection, 68030 only | Direct connection, 68030 + DSP |
+| | Gateway | Direct connection, 68030 only | Direct connection, 68030 + DSP |
 |---|---|---|---|
 | Machines | any Atari, 68000 ST too | Falcon, TT (68030) | Falcon |
-| Handshake, stock 16 MHz Falcon | done by the Pi, a fraction of a second | about 9.6 s | about 2.5 s |
-| Handshake, 50 MHz Falcon in TT/fast RAM | done by the Pi | about 5 s | about 1.5 s |
+| Handshake, stock 16 MHz Falcon | done by the Gateway, a fraction of a second | about 9.6 s | about 2.5 s |
+| Handshake, 50 MHz Falcon in TT/fast RAM | done by the Gateway | about 5 s | about 1.5 s |
 | Mail coming in, once connected | about 37 KB/s | 15 to 25 KB/s on a 50 MHz Falcon (the cipher alone: 39 KB/s at 16 MHz, 66 KB/s at 50 MHz in fast RAM) | the same: the DSP only helps the handshake |
 | Work on the Atari | none, plain IMAP/SMTP | all of TLS | TLS, RSA checks on the DSP |
 
@@ -199,7 +201,7 @@ In a handshake the 68030 does the key exchange (X25519, 0.5 to 1 s each, two of 
 the three RSA-2048 certificate checks (about 0.12 s each instead of 1.3 to 2.5 s). Running from TT/fast
 RAM matters as much as the clock: ST RAM is 16 bits wide and shared with the video, so EMail loads
 itself into TT RAM when there is some (the About box says where it runs). A 68000 ST has no chance of
-TLS in reasonable time and always goes through the Pi.
+TLS in reasonable time and always goes through the Gateway.
 
 The 50 MHz figures were measured on a real Falcon with a DFB1X board, the 16 MHz ones in cycle-exact
 emulation; details in [tools/tlsbench](tools/tlsbench/README.md).
@@ -360,4 +362,4 @@ bindings, STinG client, Hebrew right-to-left layout and keyboard, and the Hatari
 
 ---
 
-Part of **AERA** for Atari: [ECal](https://github.com/whomper/ECal) · [EContact](https://github.com/whomper/EContact) · [EMail](https://github.com/whomper/EMail) · [EFTP](https://github.com/whomper/EFTP) · [EHypView](https://github.com/whomper/EHypView) · [ClaudeST](https://github.com/whomper/ClaudeST) · [EWeb](https://github.com/whomper/EWeb) · [EUpdate](https://github.com/whomper/EUpdate) · 8-bit: [EDOS](https://github.com/whomper/EDOS) · [EFTP_XL](https://github.com/whomper/EFTP_XL) · Pi: [AERA-Gateway](https://github.com/whomper/AERA-Gateway)
+Part of **AERA** for Atari: [ECal](https://github.com/whomper/ECal) · [EContact](https://github.com/whomper/EContact) · [EMail](https://github.com/whomper/EMail) · [EFTP](https://github.com/whomper/EFTP) · [EHypView](https://github.com/whomper/EHypView) · [ClaudeST](https://github.com/whomper/ClaudeST) · [EWeb](https://github.com/whomper/EWeb) · [EUpdate](https://github.com/whomper/EUpdate) · 8-bit: [EDOS](https://github.com/whomper/EDOS) · [EFTP_XL](https://github.com/whomper/EFTP_XL) · Gateway: [AERA-Gateway](https://github.com/whomper/AERA-Gateway)

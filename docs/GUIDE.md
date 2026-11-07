@@ -24,8 +24,8 @@ reads and writes Hebrew.
   the network card that often, so it sets the speed of every STinG
   program, EMail's checks and downloads among them.
 - For providers that need encryption (nearly all), one of:
-  - a Raspberry Pi or other Linux computer on your network as a gateway
-    (any Atari), see [The Raspberry Pi gateway](#the-raspberry-pi-gateway), or
+  - the Gateway: a Raspberry Pi or other Linux computer on your network
+    (any Atari), see [The Gateway](#the-gateway), or
   - a **Direct connection**: EMail does the encryption itself (a Falcon,
     or a TT, with 4 MB of memory or more), see [Direct connection](#direct-connection)
 
@@ -41,7 +41,7 @@ from a 1 MB ST to a Falcon.
 connection](#direct-connection)). On a TT or Falcon, copy it next to
 `EMAIL.PRG`; EMail loads it the first time a Direct connection needs it.
 An ST never loads it (an ST is too slow for the encryption and reaches
-secure servers through the Pi gateway), so on an ST you can leave it
+secure servers through the Gateway), so on an ST you can leave it
 out, and the memory stays free for your mail. EMail keeps everything in the folder it
 is started from, which the desktop makes its own folder, so a folder of
 its own keeps it all together. Here it is `C:\EMAIL\`:
@@ -93,14 +93,14 @@ folders.
 `EMAIL.INF`, `EMAIL.KEY` and your mail stay as they are. Keep EMAIL.KEY
 with EMAIL.INF: without it EMail asks for the passwords again. Coming
 from a version before 1.37, type your signature once more, in Options >
-Settings > Signature. On the Pi, `./update-pi.sh` in the AERA-Gateway
+Settings > Signature. On the Gateway, `./update-pi.sh` in the AERA-Gateway
 folder updates the gateway.
 
-## The Raspberry Pi gateway
+## The Gateway
 
 Most providers want an encrypted connection, which an ST is too slow
 to make. A Raspberry Pi (or another Linux computer) on your home network
-makes it for EMail: EMail talks plainly to the Pi, and the Pi talks
+makes it for EMail, the Gateway: EMail talks plainly to the Gateway, and the Gateway talks
 TLS to your provider. Its software is AERA-Gateway
 (github.com/whomper/AERA-Gateway). On a fresh Pi, one line sets up
 every AERA gateway, the mail one with your provider's servers:
@@ -130,13 +130,13 @@ sudo gateway/aera-gateway install mail imap.gmail.com smtp.gmail.com pop.gmail.c
 iCloud is `imap.mail.me.com smtp.mail.me.com:587`; AERA-Gateway's
 README has the others. `--allow` lets only your Atari in; without it,
 any computer on your home network may use the gateway. The installer
-prints the Pi's address and the ports to give EMail. After
+prints the Gateway's address and the ports to give EMail. After
 `update-pi.sh` has run once, `sudo aera-gateway` works from any folder.
 
 - To update the gateway: `cd ~/AERA-Gateway && ./update-pi.sh`
 - To check it: `gateway/aera-gateway status`
 
-In EMail, in **Options > Accounts**, the server is the Pi's address
+In EMail, in **Options > Accounts**, the server is the Gateway's address
 (PI_IP), with port 143 for IMAP (110 for POP3) and 587 for sending
 (SMTP); the user and password are your provider's (see below).
 
@@ -150,10 +150,10 @@ Options > Accounts > New, or the dialog EMail shows at first start:
 | Your name      | shown to people you write to (Hebrew is fine)                    |
 | E-mail         | your address                                                     |
 | Incoming mail  | IMAP (folders stay on the server) or POP3 (mail comes to the Atari) |
-| Server, Port   | through the gateway: the Pi's IP and 143 (IMAP) or 110 (POP3), as for a server without TLS |
+| Server, Port   | through the Gateway: its IP and 143 (IMAP) or 110 (POP3), as for a server without TLS |
 | User, Password | your login; Gmail, iCloud, Yahoo, Fastmail: an app password, see [App passwords](#app-passwords-gmail-icloud-yahoo-fastmail) |
 | POP3: leave mail on the server | keep a copy on the server after downloading    |
-| Outgoing       | the Pi's IP and 587 through the gateway; leave User empty to use the incoming login, or type `-` for a server that needs none |
+| Outgoing       | the Gateway's IP and 587; leave User empty to use the incoming login, or type `-` for a server that needs none |
 | Passwords      | shown as `*`; click the eye beside the field to see what you typed |
 
 EMail holds up to eight accounts. Edit or delete one with Options >
@@ -172,7 +172,7 @@ an **app password** on the service's website, once, on a computer or a
 phone, and type it into EMail in place of your normal password: in
 Options > Accounts, as the Password of the incoming mail and of the
 outgoing mail (or leave the outgoing User empty, and EMail uses the
-incoming login for both). It is the same through the Pi gateway and with
+incoming login for both). It is the same through the Gateway and with
 a Direct connection. Your normal password stays as it is, and you can
 delete the app password on the same page at any time; EMail then can't
 log in until you give it a new one.
@@ -231,9 +231,9 @@ EMail works in one of two ways, chosen with **Options > Direct connection
 Connection (this was called Falcon mode before 1.56):
 
 - **Off** (the default, any Atari): EMail talks plainly to the Raspberry
-  Pi gateway, and the Pi encrypts the connection to your provider.
+  Gateway, and the Gateway encrypts the connection to your provider.
 - **On**: EMail encrypts on the Atari itself (TLS 1.2) and talks straight
-  to your provider; no Pi is needed. On a Falcon the DSP56001 checks the
+  to your provider; no Gateway is needed. On a Falcon the DSP56001 checks the
   servers' certificates (about 0.12 s each instead of 1.3 s or more on
   the 68030). "Use the DSP for the signatures" in Settings > Connection
   switches that off, leaving all of it to the 68030 (slower, but a way to rule the DSP out if something goes wrong).
@@ -283,7 +283,7 @@ Gmail `imap.gmail.com` 993 and `smtp.gmail.com` 465. Either way EMail
 never sends a password over an unencrypted connection in a Direct connection.
 
 Connecting takes a few seconds on a 50 MHz Falcon; after that mail comes
-in at 15 to 25 KB/s (the 68030 decrypts every byte; through the Pi it is
+in at 15 to 25 KB/s (the 68030 decrypts every byte; through the Gateway it is
 about 37 KB/s), which is plenty for text.
 About > shows how the current connection is made (Direct, with TLS.OVL's
 version and the DSP when it checks the signatures, or Gateway), and the
@@ -613,6 +613,9 @@ other programs share:
 - **In the main window,** ^C copies the message shown (its From, To,
   Date and Subject lines, then the text), or the folder's name when the
   folder list has the keyboard.
+- **Words of a message:** drag over them in the message pane (a double
+  click takes a word, Shift+click extends what is chosen); ^C, or the
+  right button's Copy, copies just those words.
 - **In dialogs,** ^C copies a field, ^X cuts it and ^V pastes into it.
   Nothing is ever copied out of a password field, but you can paste one
   in.
@@ -634,6 +637,29 @@ which every modern program reads.
 
 The Atari font has the 27 Hebrew letters but no vowel points (niqqud),
 so those are left out when showing a message.
+
+## Translating
+
+The Gateway can translate messages for you, on your own network (its
+translation service; nothing goes to the internet).
+
+**Options > Translate** switches it on and off; the check mark shows it
+is on. While it is on, each message you open is sent whole, its subject
+and text, and shown translated: the status line says "Translating..."
+until the translation comes, then the message is shown in it. The
+language is set in **Settings > Mail**, "Translate messages into"
+(English unless you choose another). Translations are kept while EMail
+runs, so going back to a message shows it at once; switch Translate off
+and the message is shown as it came. Esc stops a translation on its way.
+
+To translate a few words only, whether Translate is on or off: choose
+them in the message pane (drag over them, or double-click a word), then
+right-click on them and choose **Translate...**. A box shows their
+translation; the message stays as it is.
+
+With Translate off EMail never contacts the translation service. If the
+Gateway doesn't answer, EMail says so once and shows the message as it
+came.
 
 ## Keys
 
@@ -836,8 +862,8 @@ NVDI's colours. For EmuTOS,
 ## When something goes wrong
 
 - **"can't connect"**: is the gateway running (`gateway/aera-gateway
-  status`, or `sudo systemctl status emailgate`, on the Pi)? Is the address right? Is STinG (or MiNTnet) set
-  up — can other network programs reach the Pi? An answer that starts
+  status`, or `sudo systemctl status emailgate`, on the Gateway)? Is the address right? Is STinG (or MiNTnet) set
+  up — can other network programs reach the Gateway? An answer that starts
   with "emailgate:" comes from the gateway, and says what it couldn't do
   (reach your provider, trust its certificate, or let your Atari in).
 - **"TLS.OVL is missing"** (or doesn't suit): copy `TLS.OVL` from the

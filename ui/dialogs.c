@@ -450,7 +450,7 @@ int dlg_account(ACCOUNT *a)
 	d_begin(62, (short)(21 + (16 * a_gap + gl_hchar - 1) / gl_hchar));
 	d_add(G_STRING, 0, 0, (long)"Mail account", 2, 1, 12, 1);
 	d_text(16, 1, opt.falcon ? "Direct connection: the provider's servers"
-				 : "the Pi gateway's servers and login");
+				 : "the Gateway's servers and login");
 	d_text(2, AY(3), "Account name:");
 	f_name = d_framed(d_long(17, AY(3), name, 30, sizeof(name) - 1, 0));
 	d_text(2, AY(4), "Your name:");
@@ -1038,7 +1038,7 @@ static void part_connection(short x, short y)
 	zone_btn = d_add(G_BOXTEXT, TOUCHEXIT, 0, (long)d_ted(s_zlabel, 0, 0x1180), x + 11, ROW(0), 29, 1);
 	((TEDINFO *)tree[zone_btn].ob_spec)->te_thickness = -1;
 	d_tick(x, ROW(1), "Direct connection: TLS on this Atari", T_FALCON);
-	d_add(G_STRING, 0, 0, (long)"(68020 or better); off: the Pi gateway", x + 3, ROW(2), 38, 1);
+	d_add(G_STRING, 0, 0, (long)"(68020 or better); off: the Gateway", x + 3, ROW(2), 35, 1);
 	d_tick(x + 3, ROW(3), "Use the DSP for the signatures", T_DSP);
 	d_tick(x, ROW(4), "Write a protocol log (EMAIL.LOG)", T_LOG);
 }

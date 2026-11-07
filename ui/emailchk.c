@@ -623,7 +623,7 @@ static void check(int asked)
 	if (!total) {
 		if (naccts_skip)	/* what it is, and what to do (Erez, 26 Oct 2026) */
 			alert(1, "[3][Direct connections need 230 KB|more than EMail check takes|"
-				 "from ST RAM. Use the gateway,|or put HEAPKB=300 in|"
+				 "from ST RAM. Use the Gateway,|or put HEAPKB=300 in|"
 				 "C:\\EMAILCHK.INF and restart.][ OK ]");
 		else if (last_err[0])
 			alert(1, "[3][%s][ OK ]", last_err);

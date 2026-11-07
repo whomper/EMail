@@ -713,7 +713,7 @@ int store_save_settings(void)
 		"FONT", "%d,%d", opt.font_id, opt.font_pt);
 	put_fmt(&b, "the font's Hebrew letters: 0 = Atari places, 1 = ISO-8859-8, 2 = DOS 862 (Options > Font)",
 		"HEBFONT", "%d", opt.hebfont);
-	put_fmt(&b, "1 = Direct connection: TLS on the Atari (TLS.OVL, a 68020 or better), straight to the providers; 0 = through the Pi gateway",
+	put_fmt(&b, "1 = Direct connection: TLS on the Atari (TLS.OVL, a 68020 or better), straight to the providers; 0 = through the Gateway",
 		"FALCON", "%d", tls_available && falcon_usable ? opt.falcon : falcon_inf);
 	put_fmt(&b, "Direct connection: 1 = the DSP checks the servers' signatures, 0 = the 68030 does",
 		"DSP", "%d", opt.dsp);
@@ -737,15 +737,15 @@ int store_save_settings(void)
 		put_str(&b, "your e-mail address", "EMAIL", a->email);
 		put_str(&b, "incoming mail: imap (folders stay on the server) or pop3 (mail comes to the Atari)",
 			"IN", a->pop ? "pop3" : "imap");
-		put_str(&b, "incoming server through the Pi gateway: the Pi's IP address", "HOST", a->host);
-		put_fmt(&b, "its port: 143 (IMAP) or 110 (POP3) on the gateway", "PORT", "%u", a->port);
-		put_str(&b, "login for the incoming server (Pi gateway)", "USER", a->user);
+		put_str(&b, "incoming server through the Gateway: its IP address", "HOST", a->host);
+		put_fmt(&b, "its port: 143 (IMAP) or 110 (POP3) on the Gateway", "PORT", "%u", a->port);
+		put_str(&b, "login for the incoming server (through the Gateway)", "USER", a->user);
 		put_secret(&b, "password, encrypted with EMAIL.KEY (type it in Options > Accounts)", "PASS", a->pass);
 		put_fmt(&b, "POP3 only: 1 = leave mail on the server after downloading it",
 			"LEAVE", "%d", a->leave);
-		put_str(&b, "outgoing (SMTP) server through the Pi gateway: the Pi's IP address",
+		put_str(&b, "outgoing (SMTP) server through the Gateway: its IP address",
 			"SMTPHOST", a->smtphost);
-		put_fmt(&b, "its port: 587 on the gateway", "SMTPPORT", "%u", a->smtpport);
+		put_fmt(&b, "its port: 587 on the Gateway", "SMTPPORT", "%u", a->smtpport);
 		put_str(&b, "SMTP login: empty = same as incoming, - = the server needs no login",
 			"SMTPUSER", a->smtpuser);
 		put_secret(&b, "SMTP password, if the SMTP login differs (encrypted)", "SMTPPASS", a->smtppass);
