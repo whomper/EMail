@@ -647,7 +647,7 @@ translation service; nothing goes to the internet).
 is on. While it is on, each message you open is sent whole, its subject
 and text, and shown translated: the status line says "Translating..."
 until the translation comes, then the message is shown in it. The
-language is set in **Settings > Mail**, "Translate messages into"
+language is set in **Settings > Connection**, "Translate messages into"
 (English unless you choose another). Translations are kept while EMail
 runs, so going back to a message shows it at once; switch Translate off
 and the message is shown as it came. Esc stops a translation on its way.

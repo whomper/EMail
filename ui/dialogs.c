@@ -981,10 +981,6 @@ static void part_mail(short x, short y)
 	d_field(x + FX, ROW(1), s_page, 4, '9');
 	d_tick(x, ROW(2), "Keep read messages on disk", T_KEEP);
 	d_tick(x, ROW(3), "Start offline, with the mail on disk", T_START);
-	d_add(G_STRING, 0, 0, (long)"Translate messages into", x, ROW(4), 23, 1);
-	lang_label();
-	lang_btn = d_add(G_BOXTEXT, TOUCHEXIT, 0, (long)d_ted(s_llabel, 0, 0x1180), x + FX - 4, ROW(4), 14, 1);
-	((TEDINFO *)tree[lang_btn].ob_spec)->te_thickness = -1;
 }
 
 static void part_writing(short x, short y)
@@ -1041,6 +1037,12 @@ static void part_connection(short x, short y)
 	d_add(G_STRING, 0, 0, (long)"(68020 or better); off: the Gateway", x + 3, ROW(2), 35, 1);
 	d_tick(x + 3, ROW(3), "Use the DSP for the signatures", T_DSP);
 	d_tick(x, ROW(4), "Write a protocol log (EMAIL.LOG)", T_LOG);
+	/* the Gateway's translation (Options > Translate): on this page, not
+	   the first one Settings draws as it opens (its time on an ST) */
+	d_add(G_STRING, 0, 0, (long)"Translate messages into", x, ROW(5), 23, 1);
+	lang_label();
+	lang_btn = d_add(G_BOXTEXT, TOUCHEXIT, 0, (long)d_ted(s_llabel, 0, 0x1180), x + FX - 4, ROW(5), 14, 1);
+	((TEDINFO *)tree[lang_btn].ob_spec)->te_thickness = -1;
 }
 
 #define SW 13			/* the list's width */
