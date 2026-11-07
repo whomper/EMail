@@ -121,6 +121,18 @@ These come from AERA-Atari's repo template and are the same in every app's CLAUD
   (`common/ui/av_people.c`, `people_ask.c`); EContact has no patch for
   EMail any more. Check it with `econtact_test.py` against EContact's
   latest release.
+- **A candidate's test round** is EMail's section of AERA-Atari's
+  `standards/TEST-MATRIX.md` (hub 5e0039a, 7 Nov 2026):
+  - `net_test.py` on Falcon:256, EMail's own 256-colour run;
+  - `emailchk_test.py` on ST-1 only, with the KB-free reading in the same boot (the Falcon monthly);
+  - no `drag_test.py` on ST:mono, no ST:med badge run;
+  - `people_file_test.py` only when the people code changes;
+  - the speed rig as one interleaved base/candidate pair, with a second and third pair only for a row
+    the first flags;
+  - the NVDI rows (redraw, speed, `font_test.py`) are the hub's.
+
+  When those rigs are next touched, trim `disk_test.py`'s mailbox and merge select, esc, field,
+  find, rename, scroll and tip into one boot.
 
 ## Maintenance mode (Erez, 1 Nov 2026)
 
