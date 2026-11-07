@@ -25,6 +25,15 @@
 #include "charset.h"
 #include "conn.h"
 #include "translate.h"
+#include "../src/plat.h"
+
+/* the test build says on the console each time the Gateway is asked
+   (tests/hatari/translate_test.py: never with Translate off) */
+#ifdef DRAW_TRACE
+#define TRACE(what) pf_debug(what)
+#else
+#define TRACE(what) ((void)0)
+#endif
 
 #define TR_PORT 8480		/* translategate's (Erez, 7 Nov 2026) */
 #define KEEP 4			/* translations kept in memory */
@@ -133,6 +142,7 @@ void xlate_shown(void)
 	free(u);
 	free(su);
 	sb_init(&got);
+	TRACE("TRANSLATE message");
 	translate_begin(&t, host, TR_PORT, opt.translate_to, 0, src, n);
 	t_folder = cur_folder;
 	t_uid = cur_uid;
@@ -238,6 +248,7 @@ void xlate_words(const char *atari, long n)
 	status("Translating...");
 	from[0] = 0;
 	err[0] = 0;
+	TRACE("TRANSLATE words");
 	if (!translate_piece(host, TR_PORT, opt.translate_to, 0, u, un, &out, from, &same, err, sizeof(err))) {
 		busy(0);
 		status("");
