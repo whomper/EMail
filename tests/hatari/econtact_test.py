@@ -81,13 +81,14 @@ os.makedirs(book)
 subprocess.run([cli, book, "local", "Contacts"], check=True, stdout=subprocess.DEVNULL)
 subprocess.run([cli, book, "import", "Contacts", os.path.join(HERE, "people.vcf")], check=True,
                stdout=subprocess.DEVNULL)
-inf = open(os.path.join(book, "ECONTACT.INF"), "rb").read()
+book_inf = rig.ci_path(book, "ECONTACT.INF")   # econtact.inf since its 6.6
+inf = open(book_inf, "rb").read()
 inf = inf.replace(b"\nSYNC_OPEN=1", b"\nSYNC_OPEN=0")
 inf = re.sub(rb"\nSTART=[^\r\n]*", rb"\nSTART=now", inf)
 inf = re.sub(rb"\nFOLDER=[^\r\n]*", rb"\nFOLDER=C:\\ECONTACT", inf)
-os.remove(os.path.join(book, "ECONTACT.INF"))
-open(os.path.join(hd, "ECONTACT.INF"), "wb").write(inf)
-shutil.copy(os.path.join(ec_dir, acc), hd)
+os.remove(book_inf)
+open(os.path.join(hd, os.path.basename(book_inf)), "wb").write(inf)
+shutil.copy(rig.ci_path(ec_dir, acc), hd)
 
 # drive C:
 os.makedirs(os.path.join(hd, "AUTO"))

@@ -12,8 +12,10 @@ Each step is a screenshot, compared with the one before:
 1. F10: only a small patch at the right end of the top row changes.
 2. The editor (Ctrl+N) over the main window, the main window on top
    again (^W), the editor closed (^W, ^U): the badge is still there.
-3. Settings (Ctrl+,): the band's right end has the badge, white on black.
-4. Settings left (Undo), F10 again: the info line as it was at first.
+3. Settings (Ctrl+,): F10 there takes the badge off the band's right end
+   and puts it back (only that patch changes, black round it).
+4. Settings left (Undo): the main window's badge there; F10: the screen
+   as it was at first.
 
     badge_test.py WORKDIR [MACHINE]
 """
@@ -91,28 +93,30 @@ try:
     r.key(COMMA, ctrl=True)
     time.sleep(4)
     st = r.shot("b4-settings")
+    r.key(F10)                           # in the dialog: the keyboard off, the band's badge gone
+    time.sleep(2)
+    st_off = r.shot("b5-settings-off")
+    r.key(F10)                           # and on again
+    time.sleep(2)
+    st_on = r.shot("b6-settings-on")
+    sb = diff(st, st_off)
+    check("F10 in Settings: only a patch the badge's size changes", sb is not None and
+          sb[2] - sb[0] <= 24 and sb[3] - sb[1] <= 16, str(sb))
+    if sb:
+        im = Image.open(st_off).convert("L")
+        x0, y0, x1, y1 = sb
+        dark = sum(1 for x in range(x0, x1) for y in range(y0, y1) if im.getpixel((x, y)) < 60)
+        check("... on the black title band (the badge white on it)", dark > (x1 - x0) * (y1 - y0) * 3 // 4,
+              "%d dark of %d" % (dark, (x1 - x0) * (y1 - y0)))
+        check("... not the main window's badge (that one is under the dialog or elsewhere)",
+              box is None or sb != box, str(sb))
+    check("F10 again in Settings: the badge back as it was", diff(st, st_on) is None)
     r.key(UNDO)
     time.sleep(3)
+    check("Settings left: the main window's badge there", badge_there(r.shot("b7-after")))
     r.key(F10)
     time.sleep(2)
-    off2 = r.shot("b5-off")
-    # Settings: the band is the black row with the most black; its right
-    # end, where the badge is, has white pixels in it
-    im = Image.open(st).convert("L")
-    best, by = 0, -1
-    for y in range(h):
-        n = sum(1 for x in range(0, w, 4) if im.getpixel((x, y)) < 60)
-        if n > best:
-            best, by = n, y
-    xs = [x for x in range(w) if im.getpixel((x, by)) < 60]
-    if xs:
-        right = max(xs)
-        white = sum(1 for x in range(right - 22, right - 2) for y in range(max(0, by - 8), min(h, by + 8))
-                    if im.getpixel((x, y)) > 200)
-        check("Settings: white pixels at the right end of the black band", white > 6,
-              "band row %d, right %d, white %d" % (by, right, white))
-    else:
-        check("Settings: a black band", False)
+    off2 = r.shot("b8-off")
     box2 = diff(off, off2)
     check("F10 again: the window as at first", box2 is None, str(box2))
 finally:

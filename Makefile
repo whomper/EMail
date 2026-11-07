@@ -31,7 +31,14 @@ CFLAGS  := -m68000 -Os -fomit-frame-pointer -ffreestanding -fno-builtin \
            -fno-asynchronous-unwind-tables -Wall -Wno-pointer-sign \
            -DMAIL_TOS -nostdinc -isystem $(GCCINC) -Iatari/include -Icommon/atari/include \
            -Isrc -Icommon/src -Iatari -Icommon/atari -Iui -Icommon/ui -Icommon/third_party/bearssl/inc
-CFLAGS  += $(TRACECF)
+# common's dialogs drawn by the CPU (-DDLG_CPU) would be faster on an ST
+# but take 12 KB, which a 1 MB ST with EMail check doesn't have to spare
+# (the sync of 6 Nov 2026: 312 KB free with 1.73, 293 with it)
+APPCF   ?=
+CFLAGS  += $(TRACECF) $(APPCF)
+# each function and variable in a section of its own, and the link
+# leaves out those nothing uses: common/ brings code EMail doesn't call
+CFLAGS  += -ffunction-sections -fdata-sections
 LDFLAGS := -m68000 -nostdlib -static -no-pie -Wl,--emit-relocs -Wl,-T,common/atari/link.ld \
            -Wl,--build-id=none -Wl,-z,noexecstack -Wl,--no-warn-rwx-segments
 
@@ -80,7 +87,7 @@ $(OBJDIR)/build.o: $(OBJDIR)/build.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 $(OBJDIR)/mail.elf: $(OBJS) $(OBJDIR)/build.o common/atari/link.ld
-	$(CC) $(LDFLAGS) -o $@ $(OBJS) $(OBJDIR)/build.o -lgcc
+	$(CC) $(LDFLAGS) -Wl,--gc-sections -o $@ $(OBJS) $(OBJDIR)/build.o -lgcc
 
 # EMail's icon (the AERA guidelines, 5.5): drawn in common/icons/EMAIL.txt,
 # made into icons/ (the desktop's RSC and ICN files), ui/icon.h and
@@ -122,9 +129,9 @@ $(OBJDIR)/nf.o: common/atari/nf.S | $(OBJDIR)
 CHKDIR  := build/chk
 CHKOBJ  := sting_s nf util charset mime links conn imap pop3 store newmail futil bidi secret ctime tz \
            ovl libc tos plat_tos net_tos sting gem tls_ovl bigbuf \
-           emailchk notify aboutline dsp_ovl av alert dialog aboutbox accmem bgwork twin busy field clip clipedit crash crash_s
+           emailchk notify aboutline dsp_ovl av alert dialog aboutbox accmem bgwork twin busy field clip clipedit crash crash_s text
 binary/emailchk.acc: FORCE | binary
-	$(MAKE) OBJDIR=$(CHKDIR) TRACECF="-ffunction-sections -fdata-sections" $(CHKDIR)/emailchk.elf
+	$(MAKE) OBJDIR=$(CHKDIR) APPCF= TRACECF="-ffunction-sections -fdata-sections" $(CHKDIR)/emailchk.elf
 	PRGFLAGS=7 python3 common/tools/elf2tos.py $(CHKDIR)/emailchk.elf $@
 $(OBJDIR)/emailchk.elf: $(OBJDIR)/crt0chk.o $(addprefix $(OBJDIR)/,$(addsuffix .o,$(CHKOBJ))) $(OBJDIR)/build.o common/atari/link.ld
 	$(CC) $(LDFLAGS) -Wl,--gc-sections -o $@ $(OBJDIR)/crt0chk.o $(addprefix $(OBJDIR)/,$(addsuffix .o,$(CHKOBJ))) \
@@ -146,7 +153,7 @@ $(OBJDIR)/speed/email.prg: FORCE
 	$(MAKE) OBJDIR=$(OBJDIR)/speed TRACECF=-DAES_PROFILE=20 $(OBJDIR)/speed/mail.elf
 	PRGFLAGS=7 python3 common/tools/elf2tos.py $(OBJDIR)/speed/mail.elf $@
 $(OBJDIR)/speed/emailchk.acc: FORCE
-	$(MAKE) OBJDIR=$(OBJDIR)/speed/chk TRACECF="-ffunction-sections -fdata-sections -DAES_PROFILE=20" \
+	$(MAKE) OBJDIR=$(OBJDIR)/speed/chk APPCF= TRACECF="-ffunction-sections -fdata-sections -DAES_PROFILE=20" \
 		$(OBJDIR)/speed/chk/emailchk.elf
 	PRGFLAGS=7 python3 common/tools/elf2tos.py $(OBJDIR)/speed/chk/emailchk.elf $@
 

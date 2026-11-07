@@ -246,10 +246,16 @@ static void set_logging(void)
 
 /* the Hebrew keyboard (common/ui/hebkey.c) switched: the menu's tick and
    the badge (guideline 5.3) */
+static short badge_later;	/* switched in a dialog: drawn once it is gone */
+static short heb_start;		/* Settings' "Start with the Hebrew keyboard" as it was */
+
 static void hebrew_changed(void)
 {
 	menu_update();
-	win_badge_redraw();
+	if (dialog_up)
+		badge_later = 1;
+	else
+		win_badge_redraw();
 }
 
 /* folder lists can be rebuilt by the server: find the open one again */
@@ -1413,6 +1419,7 @@ static void command(short cmd)
 	case C_ACCOUNTS: cmd_accounts(); break;
 	case C_SETTINGS:
 		dlg_falcon = opt.falcon;
+		heb_start = opt.hebrew;
 		if (dlg_settings()) {
 			if (dlg_falcon != opt.falcon)
 				falcon_mode_set(dlg_falcon);
@@ -1420,7 +1427,9 @@ static void command(short cmd)
 			people_setup();
 			set_logging();
 			store_save_settings();
-			if (w_editor.h <= 0 && hebrew_kbd != opt.hebrew)
+			/* "Start with the Hebrew keyboard" changed: the keyboard
+			   as it says (F10 in the dialog stays as pressed else) */
+			if (w_editor.h <= 0 && opt.hebrew != heb_start && hebrew_kbd != opt.hebrew)
 				set_hebrew_kbd(opt.hebrew);
 			theme_init();
 			win_redraw_all();
@@ -1926,6 +1935,10 @@ int main(void)
 			if (win_mouse(ev.mx, ev.my, ev.mbutton, double_click(ev.mx, ev.my), ev.kstate))
 				menu_update();
 			wait_release();
+		}
+		if (badge_later && !dialog_up) {
+			badge_later = 0;
+			win_badge_redraw();
 		}
 		if (which & (MU_KEYBD | MU_BUTTON | MU_MESAG))
 			last_input = pf_ms();

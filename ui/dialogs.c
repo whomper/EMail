@@ -307,11 +307,19 @@ static short esc_button(void)
    as the guidelines (3.5) have them: Esc empties the field the cursor is
    in, as GEM's form_do does, and cancels only a dialog without one; Undo
    cancels */
+static short band_obj;			/* the open dialog's band, 0 none */
+static void band_badge(void);
+
+/* while one of these dialogs runs, the windows under it aren't drawn
+   (main.c draws the badge's place once it is gone) */
+int dialog_up;
+
 static short form_loop(short start)
 {
 	short next = start ? start : first_editable(), edit = 0, idx = 0, cont = 1;
 	short m[8];
 	AEVENT e;
+	dialog_up++;
 	while (cont) {
 		if (next && next != edit) {
 			edit = next;
@@ -329,20 +337,34 @@ static short form_loop(short start)
 			LFIELD *lf = lf_at(edit);
 			if ((e.kreturn & 0xff) == 0x1b)
 				e.kreturn = 0x011b;	/* ^[ is Esc, for objc_edit too */
-			if (dlg_cancel_key(e.kreturn, edit != 0) && esc_button()) {
+			if (KEY_SCAN(e.kreturn) == 0x44) {
+				/* F10: the Hebrew keyboard on or off, here too (as
+				   common's dlg_do; Erez, 6 Nov 2026); the band's badge
+				   shows it */
+				set_hebrew_kbd(!hebrew_kbd);
+				if (band_obj && !dlg_in_window()) {
+					dlg_draw(tree, band_obj);
+					band_badge();
+				}
+			} else if (dlg_cancel_key(e.kreturn, edit != 0) && esc_button()) {
 				/* Undo, or Esc where no field has the cursor:
 				   Cancel, as if clicked */
 				next = esc_button();
 				cont = 0;
-			} else if (lf && lf_key(lf, e.kreturn, KEY_ASCII(e.kreturn), e.kstate, &idx)) {
+			} else if (lf && lf_key(lf, e.kreturn, key_char(e.kstate, e.kreturn), e.kstate, &idx)) {
 				/* the long field took it: a letter, an edit, ^C ^X ^V */
 			} else if (edit && !lf && clip_key(e.kreturn)) {
 				clip_edit(tree, edit, &idx, e.kreturn);
 			} else {
 				short kr;
 				cont = form_keybd(tree, edit, next, e.kreturn, &next, &kr);
-				if (kr && !lf)	/* a long field's text isn't objc_edit's */
+				if (kr && !lf) {	/* a long field's text isn't objc_edit's */
+					/* a letter key types its Hebrew letter while that
+					   keyboard is on */
+					if ((kr & 0xff) == (e.kreturn & 0xff))
+						kr = (short)((kr & 0xff00) | key_char(e.kstate, e.kreturn));
 					objc_edit(tree, edit, kr, &idx, ED_CHAR);
+				}
 			}
 		}
 		if (e.which & MU_BUTTON) {
@@ -367,6 +389,7 @@ static short form_loop(short start)
 			if (edit)
 				objc_edit(tree, edit, 0, &idx, ED_END);
 	}
+	dialog_up--;
 	return next;
 }
 
@@ -564,7 +587,6 @@ static TEDINFO *d_ted(const char *text, short just, short color)
 }
 
 /* black band across the top, white title */
-static short band_obj;			/* the open dialog's band, 0 none */
 
 static void d_band(short w, const char *title)
 {
