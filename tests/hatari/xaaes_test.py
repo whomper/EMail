@@ -73,6 +73,7 @@ def undrawn(shot):
 w, rc = run("first", "until EMail 30;wait 20;shot")
 check("the first start runs", rc == 0)
 shot = os.path.join(w, "shots", "grab0001.png")
+check("its screenshot taken", os.path.exists(shot), shot)
 if os.path.exists(shot):
     n = undrawn(shot)
     check("behind the welcome box, EMail's window is drawn whole", n < 20, "%d desktop pixels" % n)
@@ -85,6 +86,7 @@ with open(inf, "w", newline="") as f:
 w, rc = run("account", "until EMail 30;wait 20;shot", copy=[inf])
 check("with an account it runs", rc == 0)
 shot = os.path.join(w, "shots", "grab0001.png")
+check("its screenshot taken", os.path.exists(shot), shot)
 if os.path.exists(shot):
     n = undrawn(shot)
     check("its window is drawn whole, behind the check's box", n < 20, "%d desktop pixels" % n)

@@ -186,6 +186,16 @@ class Rig:
                 self.key(SCAN[ch])
             time.sleep(pace)
 
+    @staticmethod
+    def clicked(before, after):
+        """did a click do something: its screenshot after differs from the one
+        before (guidelines 1.2: a missed click is a FAIL, never a step given up)"""
+        from PIL import Image, ImageChops
+        if not before or not after or not os.path.exists(before) or not os.path.exists(after):
+            return False
+        return ImageChops.difference(Image.open(before).convert("RGB"),
+                                     Image.open(after).convert("RGB")).getbbox() is not None
+
     def shot(self, name, wait=0.6):
         """Save a screenshot as shots/NAME.png and return its path."""
         before = set(os.listdir(self.shots))

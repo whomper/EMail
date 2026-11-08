@@ -173,9 +173,11 @@ try:
         n = len(to_gateway())
         r.click(*WORD, double=True)
         time.sleep(2)
+        chosen = r.shot("t5-chosen")
         r.rclick(*WORD)
         time.sleep(2)
-        r.shot("t5-menu")
+        menu = r.shot("t5-menu")
+        check("the right-click's menu opened", rig.Rig.clicked(chosen, menu))
         r.click(WORD[0] + 20, WORD[1] + 24)   # the menu's second row: Translate...
         time.sleep(10)
         box = r.shot("t6-box")

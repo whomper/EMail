@@ -220,6 +220,16 @@ def font_line():
 
 
 skipped = False
+nskipped = 0
+
+
+def skip(why):
+    """a step that can't run here: said, and counted in the summary (guidelines 1.2)"""
+    global nskipped
+    nskipped += 1
+    print("  SKIPPED: " + why, flush=True)
+
+
 # 1. EMail as Erez starts it: the system font; read the Hebrew message, choose a GDOS font
 r = rig.Rig(work, machine, serial=(fifo_out, fifo_in))
 try:
@@ -239,7 +249,7 @@ try:
     time.sleep(3)
     moved = r.shot("f3-first-gdos-font")
     if changed(dlg, moved) < 0.0005:
-        print("  no GDOS fonts listed (no GDOS here): the font steps skipped", flush=True)
+        skip("the font steps: no GDOS fonts listed (no GDOS here)")
         skipped = True
         r.key(K["ESC"])
         time.sleep(2)
@@ -320,7 +330,7 @@ try:
     mono = sum(1 for n, c in im.getcolors(1 << 16) if n > 0.01 * im.size[0] * im.size[1]) <= 2   # (Hatari's drive light aside)
     bar = None if mono else header_bar(heb, 220, W - 24)
     if mono:
-        print("  (a mono screen: labels and values share a colour, the header checks skipped)", flush=True)
+        skip("the header colour checks: a mono screen (labels and values share a colour)")
     elif not bar:
         check("the reader's header bar found", False)
     else:
@@ -345,8 +355,10 @@ finally:
 
 print("FONT=" + font_line())
 print("screenshots in", os.path.join(work, "shots"))
-if skipped and not fails:
-    print("font test: no GDOS fonts, the font steps skipped; the rest passed")
-    sys.exit(0)
-print("font test:", "all passed" if not fails else "%d failed" % len(fails))
+if fails:
+    print("font test: %d failed" % len(fails))
+elif nskipped:
+    print("font test: passed, %d skipped" % nskipped)
+else:
+    print("font test: all passed")
 sys.exit(1 if fails else 0)

@@ -37,7 +37,8 @@ IMAP, SMTP = 10143, 10025
 work, machine, more = rig.cli("Falcon")
 real = bool(more)                       # ECal's release, not the stand-in
 if machine.partition(":")[0] not in ("Falcon", "Falcon-4", "TT"):
-    print("SKIP on %s: the clicks are placed for a 640x480 screen" % machine)
+    print("SKIPPED: the whole test on %s: the clicks are placed for a 640x480 screen" % machine)
+    print("%s: 0 passed, 1 skipped" % os.path.basename(__file__))
     sys.exit(0)
 os.makedirs(work, exist_ok=True)
 srv = os.path.join(work, "srv")

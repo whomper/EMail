@@ -46,7 +46,8 @@ mode = more[0] if more else "file"
 if mode not in ("file", "econtact"):
     sys.exit(__doc__)
 if mode == "econtact" and machine.partition(":")[0] == "ST-1":
-    print("SKIP on %s: 1 MB: EMail and the accessory don't fit together, Erez 19 Oct" % machine)
+    print("SKIPPED: the whole test on %s: 1 MB: EMail and the accessory don't fit together, Erez 19 Oct" % machine)
+    print("%s: 0 passed, 1 skipped" % os.path.basename(__file__))
     sys.exit(0)
 os.makedirs(work, exist_ok=True)
 srv = os.path.join(work, "srv")

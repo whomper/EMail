@@ -41,7 +41,8 @@ ALT = "https://www.atari-forum.com/viewtopic.php?t=12345&start=20"
 
 work, machine, more = rig.cli("Falcon")
 if machine.partition(":")[0] not in ("Falcon", "Falcon-4", "TT") or ":16" not in machine:
-    print("SKIP on %s: the clicks are placed for a 640x480 screen in 16 colours" % machine)
+    print("SKIPPED: the whole test on %s: the clicks are placed for a 640x480 screen in 16 colours" % machine)
+    print("%s: 0 passed, 1 skipped" % os.path.basename(__file__))
     sys.exit(0)
 os.makedirs(work, exist_ok=True)
 srv = os.path.join(work, "srv")
