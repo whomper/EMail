@@ -21,7 +21,8 @@ An e-mail program for the Atari ST, STE, TT and Falcon, written in C for GEM.
   server** looks through the messages' text on the IMAP server too.
 - **Folders:** create, rename and delete; an alphabetical folder picker for moving messages.
 - **Translate:** Options > Translate shows each message translated by the Gateway's translation service, on
-  your own network; a right-click on chosen words translates just those.
+  your own network; a right-click on chosen words translates just those. Settings > Connection >
+  Languages... chooses which languages the Gateway has installed.
 - **New mail while EMail isn't running:** EMail check (`EMAILCHK.ACC`), a small desk accessory, looks
   in each account's Inbox as often as EMail would and says how many new messages have come; under MiNT
   with BGEM.NG, new mail is a notification with Open and Later, from EMail check and from EMail itself
@@ -303,6 +304,7 @@ tests/hatari/people_file_test.py /tmp/mail-pf      # EContact's CONTACTS.TXT wit
 make build/fakecal.acc && tests/hatari/invite_test.py /tmp/mail-inv   # an invitation to (a stand-in for) ECal
 make build/fakeweb.acc build/fakeweb.prg && tests/hatari/link_test.py /tmp/mail-link Falcon:16   # links to (a stand-in for) a browser
 make help build/fakehelp.acc && tests/hatari/help_test.py /tmp/mail-help   # the Help key asks (a stand-in for) EHypView
+tests/hatari/langs_test.py /tmp/mail-langs         # Settings > Languages... and Translate into, against common's stand-in translategate
 tests/hatari/emailchk_test.py /tmp/mail-chk        # EMAILCHK.ACC: new mail told at the desktop, none while EMail runs
                                                    # (Falcon; also ST-1 or TT, never ST or Falcon-4: no accessory
                                                    # is tested on the 4 MB machines, Erez, 4 Nov 2026)

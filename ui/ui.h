@@ -197,6 +197,11 @@ void xlate_step(void);
 int xlate_running(void);
 void xlate_toggle(void);
 void xlate_words(const char *atari, long n);
+#include "translate.h"
+void xlate_languages(void);
+int xlate_langs_running(void);
+void xlate_langs_step(void);
+const TR_LANGS *xlate_installed(void);
 void words_box(const char *title, const char *text, long n);	/* dialogs.c */
 extern MSG *cur_msg;
 extern char *cur_raw;

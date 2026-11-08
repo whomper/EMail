@@ -667,6 +667,23 @@ With Translate off EMail never contacts the translation service. If the
 Gateway doesn't answer, EMail says so once and shows the message as it
 came.
 
+### Languages
+
+The Gateway translates between the languages installed on it. The
+"Translate messages into" list shows English and the languages it has.
+**Languages...** under it, in **Settings > Connection**, shows every
+language the Gateway offers, each with the memory it takes on the
+Gateway, and how much of its room the ticked ones use. Tick the ones you
+want and untick the ones you don't: nothing changes on the Gateway until
+you choose **OK**, and Cancel or Esc leaves it as it was. A language
+that doesn't fit is refused, with what it would need.
+
+After OK the Gateway installs and removes them, which takes minutes. The
+status line shows how far it is, and you can go on working. Until it
+says "Languages installed", the list has the languages the Gateway had
+before. If a message is in a language the Gateway hasn't got, EMail
+says so and sends you to **Settings > Languages**.
+
 ## Keys
 
 | Key          | Does                       | Key          | Does                    |

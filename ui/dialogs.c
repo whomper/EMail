@@ -10,6 +10,7 @@
 #include <stdarg.h>
 #include "ui.h"
 #include "dialog.h"
+#include "langs.h"
 #include "field.h"
 #include "bidi.h"
 #include "util.h"
@@ -680,16 +681,67 @@ static const char *const lang_name[] = { "English", "Hebrew", "German", "French"
 					 "Portuguese", "Dutch", "Russian", "Arabic" };
 static const char *const lang_code[] = { "en", "he", "de", "fr", "es", "it", "pt", "nl", "ru", "ar" };
 #define NLANG ((short)(sizeof(lang_code) / sizeof(lang_code[0])))
-static short lang_btn, s_lang;
+static short lang_btn, langs_btn = -1;
+static char s_lang[TR_LANG];	/* the language chosen: its code */
 static char s_llabel[16];
+
+/* a language's name for code: ours, else the Gateway's (its installed
+   list, when it has been asked), else the code */
+static void lang_name_of(const char *code, char *out, const TR_LANGS *l)
+{
+	short k;
+	for (k = 0; k < NLANG; k++)
+		if (!strcmp(lang_code[k], code)) {
+			str_copy(out, lang_name[k], LANGS_NAME);
+			return;
+		}
+	for (k = 0; l && k < l->n; k++)
+		if (!strcmp(l->l[k].code, code)) {
+			langs_name(&l->l[k], out);
+			return;
+		}
+	str_copy(out, code, LANGS_NAME);
+}
 
 static void lang_label(void)
 {
 	/* a pop-up's button: the name, a down arrow at the end (guidelines 5.7) */
+	char name[LANGS_NAME];
+	short n;
+	lang_name_of(s_lang, name, 0);
+	n = (short)strlen(name);
+	if (n > 11)
+		n = 11;
 	memset(s_llabel, ' ', 14);
 	s_llabel[14] = 0;
-	memcpy(s_llabel + 1, lang_name[s_lang], strlen(lang_name[s_lang]));
+	memcpy(s_llabel + 1, name, n);
 	s_llabel[13] = 2;
+}
+
+/* Translate into's pop-up: English and the languages the Gateway has
+   installed (Settings > Languages... changes them); -1 for none chosen */
+static short lang_pick(short x, short y)
+{
+	static langs_nm names[TR_LANGS_MAX];
+	static const char *labels[TR_LANGS_MAX];
+	static short code_of[TR_LANGS_MAX];
+	const TR_LANGS *l = xlate_installed();
+	short n = 0, k, r;
+	if (!l)
+		return -1;
+	for (k = 0; k < l->n && n < TR_LANGS_MAX; k++)
+		if (l->l[k].installed || !strcmp(l->l[k].code, "en")) {
+			lang_name_of(l->l[k].code, names[n], l);
+			labels[n] = names[n];
+			code_of[n] = k;
+			n++;
+		}
+	if (!n)
+		return -1;
+	r = popup(x, y, labels, n);
+	if (r >= 0)
+		str_copy(s_lang, l->l[code_of[r]].code, sizeof(s_lang));
+	return r;
 }
 
 static void zone_label(void)
@@ -873,19 +925,28 @@ static short settings_run(short pages_box)
 			short bx, by, k;
 			tree[r].ob_state &= ~SELECTED;
 			objc_offset(tree, r, &bx, &by);
-			k = popup(bx, by + tree[r].ob_height, (const char **)lang_name, NLANG);
+			popup_put_back = 1;	/* no pop-up drawn yet (the list may not come) */
+			k = lang_pick(bx, by + tree[r].ob_height);
 			if (!popup_put_back)
 				win_redraw_area(&popup_area);
-			if (k >= 0) {
-				s_lang = k;
+			if (k >= 0)
 				lang_label();
-			}
 			if (!dlg_in_window() && !popup_put_back) {
 				dlg_draw(tree, 0);
 				band_badge();
 			} else {
 				dlg_draw(tree, r);
 			}
+			continue;
+		}
+		if (r == langs_btn) {
+			/* the family's Languages dialog over the settings, then
+			   the settings again over what it covered */
+			tree[r].ob_state &= ~SELECTED;
+			xlate_languages();
+			ui_redraws();
+			dlg_draw(tree, 0);
+			band_badge();
 			continue;
 		}
 		if (r == zone_btn) {
@@ -922,8 +983,7 @@ static void settings_begin(short w, short h)
 static void settings_load(void)
 {
 	str_copy(s_zone, opt.tzname, sizeof(s_zone));
-	for (s_lang = NLANG - 1; s_lang > 0 && strcmp(lang_code[s_lang], opt.translate_to); s_lang--)
-		;
+	str_copy(s_lang, opt.translate_to[0] ? opt.translate_to : "en", sizeof(s_lang));
 	snprintf(s_check, sizeof(s_check), "%d", opt.check);
 	snprintf(s_page, sizeof(s_page), "%d", opt.page);
 	snprintf(s_wrap, sizeof(s_wrap), "%d", opt.wrap);
@@ -1041,6 +1101,8 @@ static void part_connection(short x, short y)
 	lang_label();
 	lang_btn = d_add(G_BOXTEXT, TOUCHEXIT, 0, (long)d_ted(s_llabel, 0, 0x1180), x + FX - 4, ROW(5), 14, 1);
 	((TEDINFO *)tree[lang_btn].ob_spec)->te_thickness = -1;
+	/* which languages the Gateway has (the family's dialog, common/ui/langs.c) */
+	langs_btn = d_button(x, ROW(6), 14, "Languages...", TOUCHEXIT);
 }
 
 #define SW 13			/* the list's width */
@@ -1098,7 +1160,7 @@ int dlg_settings(void)
 	if (r != ok)
 		return 0;
 	str_copy(opt.tzname, s_zone, sizeof(opt.tzname));
-	str_copy(opt.translate_to, lang_code[s_lang], sizeof(opt.translate_to));
+	str_copy(opt.translate_to, s_lang, sizeof(opt.translate_to));
 	opt.check = (short)atoi(s_check);
 	opt.page = (short)atoi(s_page);
 	if (opt.page < 20)

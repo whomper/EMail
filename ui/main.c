@@ -1891,6 +1891,8 @@ int main(void)
 				list_later_now();
 			else if (xlate_running())
 				xlate_step();	/* Options > Translate: the next piece */
+			else if (xlate_langs_running())
+				xlate_langs_step();	/* Settings > Languages' job on the Gateway */
 		}
 		if (which & MU_M1) {
 			win_hover(ev.mx, ev.my);

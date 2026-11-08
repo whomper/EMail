@@ -25,6 +25,7 @@
 #include "charset.h"
 #include "conn.h"
 #include "translate.h"
+#include "langs.h"
 #include "../src/plat.h"
 
 /* the test build says on the console each time the Gateway is asked
@@ -45,6 +46,18 @@ static SBUF got;		/* the translation so far, UTF-8 */
 static FOLDER *t_folder;
 static unsigned long t_uid;
 static int told;		/* the Gateway's silence said once in an alert */
+
+/* the Gateway's 422: the pair isn't installed there (translate_refusal's
+   words); the user is sent to the Languages dialog */
+static int not_installed(const char *err)
+{
+	return strstr(err, "isn't installed") != 0;
+}
+
+static void say_not_installed(void)
+{
+	alert(1, "[1][That language isn't installed on|the Gateway's translation service:|Settings > Languages.][ OK ]");
+}
 
 /* the three phases of work handed to the Gateway on the status line
    (Erez, 7 Nov 2026; guideline 7.3): sending, translating, receiving;
@@ -227,7 +240,9 @@ void xlate_step(void)
 		int stopped = !strcmp(t.err, "stopped");
 		drop();
 		status("");
-		if (!stopped && !told) {
+		if (!stopped && not_installed(t.err)) {
+			say_not_installed();
+		} else if (!stopped && !told) {
 			told = 1;
 			alert(1, "[1][The translation service on the|Gateway doesn't answer: is it on?|(%.40s)][ OK ]", t.err);
 		} else if (!stopped) {
@@ -257,6 +272,98 @@ void xlate_step(void)
 		next_keep = (k + 1) % KEEP;
 		show(a, an);
 	}
+}
+
+/* ---- Settings > Languages... (the family's dialog, common/ui/langs.c) ---- */
+
+static langs_job ljob;
+static int ljob_on;		/* the Gateway is installing or removing: followed on the status line */
+static TR_LANGS installed;	/* the Gateway's languages, for Translate into's pop-up */
+static int installed_known;	/* asked this run, and nothing changed since */
+
+void xlate_languages(void)
+{
+	static langs l;		/* 4 KB: not on the stack */
+	const char *host = gateway();
+	int r;
+	if (!host[0]) {
+		alert(1, "[1][There is no account yet: the|translation service is on the|Gateway the accounts use.][ OK ]");
+		return;
+	}
+	if (ljob_on) {
+		alert(1, "[1][The Gateway is still installing|languages: the status line|says how far.][ OK ]");
+		return;
+	}
+	memset(&l, 0, sizeof(l));
+	l.host = host;
+	l.port = TR_PORT;
+	l.wait = busy;
+	conn_stop = 0;
+	r = langs_run(&l);
+	conn_stop = 0;
+	if (r != 1)
+		return;
+	/* what the Gateway has (its installed flags; the ticks are only
+	   wanted), and still has while a job runs: Translate into's list
+	   until the job is done, then asked again */
+	installed = l.list;
+	installed_known = 1;
+	if (!l.job)
+		return;
+	langs_job_begin(&ljob, host, TR_PORT, l.job, l.add_mb, pf_ms());
+	ljob_on = 1;
+	status(ljob.text);
+}
+
+int xlate_langs_running(void)
+{
+	return ljob_on;
+}
+
+/* the job, in a quiet turn (main.c): langs_job_step asks the Gateway no
+   oftener than every 2 s */
+void xlate_langs_step(void)
+{
+	int r;
+	if (!ljob_on)
+		return;
+	r = langs_job_step(&ljob, pf_ms());
+	conn_stop = 0;
+	if (r)
+		status(ljob.text);
+	if (r == 2) {
+		ljob_on = 0;
+		installed_known = 0;
+	}
+}
+
+/* the installed languages for Translate into's pop-up: asked of the Gateway
+   once a run (and after a job); 0 with an alert when it can't be had */
+const TR_LANGS *xlate_installed(void)
+{
+	char err[160];
+	const char *host = gateway();
+	int r;
+	if (installed_known)
+		return &installed;
+	if (!host[0]) {
+		alert(1, "[1][There is no account yet: the|translation service is on the|Gateway the accounts use.][ OK ]");
+		return 0;
+	}
+	if (ljob_on)
+		return 0;	/* not reached: the list is known while a job runs */
+	busy(1);
+	err[0] = 0;
+	r = translate_langs_get(host, TR_PORT, &installed, err, sizeof(err));
+	busy(0);
+	conn_stop = 0;
+	if (!r) {
+		if (strcmp(err, "stopped"))
+			alert(1, "[1][The translation service on the|Gateway doesn't answer: is it on?|(%.40s)][ OK ]", err);
+		return 0;
+	}
+	installed_known = 1;
+	return &installed;
 }
 
 /* Options > Translate switched */
@@ -305,7 +412,9 @@ void xlate_words(const char *atari, long n)
 		status("");
 		free(u);
 		sb_free(&out);
-		if (strcmp(err, "stopped"))
+		if (not_installed(err))
+			say_not_installed();
+		else if (strcmp(err, "stopped"))
 			alert(1, "[1][The translation service on the|Gateway doesn't answer: is it on?|(%.40s)][ OK ]", err);
 		conn_stop = 0;
 		return;
