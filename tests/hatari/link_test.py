@@ -14,13 +14,15 @@ underline in the reader, and clicks it.
 1. With build/fakeweb.acc as C:\\EWEB.ACC, a stand-in for a browser that
    is running (it writes what VA_START gave it into C:\\EWEB.LOG): each
    click hands it the link's address.
-2. Without it, as on plain TOS, with EWeb's latest release in C:\\EWEB\\
-   (EMAIL.INF's BROWSER names it): a click asks, Return chooses "Open in
-   EWeb", EMail quits and EWeb starts on the link.
+2. Without it, as on plain TOS, with build/fakeweb.prg as C:\\EWEB\\EWEB.PRG
+   (EMAIL.INF's BROWSER names it; a stand-in that writes its command line
+   into C:\\EWEB.LOG: EMail runs alone, guidelines 1.2): a click asks,
+   Return chooses "Open in EWeb", EMail quits and the browser starts on
+   the link.
 3. The same with a link too long for a command line (150 characters):
-   EWeb starts on EMail's LINK.HTM, which sends it on to the link.
+   the browser starts on EMail's LINK.HTM, which sends it on to the link.
 
-    link_test.py WORKDIR [MACHINE]  (make build/fakeweb.acc first)
+    link_test.py WORKDIR [MACHINE]  (make build/fakeweb.acc build/fakeweb.prg first)
 """
 import os
 import shutil
@@ -101,8 +103,8 @@ os.makedirs(os.path.join(hd, "AUTO"))
 rig.install_prg(hd)
 shutil.copy(os.path.join(ROOT, "build", "fakeweb.acc"), os.path.join(hd, "EWEB.ACC"))
 rig.fakesting(os.path.join(hd, "AUTO"))
-eweb = os.path.join(hd, "EWEB")
-print("EWeb", rig.release("EWeb", eweb, "EWEB.PRG", "EWEB.FNT"), flush=True)
+os.makedirs(os.path.join(hd, "EWEB"))
+shutil.copy(os.path.join(ROOT, "build", "fakeweb.prg"), os.path.join(hd, "EWEB", "EWEB.PRG"))
 with open(os.path.join(hd, "email.inf"), "w", newline="") as f:
     f.write("[options]\r\ntz=180\r\nbrowser=C:\\EWEB\\EWEB.PRG\r\n[account]\r\nname=Dana\r\nfullname=Dana Falcon\r\n"
             "email=dana@test.local\r\nin=imap\r\nhost=127.0.0.1\r\nport=%d\r\nuser=dana\r\n"
@@ -172,10 +174,12 @@ try:
 finally:
     r.stop()
 
-# 2. and 3. no browser running (plain TOS): EMail quits, and EWeb starts
-# on the link, a long one by LINK.HTM
+# 2. and 3. no browser running (plain TOS): EMail quits, and the browser
+# starts on the link, a long one by LINK.HTM
 os.remove(os.path.join(hd, "EWEB.ACC"))
-for part, (row, url, look) in enumerate(((0, PLAIN, "example.com/show"), (3, LONG, "track.example/c"))):
+for part, (row, url, look) in enumerate(((0, PLAIN, PLAIN), (3, LONG, "link.htm"))):
+    if os.path.exists(LOG):
+        os.remove(LOG)
     r = rig.Rig(work, machine, serial=(fifo_out, fifo_in))
     try:
         r.settle(45, 240)
@@ -187,16 +191,15 @@ for part, (row, url, look) in enumerate(((0, PLAIN, "example.com/show"), (3, LON
             time.sleep(4)
             r.shot("m%d-asked" % part)
             r.key(K["RETURN"])           # Open in EWeb
-            time.sleep(40)               # EMail logs out and quits; EWeb starts
+            time.sleep(20)               # EMail logs out and quits; the browser starts
             r.shot("m%d-eweb" % part)
     finally:
         r.stop()
-    hlog = open(os.path.join(work, "hatari.log"), errors="replace").read()
-    eweb_lines = [l for l in hlog.splitlines() if l.startswith("EWEB ")]
+    args = [l[5:] for l in log().splitlines() if l.startswith("args ")]
     what = "a link of %d characters" % len(url)
-    check("%s, no browser: EWeb started after EMail" % what, any(l.startswith("EWEB ready") for l in eweb_lines),
-          " | ".join(eweb_lines[:2]))
-    check("... on the link", any(look in l for l in eweb_lines), " | ".join(eweb_lines[-3:]))
+    check("%s, no browser: the browser started after EMail" % what, bool(args), log().strip().replace("\r\n", " | "))
+    check("... on the link", any(look in a.lower() if look == "link.htm" else look == a.strip() for a in args),
+          " | ".join(args))
     if url == LONG:
         page = open(os.path.join(hd, "link.htm"), errors="replace").read() if os.path.exists(
             os.path.join(hd, "link.htm")) else ""

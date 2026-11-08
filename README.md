@@ -298,11 +298,11 @@ tests/hatari/screenshots.py WORKDIR                # the pictures in docs/, Engl
 tests/hatari/falcon_test.py /tmp/mail-tls          # a Direct connection: TLS.OVL and the DSP (or: ... TT)
 tests/hatari/tlsovl_test.py /tmp/mail-ovl          # TLS.OVL missing (an alert), there (loaded), and on an ST
 tests/hatari/badge_test.py /tmp/mail-badge         # the Hebrew keyboard's badge (F10): top right and Settings
-tests/hatari/econtact_test.py /tmp/mail-ec         # names and ^B with EContact's latest release
+make build/fakecontact.acc && tests/hatari/people_test.py /tmp/mail-pp   # names and ^B with (a stand-in for) EContact
 tests/hatari/people_file_test.py /tmp/mail-pf      # EContact's CONTACTS.TXT without EContact (or: ... Falcon econtact)
 make build/fakecal.acc && tests/hatari/invite_test.py /tmp/mail-inv   # an invitation to (a stand-in for) ECal
-tests/hatari/invite_test.py /tmp/mail-inv Falcon ECal  # the same with ECal's latest release, its New Event saved
-tests/hatari/help_test.py /tmp/mail-help           # EMAIL.HYP in EHypView's latest release
+make build/fakeweb.acc build/fakeweb.prg && tests/hatari/link_test.py /tmp/mail-link Falcon:16   # links to (a stand-in for) a browser
+make help build/fakehelp.acc && tests/hatari/help_test.py /tmp/mail-help   # the Help key asks (a stand-in for) EHypView
 tests/hatari/emailchk_test.py /tmp/mail-chk        # EMAILCHK.ACC: new mail told at the desktop, none while EMail runs
                                                    # (Falcon; also ST-1 or TT, never ST or Falcon-4: no accessory
                                                    # is tested on the 4 MB machines, Erez, 4 Nov 2026)
@@ -326,14 +326,16 @@ you type, Esc, Search server for a word in a body, Undo and Ctrl+F to leave), `e
 all of it kept: the AERA guidelines, 5.4) and `colour_tour.py` run the same way. `font_test.py` chooses the
 first GDOS font in Options > Font, checks the windows redraw in it and that it is saved, then starts EMail
 again in it and reads a Hebrew message from disk; under NVDI it needs Erez's NVDI (`AERA_WITH_NVDI=1`,
-`common/tools/machines.py`), and without a GDOS it checks the restart in the system font. The tests that need another
-AERA program take its latest release, as you would have it (`common/tools/getrelease.py`; add `vX.Y`
-for another one): `econtact_test.py` with EContact, `help_test.py` with EHypView. `people_test.py`
-checks the same conversation with a stand-in for EContact (`build/fakecontact.acc`), and `invite_test.py` an
+`common/tools/machines.py`), and without a GDOS it checks the restart in the system font. EMail's tests run EMail alone (the AERA guidelines, 1.2): no other AERA
+program is loaded, started or fetched for them, and where EMail talks to one a stand-in built here
+plays the other side. `people_test.py` checks names and ^B with a stand-in for EContact
+(`build/fakecontact.acc`), and `invite_test.py` an
 invitation handed to a stand-in for ECal (`build/fakecal.acc`), and the alert when ECal isn't there.
 `link_test.py` clicks the links in a plain and an HTML message: they go to a stand-in for a running
-browser (`build/fakeweb.acc`), and without one EMail quits and EWeb's latest release starts on the link,
-a long one through `LINK.HTM`. Hatari has no network card,
+browser (`build/fakeweb.acc`), and without one EMail quits and starts the browser program
+(`build/fakeweb.prg` as `C:\EWEB\EWEB.PRG`) on the link, a long one through `LINK.HTM`. `help_test.py`
+checks that the Help key asks a stand-in for EHypView (`build/fakehelp.acc`) for `EMAIL.HYP`. EMail with
+the real programs is the hub's family check. Hatari has no network card,
 so `FAKESTNG.PRG` (the AERA apps' shared one, in `common/tools/fakesting`) stands in for STinG and
 carries EMail's connections over the emulated serial port to `serial_bridge.py` next to it. It's for
 the emulator only; never install it on a real Atari.

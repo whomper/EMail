@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-2.0-or-later
 # Copyright (C) 2026 AERA | Erez Yaary
-"""email.hyp in EHypView's latest release (the AERA guidelines, 1.2 and
-4.3), as Erez reads it: EHYPVIEW.ACC is in, EMail runs, and its Help key
-opens the front page with its two pictures (the banner and the main
-window), on a Falcon in 16 colours and on a TT in black and white.
-Screenshots of the page, top to bottom, for people to look at.
+"""The Help key (the AERA guidelines, 4.3): with a help viewer loaded,
+EMail's Help key asks it for EMAIL.HYP with VA_START, on a Falcon in 16
+colours and on a TT in black and white.
 
-    help_test.py WORKDIR [MACHINE] [vX.Y]   (make help first; EHypView's latest release, or that one)
+EMail runs alone (guidelines 1.2): build/fakehelp.acc is C:\\EHYPVIEW.ACC,
+a stand-in that answers to EHYPVIEW and writes what VA_START named into
+C:\\EHYPVIEW.LOG. How EHypView shows the page is the hub's family check.
+
+    help_test.py WORKDIR [MACHINE]   (make help build/fakehelp.acc first)
 """
 import os
 import shutil
@@ -23,17 +25,14 @@ ROOT = os.path.normpath(os.path.join(HERE, "..", ".."))
 work, machine, more = rig.cli("Falcon")
 # MACHINE given: that one only; else a Falcon in 16 colours and a TT in black and white
 looks = [machine] if len(sys.argv) > 2 and sys.argv[2] == machine else ["Falcon:16", "TT:mono"]
-spec = "EHypView@" + more[0] if more else "EHypView"
 shutil.rmtree(work, ignore_errors=True)
 os.makedirs(work)
-ehv = os.path.join(work, "ehypview")
-tag = rig.release(spec, ehv, "EHYPVIEW.ACC")
 checks = []
 
 
-def check(what, good):
+def check(what, good, detail=""):
     checks.append(good)
-    print("  %s   %s" % ("ok" if good else "FAIL", what))
+    print("  %s   %s%s" % ("ok" if good else "FAIL", what, ("  (" + detail + ")") if detail else ""))
 
 
 def look(machine):
@@ -41,7 +40,7 @@ def look(machine):
     w = os.path.join(work, name)
     hd = os.path.join(w, "hd")
     os.makedirs(hd)
-    shutil.copy(os.path.join(ehv, "EHYPVIEW.ACC"), hd)
+    shutil.copy(os.path.join(ROOT, "build", "fakehelp.acc"), os.path.join(hd, "EHYPVIEW.ACC"))
     shutil.copy(os.path.join(ROOT, "binary", "email.hyp"), hd)
     rig.install_prg(hd)
     with open(os.path.join(hd, "email.inf"), "w", newline="") as f:
@@ -51,24 +50,22 @@ def look(machine):
     r = rig.Rig(w, machine)
     try:
         r.settle(20, 90)                     # EMail's window, offline
-        r.key(K["HELP"])                     # EMail asks the accessory: VA_START C:\email.hyp
-        time.sleep(10)
+        r.key(K["HELP"])                     # EMail asks the viewer: VA_START C:\email.hyp
+        time.sleep(5)
         r.shot("%s-1" % name)
-        for i in range(2, 5):
-            r.key(K["DOWN"], shift=True)     # a page down
-            time.sleep(1)
-            r.shot("%s-%d" % (name, i))
     finally:
         r.stop()
-    log = open(os.path.join(w, "hatari.log"), errors="replace").read()
+    p = os.path.join(hd, "EHYPVIEW.LOG")
+    log = open(p, errors="replace").read() if os.path.exists(p) else ""
+    starts = [l[6:] for l in log.splitlines() if l.startswith("start ")]
     what = r.machine.describe()
-    check("%s: EHypView %s opens EMAIL.HYP's front page" % (what, tag), "EHV page C:\\email.hyp Main" in log)
-    check("%s: with both its pictures" % what, "EHV pictures 2" in log)
+    check("%s: the Help key asks the viewer for EMAIL.HYP" % what,
+          any(s.lower().split(" ")[0] == "c:\\email.hyp" for s in starts), log.strip().replace("\n", " | "))
 
 
 for m in looks:
     look(m)
 print("screenshots in", work)
 ok = checks and all(checks)
-print("PASS" if ok else "FAIL")
+print("help test:", "all passed" if ok else "%d failed" % checks.count(False))
 sys.exit(0 if ok else 1)

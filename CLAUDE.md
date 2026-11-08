@@ -60,10 +60,11 @@ These come from AERA-Atari's repo template and are the same in every app's CLAUD
 
   How it is made is the team's, without asking: code, structure, shared code, tests, measurements,
   fixes, docs and releases inside an approved phase.
-- **Testing with another AERA program uses its latest release**, what Erez runs, never a build of its
-  `main`: `common/tools/getrelease.py APP DIR FILE...` fetches it. Only for a change both programs are
-  still making, test against the other's `main` at a named commit, say so, and test again against its
-  release when it is out.
+- **No AERA app tests itself with another AERA program or accessory** (Erez, 8 Nov 2026; guidelines
+  1.2, AERA-Atari 76417f7): EMail's own tests run EMail alone, with nothing else AERA loaded beside it,
+  started by it or fetched for it. Where EMail talks to another program, a stand-in built here plays
+  the other side (`tests/atari/`). EMAIL.PRG with EMAILCHK.ACC is EMail alone. EMail with the real
+  programs is the hub's family check.
 - **Every new source file starts with the SPDX line and copyright** (see any `.c` file); a generator
   writes them into the files it makes.
 - **The name** reads "AERA | Erez Yaary" wherever it is given: copyright lines
@@ -108,8 +109,8 @@ These come from AERA-Atari's repo template and are the same in every app's CLAUD
   (FreeMiNT with XaAES, a multitasking AES: common's rig in
   `common/tests/xaaes`, `make base` there once); `emailchk_test.py` (on `ST-1`, `TT` or `Falcon`: no accessory
   runs on the 4 MB machines, `ST` and `Falcon-4`; Erez, 4 Nov 2026) when the
-  accessory or `src/newmail.c` changes. With EContact: `econtact_test.py` (its latest release);
-  the help file: `help_test.py` (EHypView's latest release).
+  accessory or `src/newmail.c` changes. With EContact: `people_test.py` (its stand-in);
+  the Help key: `help_test.py` (EHypView's stand-in).
 - `gateway/` is a read-only copy of
   [AERA-Gateway](https://github.com/whomper/AERA-Gateway)'s (emailgate,
   the other gateways, `aera-gateway`): change it there, with that
@@ -117,10 +118,13 @@ These come from AERA-Atari's repo template and are the same in every app's CLAUD
   `tools/sync-gateway.sh`. EMail decides emailgate's protocol (STARTTLS,
   the "emailgate:" refusal lines, ports 143/587/110): review changes to
   it there. Its log names who connected where, never what went through.
+  EMail tests emailgate itself (Erez, 8 Nov 2026; guidelines 1.2, AERA-Atari
+  4169af2): every change to it is run here from the `gateway/` copy (`make
+  itest`, the rigs through the gateway), and those tests are EMail's.
 - EContact is EMail's address book through the family's PEOPLE messages
   (`common/ui/av_people.c`, `people_ask.c`); EContact has no patch for
-  EMail any more. Check it with `econtact_test.py` against EContact's
-  latest release.
+  EMail any more. Check it with `people_test.py` and its stand-in
+  (`build/fakecontact.acc`).
 - **A candidate's test round** is EMail's section of AERA-Atari's
   `standards/TEST-MATRIX.md` (hub 5e0039a, 7 Nov 2026):
   - `net_test.py` on Falcon:256, EMail's own 256-colour run;

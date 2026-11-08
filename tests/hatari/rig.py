@@ -68,15 +68,6 @@ def fakesting(auto):
     shutil.copy(os.path.join(FAKESTING, "FAKESTNG.PRG"), auto)
 
 
-def release(app, d, *files):
-    """Another AERA program's files from its release (guidelines 1.2), as
-    Erez has them: APP for the latest, APP@vX.Y for that one. Returns the
-    release's tag (also in d/APP.VERSION) for the report."""
-    getrelease = os.path.join(COMMON_TOOLS, "getrelease.py")
-    subprocess.run([sys.executable, getrelease, app, d] + list(files), check=True)
-    return open(os.path.join(d, app.split("@")[0].upper() + ".VERSION")).read().strip()
-
-
 def servers_ready(work, *ports):
     """Before Dovecot and the SMTP stand-in start: Dovecot runs as its own
     user, so every folder above work must let others through, and a server

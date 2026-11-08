@@ -189,6 +189,20 @@ $(OBJDIR)/fakeweb.acc: tests/atari/fakeweb.c $(addprefix $(OBJDIR)/,$(addsuffix 
 		$(addprefix $(OBJDIR)/,$(addsuffix .o,$(FAKECAL))) $(OBJDIR)/nf.o -lgcc
 	python3 common/tools/elf2tos.py $(OBJDIR)/fakeweb.elf $@
 
+# the same, started as the browser program on plain TOS (C:\EWEB\EWEB.PRG):
+# it writes its command line into C:\EWEB.LOG (never released)
+$(OBJDIR)/fakeweb.prg: $(OBJDIR)/fakeweb.acc
+	python3 common/tools/elf2tos.py $(OBJDIR)/fakeweb.elf $@
+
+# a stand-in for a help viewer's receiving side (EHYPVIEW's VA_START), for
+# tests/hatari/help_test.py: what EMail asks for goes into C:\EHYPVIEW.LOG
+# (never released)
+$(OBJDIR)/fakehelp.acc: tests/atari/fakeweb.c $(addprefix $(OBJDIR)/,$(addsuffix .o,$(FAKECAL))) $(OBJDIR)/nf.o
+	$(CC) $(CFLAGS) -DFAKE_NAME='"EHYPVIEW"' -DFAKE_LOG='"C:\\EHYPVIEW.LOG"' -c -o $(OBJDIR)/fakehelp.o $<
+	$(CC) $(LDFLAGS) -o $(OBJDIR)/fakehelp.elf $(OBJDIR)/fakehelp.o \
+		$(addprefix $(OBJDIR)/,$(addsuffix .o,$(FAKECAL))) $(OBJDIR)/nf.o -lgcc
+	python3 common/tools/elf2tos.py $(OBJDIR)/fakehelp.elf $@
+
 $(OBJDIR) binary:
 	mkdir -p $@
 

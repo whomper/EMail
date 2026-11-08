@@ -4,31 +4,28 @@
 """EContact's CONTACTS.TXT when EContact isn't loaded (the guidelines, 4.1:
 an option, Settings > Contacts; Erez, 21 Oct 2026).
 
-As econtact_test.py (Dovecot, the SMTP stand-in, FAKESTNG.PRG over the
+As people_test.py (Dovecot, the SMTP stand-in, FAKESTNG.PRG over the
 serial port, a reply to Dana with ", Grace" typed and ^B), with
 PEOPLEFILE=1 and PEOPLEDIR=C:\\ECONTACT in EMAIL.INF and a CONTACTS.TXT
 there whose names end in "Filed" ("Grace Filed"):
 
 - file (the default): no EContact. ^B opens the people dialog on the
   file, Return takes Grace, and the reply goes to "Grace Filed".
-- econtact: EContact's latest release loaded as well. Its window picks,
-  the reply goes to "Grace Baker", and no name of the file is used.
+- econtact: build/fakecontact.acc loaded as well, as C:\\ECONTACT.ACC (a
+  stand-in for EContact: EMail runs alone, guidelines 1.2). It picks, the
+  reply goes to its "Baker, Grace", and no name of the file is used.
 
-Until EContact writes the file itself, the rig writes it in EContact
-1.40's format: a note line, a P line per address (name, email, label)
-and a G line per group ("Name <email>, ..."), Atari text, CRLF. In file
-mode the reply also picks the group "Team Filed", which gives its people.
+The rig writes the file in EContact 1.40's format: a note line, a P line
+per address (name, email, label) and a G line per group ("Name <email>,
+..."), Atari text, CRLF. In file mode the reply also picks the group
+"Team Filed", which gives its people.
 
-    people_file_test.py WORKDIR [MACHINE] [file|econtact]
-
-AERA_EC_WRITER=COMMIT: the file written by EContact's own card-cli at
-that commit of its main, with the same people and group.
+    people_file_test.py WORKDIR [MACHINE] [file|econtact]  (make build/fakecontact.acc first)
 """
 import email
 import email.header
 import imaplib
 import os
-import re
 import shutil
 import subprocess
 import sys
@@ -80,61 +77,16 @@ rig.stop_at_exit(srv, smtp)
 book = os.path.join(hd, "ECONTACT")
 os.makedirs(book)
 # EContact 1.40's format: P<TAB>name<TAB>email<TAB>label, G<TAB>group<TAB>Name <email>, ...
-writer = os.environ.get("AERA_EC_WRITER")
-if writer and mode == "file":
-    # written by EContact itself: its card-cli at that commit of its main
-    # (a change both programs are still making: named, as the guidelines ask)
-    wd = os.path.join(work, "ec-writer")
-    shutil.rmtree(wd, ignore_errors=True)
-    subprocess.run(["git", "clone", "-q", "https://github.com/whomper/EContact", wd], check=True)
-    subprocess.run(["git", "-C", wd, "-c", "advice.detachedHead=false", "checkout", "-q", writer], check=True)
-    subprocess.run(["make", "-s", "-C", wd, "build/card-cli"], check=True, stdout=subprocess.DEVNULL)
-    wcli = os.path.join(wd, "build", "card-cli")
-    for args in (["local", "Contacts"],
-                 ["add", "Contacts", "Avi", "Filed", "avi@example.org"],
-                 ["add", "Contacts", "Dana", "Filed", "dana@example.com"],
-                 ["add", "Contacts", "Grace", "Filed", "grace@example.net"],
-                 ["add", "Contacts", "Yael", "Filed", "yael@example.org"],
-                 ["group-new", "Contacts", "Team Filed"],
-                 ["group-add", "Team Filed", "Avi Filed"],
-                 ["group-add", "Team Filed", "Yael Filed"]):
-        subprocess.run([wcli, book] + args, check=True, stdout=subprocess.DEVNULL)
-    print("contacts.txt by EContact %s:" % writer)
-    print(open(os.path.join(book, "contacts.txt"), "rb").read().decode("latin-1"))
-else:
-    with open(os.path.join(book, "contacts.txt"), "wb") as f:
-        f.write(b"; EContact's contacts, for EMail and ECal when EContact isn't loaded\r\n"
-                b"P\tAvi Filed\tavi@example.org\twork\r\n"
-                b"P\tDana Filed\tdana@example.com\thome\r\n"
-                b"P\tGrace Filed\tgrace@example.net\thome\r\n"
-                b"P\tYael Filed\tyael@example.org\twork\r\n"
-                b"G\tTeam Filed\tAvi Filed <avi@example.org>, Yael Filed <yael@example.org>\r\n")
+with open(os.path.join(book, "contacts.txt"), "wb") as f:
+    f.write(b"; EContact's contacts, for EMail and ECal when EContact isn't loaded\r\n"
+            b"P\tAvi Filed\tavi@example.org\twork\r\n"
+            b"P\tDana Filed\tdana@example.com\thome\r\n"
+            b"P\tGrace Filed\tgrace@example.net\thome\r\n"
+            b"P\tYael Filed\tyael@example.org\twork\r\n"
+            b"G\tTeam Filed\tAvi Filed <avi@example.org>, Yael Filed <yael@example.org>\r\n")
 
-tag = "-"
 if mode == "econtact":
-    # EContact: its release, and its address book made by its own card-cli
-    # from the same release's source
-    ec_spec = "EContact"
-    ec_dir = os.path.join(work, "econtact")
-    shutil.rmtree(ec_dir, ignore_errors=True)
-    acc = "ECONTACT.ACC"
-    tag = rig.release(ec_spec, ec_dir, acc)
-    print("EContact", tag)
-    ec_src = os.path.join(ec_dir, "src")
-    subprocess.run(["git", "-c", "advice.detachedHead=false", "clone", "-q", "--depth", "1", "--branch", tag, "https://github.com/whomper/EContact",
-                    ec_src], check=True)
-    subprocess.run(["make", "-s", "-C", ec_src, "build/card-cli"], check=True, stdout=subprocess.DEVNULL)
-    cli = os.path.join(ec_src, "build", "card-cli")
-    subprocess.run([cli, book, "local", "Contacts"], check=True, stdout=subprocess.DEVNULL)
-    subprocess.run([cli, book, "import", "Contacts", os.path.join(HERE, "people.vcf")], check=True,
-                   stdout=subprocess.DEVNULL)
-    inf = open(os.path.join(book, "ECONTACT.INF"), "rb").read()
-    inf = inf.replace(b"\nSYNC_OPEN=1", b"\nSYNC_OPEN=0")
-    inf = re.sub(rb"\nSTART=[^\r\n]*", rb"\nSTART=now", inf)
-    inf = re.sub(rb"\nFOLDER=[^\r\n]*", rb"\nFOLDER=C:\\ECONTACT", inf)
-    os.remove(os.path.join(book, "ECONTACT.INF"))
-    open(os.path.join(hd, "ECONTACT.INF"), "wb").write(inf)
-    shutil.copy(os.path.join(ec_dir, acc), hd)
+    shutil.copy(os.path.join(ROOT, "build", "fakecontact.acc"), os.path.join(hd, "ECONTACT.ACC"))
 
 # drive C:
 os.makedirs(os.path.join(hd, "AUTO"))
@@ -177,7 +129,8 @@ try:
     r.ctrl("b")                          # ^B: the people dialog on the file, or EContact's window
     r.settle(8, 60)
     r.shot("c3-choosing")
-    r.key(K["RETURN"])                   # she is chosen
+    if mode == "file":
+        r.key(K["RETURN"])               # she is chosen (the stand-in answers at once)
     r.settle(4, 30)
     r.shot("c4-picked")
     if mode == "file":
@@ -210,7 +163,7 @@ try:
         check("and to the group Team's people, Avi and Yael",
               "Avi Filed <avi@example.org>" in to and "Yael Filed <yael@example.org>" in to and "Team" not in to)
     else:
-        check("and to Grace, chosen in EContact %s" % tag, "Grace Baker <grace@example.net>" in to)
+        check("and to Grace, picked by the stand-in EContact", '"Baker, Grace" <grace@example.net>' in to)
         check("no name from CONTACTS.TXT while EContact is loaded", "Filed" not in to)
 
 finally:
