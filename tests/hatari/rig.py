@@ -283,4 +283,12 @@ class Rig:
         except Exception:
             self.proc.kill()
         if self.xvfb:
+            # gone before the next boot: a dying Xvfb's socket still answers,
+            # the next Rig takes it for a display and starts none, and Hatari
+            # hangs on "x11 not available" (the second boots that timed out)
             self.xvfb.terminate()
+            try:
+                self.xvfb.wait(10)
+            except Exception:
+                self.xvfb.kill()
+                self.xvfb.wait()
