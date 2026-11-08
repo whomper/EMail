@@ -239,6 +239,18 @@ static void set_logging(void)
 		path_join(conn_logfile, sizeof(conn_logfile), opt.workdir, "email.log");
 		if (*clock)		/* a 200 Hz timer that isn't: the times are corrected */
 			conn_log("EMail", " -- ", clock, (long)strlen(clock));
+		{
+			/* what decides the dialogs' 3D look (common dlg_3d_ok;
+			   guideline 5.6): the AES, its 3D objects, the colours, NVDI */
+			char t[160];
+			short v = aes_version(), a = -1, b = -1, c = -1, d = -1;
+			if ((v >= 0x0400 || get_cookie(0x3F414749L)) && !appl_getinfo(13, &a, &b, &c, &d))
+				a = b = c = d = -1;	/* (asked only where it exists: ?AGI or AES 4) */
+			snprintf(t, sizeof(t), "AES %04x, appl_getinfo(13) %d %d %d %d, %d planes, NVDI %s: dialogs %s",
+				 (unsigned)v, a, b, c, d, planes, get_cookie(0x4E564449L) ? "yes" : "no",
+				 dlg_3d_ok() ? "3D" : "flat");
+			conn_log("EMail", " -- ", t, (long)strlen(t));
+		}
 	} else {
 		conn_logfile[0] = 0;
 	}
