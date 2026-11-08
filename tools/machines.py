@@ -15,7 +15,8 @@ HD is the folder Hatari shows as C:. From a rig:
     subprocess.Popen(["hatari"] + m.args() + ["--auto", "C:\\\\APP.PRG"], env=m.env())
     print(m.describe())         # "Falcon:256, TOS 4.04" - put it in the report
 
-The TOS: Erez's own (TOS 1.04 from his ST, TOS 4.04 from his Falcon) when
+The TOS: Erez's own (TOS 1.04 from his ST, TOS 4.04 from his Falcon; the
+STE's tos162.img, where he has one) when
 the folder $AERA_TOS (~/.aera/tos) has them, else EmuTOS 1.4, fetched once
 into ~/.cache/aera. AERA_TOS=emutos takes EmuTOS always. The TOS images
 are never put in git (Atari's copyright), nor sent anywhere.
@@ -23,7 +24,7 @@ are never put in git (Atari's copyright), nor sent anywhere.
 Each machine starts with its own settings: its own HOME for Hatari (so no
 NVRAM is shared between rigs), the Falcon's screen mode in its NVRAM and,
 for a real TOS 4, in C:\\NEWDESK.INF (TOS 4's desktop takes the mode from
-there), unless the rig brought its own. An ST, which has no clock, gets
+there), unless the rig brought its own. An ST or an STE, which has no clock, gets
 C:\\AUTO\\CLOCK.PRG, setting this computer's date and time. Standard Python
 only.
 
@@ -68,6 +69,9 @@ MACHINES = {
            ["--machine", "st", "--memsize", "4"], ["mono", "med", "low"], "tos104us.img"),
     "ST-1": ("an ST with 1 MB, the smallest the family runs on (the ST editions)",
              ["--machine", "st", "--memsize", "1"], ["mono", "med", "low"], "tos104us.img"),
+    "STE": ("an STE: 68000 at 8 MHz, 4 MB, its 8-bit DMA sound (EPlay's STE edition, 7 Nov 2026); "
+            "TOS 1.62 (STE's own; 1.04 has no DMA sound), else EmuTOS",
+            ["--machine", "ste", "--memsize", "4"], ["mono", "med", "low"], "tos162.img"),
     "TT": ("a TT030: 68030 at 32 MHz, 68882, 4 MB ST RAM and 16 MB TT RAM (68030 code in fast RAM)",
            ["--machine", "tt", "--cpuclock", "32", "--fpu", "68882", "--memsize", "4",
             "--ttram", "16", "--addr24", "off"], ["ttmed", "mono", "med"], "tos306.img"),
@@ -75,12 +79,12 @@ MACHINES = {
                "14 MB ST RAM, 128 MB TT RAM, the DSP, VGA",
                ["--machine", "falcon", "--cpuclock", "32", "--fpu", "68882", "--memsize", "14",
                 "--ttram", "128", "--addr24", "off", "--dsp", "emu", "--monitor", "vga"],
-               ["16", "256"], "tos404.img"),
+               ["16", "256", "65536"], "tos404.img"),
     "Falcon-4": ("a Falcon030 as sold: 68030 at 16 MHz, no FPU, 4 MB ST RAM and no TT RAM, the DSP, VGA "
                  "(Erez, 19 Oct 2026: the machine for all three accessories loaded at once)",
                  ["--machine", "falcon", "--cpuclock", "16", "--memsize", "4", "--ttram", "0",
                   "--addr24", "on", "--dsp", "emu", "--monitor", "vga"],
-                 ["16", "256"], "tos404.img"),
+                 ["16", "256", "65536"], "tos404.img"),
 }
 
 SCREENS = {
@@ -90,8 +94,10 @@ SCREENS = {
     "ttmed": ["--monitor", "vga", "--tos-res", "ttmed"],  # TT 640x480, 16 colours
     "16": [],                                           # Falcon 640x480, 16 colours
     "256": [],                                          # Falcon 640x480, 256 colours
+    "65536": [],                                        # Falcon 640x480, true colour (16 bits)
 }
-FALCON_MODE = {"16": 0x001A, "256": 0x001B}    # VGA | 80 columns | 4 or 8 planes
+FALCON_MODE = {"16": 0x001A, "256": 0x001B,    # VGA | 80 columns | 4 or 8 planes
+               "65536": 0x001C}                 # ... | 16 bits (R5G6B5, Motorola order)
 
 EMUTOS = ("https://downloads.sourceforge.net/project/emutos/emutos/1.4/emutos-512k-1.4.zip",
           "1ef7bd25f61bcfc66d19debc2f0ebb0d5e5ba811ccd7f0fddfcb105bb72d1663", "etos512us.img")
