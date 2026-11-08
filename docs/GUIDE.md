@@ -631,7 +631,7 @@ Press **F10** to type Hebrew with the
 Israeli SI-1452 layout: the keys where the Hebrew letters are on an
 Israeli keyboard. While it is on, the letters ayin and bet show at the
 right end of the message list's title bar and of the Settings title. F10
-works in EMail's dialogs too. Press F10 again for Latin letters. In a Hebrew line the
+works in EMail's dialogs too. Press F10 again for Latin letters. EMail always starts with Latin letters. In a Hebrew line the
 Left arrow moves forward, as on Hebrew systems. Messages go out in UTF-8,
 which every modern program reads.
 
@@ -812,7 +812,7 @@ are underlined).
 **Settings** (Options > Settings, Ctrl+,) has six parts in its
 sidebar: **Mail** (checking every few minutes, how many messages to load
 at a time, keeping read messages on disk, starting offline), **Writing** (where lines
-wrap, starting with the Hebrew keyboard), **Signature**, **Look**
+wrap), **Signature**, **Look**
 (colours; dialogs have the AES's own 3D look wherever it draws one: TOS
 4, MagiC, XaAES and EmuTOS in colour), **Contacts** (EContact's file, below) and **Connection** (the
 time zone, the Direct connection, the DSP and the protocol log).

@@ -39,7 +39,6 @@ static void defaults(void)
 	opt.keepcache = 1;
 	opt.startoffline = 0;
 	opt.log = 0;
-	opt.hebrew = 0;
 	opt.offline = 0;
 	opt.dsp = 1;
 	opt.colour = 1;
@@ -472,7 +471,6 @@ static void set_opt(const char *k, const char *v)
 	else if (!strcmp(k, "page")) opt.page = n < 20 ? 20 : n > 1000 ? 1000 : n;
 	else if (!strcmp(k, "keepcache")) opt.keepcache = n;
 	else if (!strcmp(k, "log")) opt.log = n;
-	else if (!strcmp(k, "hebrew")) opt.hebrew = n;
 	else if (!strcmp(k, "offline")) offline_inf = n != 0;
 	else if (!strcmp(k, "wrap")) opt.wrap = n < 40 ? 40 : n > 78 ? 78 : n;
 	else if (!strcmp(k, "main")) shorts(v, &opt.main_x, 4);
@@ -697,7 +695,6 @@ int store_save_settings(void)
 		"KEEPCACHE", "%d", opt.keepcache);
 	put_fmt(&b, "1 = write the conversation with the servers to EMAIL.LOG (passwords hidden)",
 		"LOG", "%d", opt.log);
-	put_fmt(&b, "1 = start with the Hebrew keyboard (F10 switches)", "HEBREW", "%d", opt.hebrew);
 	put_fmt(&b, "1 = start offline, with the mail on disk: no connection and no timed checks "
 		"until Options > Work offline is switched off", "STARTOFFLINE", "%d", opt.startoffline);
 	put_fmt(&b, "the editor wraps lines at this column (40-78)", "WRAP", "%d", opt.wrap);

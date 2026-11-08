@@ -247,7 +247,6 @@ static void set_logging(void)
 /* the Hebrew keyboard (common/ui/hebkey.c) switched (F10 only, no menu
    entry: Erez, 7 Nov 2026): the badge (guideline 5.3) */
 static short badge_later;	/* switched in a dialog: drawn once it is gone */
-static short heb_start;		/* Settings' "Start with the Hebrew keyboard" as it was */
 
 static void hebrew_changed(void)
 {
@@ -1424,7 +1423,6 @@ static void command(short cmd)
 	case C_ACCOUNTS: cmd_accounts(); break;
 	case C_SETTINGS:
 		dlg_falcon = opt.falcon;
-		heb_start = opt.hebrew;
 		if (dlg_settings()) {
 			if (dlg_falcon != opt.falcon)
 				falcon_mode_set(dlg_falcon);
@@ -1432,10 +1430,6 @@ static void command(short cmd)
 			people_setup();
 			set_logging();
 			store_save_settings();
-			/* "Start with the Hebrew keyboard" changed: the keyboard
-			   as it says (F10 in the dialog stays as pressed else) */
-			if (w_editor.h <= 0 && opt.hebrew != heb_start && hebrew_kbd != opt.hebrew)
-				set_hebrew_kbd(opt.hebrew);
 			theme_init();
 			win_redraw_all();
 			list_refresh();
@@ -1753,7 +1747,7 @@ int main(void)
 	theme_init();
 	font_apply();
 	hebrew_kbd_hook = hebrew_changed;
-	hebrew_kbd = opt.hebrew;
+	hebrew_kbd = 0;		/* off at the start, F10 only (Erez, 8 Nov 2026; guideline 5.3) */
 	set_logging();
 	net_init();
 	pf_idle = busy_idle;

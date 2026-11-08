@@ -562,8 +562,8 @@ static char s_zone[40], s_zlabel[42], s_check[4], s_page[5], s_wrap[3];
 static char s_sig[SIG_ROWS][SIG_CAP + 1];	/* the signature, a line a row */
 #define PDIR_W 32
 static char s_pdir[sizeof(opt.peopledir)];	/* EContact's folder */
-static short s_on[8];			/* keep, log, hebrew, falcon, dsp, colour, people file, start */
-enum { T_KEEP, T_LOG, T_HEB, T_FALCON, T_DSP, T_COLOUR, T_PFILE, T_START };
+static short s_on[7];			/* keep, log, falcon, dsp, colour, people file, start */
+enum { T_KEEP, T_LOG, T_FALCON, T_DSP, T_COLOUR, T_PFILE, T_START };
 
 #define NTICK 8
 static short tick_box[NTICK], tick_lbl[NTICK], tick_var[NTICK], nticks;
@@ -930,7 +930,6 @@ static void settings_load(void)
 	s_on[T_KEEP] = opt.keepcache;
 	s_on[T_START] = opt.startoffline;
 	s_on[T_LOG] = opt.log;
-	s_on[T_HEB] = opt.hebrew;
 	s_on[T_FALCON] = dlg_falcon;
 	s_on[T_DSP] = opt.dsp;
 	s_on[T_COLOUR] = opt.colour;
@@ -988,7 +987,6 @@ static void part_writing(short x, short y)
 	rows_at(y);
 	d_add(G_STRING, 0, 0, (long)"Wrap my lines at column", x, ROW(0), 23, 1);
 	d_field(x + FX, ROW(0), s_wrap, 2, '9');
-	d_tick(x, ROW(1), "Start with the Hebrew keyboard", T_HEB);
 }
 
 /* four rows in one frame, as one box to write in */
@@ -1113,7 +1111,6 @@ int dlg_settings(void)
 	opt.keepcache = s_on[T_KEEP];
 	opt.startoffline = s_on[T_START];
 	opt.log = s_on[T_LOG];
-	opt.hebrew = s_on[T_HEB];
 	dlg_falcon = s_on[T_FALCON];
 	opt.dsp = s_on[T_DSP];
 	opt.colour = s_on[T_COLOUR];

@@ -85,7 +85,6 @@ typedef struct {
 	short page;		/* messages loaded at a time (more on request) */
 	short keepcache;	/* keep message bodies on disk when quitting */
 	short log;		/* write EMAIL.LOG */
-	short hebrew;		/* Hebrew keyboard on at start */
 	short offline;
 	short wrap;		/* compose wrap column */
 	short main_x, main_y, main_w, main_h;	/* main window, 0 = not yet placed */
