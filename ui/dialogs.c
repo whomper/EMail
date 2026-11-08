@@ -1499,6 +1499,29 @@ void words_box(const char *title, const char *text, long n)
 			k = e - s0;
 		}
 		rows[nr][k] = 0;
+		/* GEM draws in storage order: Hebrew laid out right to left
+		   first, and a right-to-left paragraph's rows set against the
+		   right edge, as the reader shows them (Erez, 8 Nov 2026) */
+		if (bidi_has_rtl(rows[nr], (short)k)) {
+			char vis[TB_W + 4];
+			long p = s0, pe = s0;
+			short rtl;
+			while (p > 0 && text[p - 1] != '\n')
+				p--;	/* the paragraph's start decides its direction */
+			while (pe < n && text[pe] != '\n' && pe - p < BIDI_MAX)
+				pe++;
+			rtl = bidi_is_rtl(text + p, (short)(pe - p));
+			bidi_visual(rows[nr], (short)k, rtl, vis);
+			if (rtl) {
+				memset(rows[nr], ' ', TB_W - k);
+				memcpy(rows[nr] + TB_W - k, vis, k);
+				k = TB_W;
+				rows[nr][k] = 0;
+			} else {
+				memcpy(rows[nr], vis, k);
+			}
+			heb_font_map(rows[nr], (short)k, opt.hebfont);
+		}
 		nr++;
 	}
 	if (!nr) {
