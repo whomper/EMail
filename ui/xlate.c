@@ -56,6 +56,7 @@ static int not_installed(const char *err)
 
 static void say_not_installed(void)
 {
+	TRACE("TRANSLATE not installed");
 	alert(1, "[1][That language isn't installed on|the Gateway's translation service:|Settings > Languages.][ OK ]");
 }
 
