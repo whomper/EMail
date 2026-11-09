@@ -14,12 +14,12 @@ when it is there.
 
 | # | Item | Rows | Size | State |
 |---|---|---|---|---|
-| 1 | Mark as unread leaves ⇧^U (a key typed while EMail is busy can lose its Shift: ^U closes the window). Proposed to the hub: ^J. Until Erez's OK, ⇧^U stays | D1, MD13 | S | key proposed |
+| 1 | Mark as unread leaves ⇧^U for **^J** (Erez, 9 Nov 2026): a key typed while EMail is busy can lose its Shift, and ^U closes the window. The bar reads "Mark as unread  ^J", the list's right-click the same | D1, MD13 | S | approved |
 | 2 | Pop-up words and keys are the bar's, in sentence case: Mark as unread shows the bar's key (after 1), Reply to all shows ⇧^R (`ui/list.c`) | D14, MD19 | S | |
 | 3 | Translate in its own section of Options, with a line above and below (`ui/main.c` m_opts) | D5, MD11 | S | |
 | 4 | `Write a log` in the menu and in Settings > Connection | D8, MD3 | S | |
 | 5 | `Direct connection` without `(TLS)` in Options | D9, MD6 | S | |
-| 6 | Out-of-range numbers in Settings (messages at a time, wrap column) refused by an alert that says what to type, not clamped. Words proposed to the hub | D30, C21 | S | words proposed |
+| 6 | Out-of-range numbers in Settings refused by an alert, not clamped (Erez approved the words, 9 Nov 2026): `[1][Messages to load at a time:\|type a number from 20 to 1000.][ OK ]` and `[1][Wrap lines at column:\|type a number from 40 to 78.][ OK ]`; Settings stays on the page with the field ready, nothing saved until in range | D30, C21 | S | approved |
 | 7 | POP3 "leave mail on the server": the toggle button becomes a bitmap tick (`d_check` to `d_tick`); the pick list's rows nested as EFTP's `d_nest` | D23, C5, C10 | S each | |
 | 8 | A black title band in every dialog (the hub does the Font and Languages dialogs) | D22, C4 | S to H | |
 | 9 | Pop-up labels drop their own padding once `popup()` adds the margin | D15, MD18 | S | [hub] |
