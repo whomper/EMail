@@ -140,6 +140,8 @@ These come from AERA-Atari's repo template and are the same in every app's CLAUD
 
   When those rigs are next touched, trim `disk_test.py`'s mailbox and merge select, esc, field,
   find, rename, scroll and tip into one boot.
+- **The interface backlog** (Erez's UI decisions of 9 Nov 2026, AERA-Atari `standards/ui`) is
+  [docs/UI-BACKLOG.md](docs/UI-BACKLOG.md): taken only with a release EMail makes anyway, as it says.
 
 ## Maintenance mode (Erez, 1 Nov 2026)
 
