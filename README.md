@@ -6,12 +6,16 @@ An e-mail program for the Atari ST, STE, TT and Falcon, written in C for GEM.
 
 **Highlights**
 
-- **IMAP and POP3 in, SMTP out**, with an Outbox, a mirror on disk for working offline, and Find as you type.
-- **Secure on any Atari:** through the Gateway (a Raspberry Pi), or a Direct connection with TLS 1.2 on a
-  Falcon or TT, RSA on the Falcon's DSP.
-- **Hebrew throughout:** right-to-left layout, the Israeli keyboard on F10, Hebrew in vector fonts through NVDI.
-- **Translate** messages, or a few chosen words, with the Gateway's translation service on your own network.
+- **IMAP and POP3 in, SMTP out**, with an Outbox for sending later and copies in Sent.
+- **Secure on any Atari:** through AERA-Gateway, or a Direct connection with TLS 1.2 on a Falcon or TT.
+- **Hebrew throughout:** right-to-left layout, the Israeli keyboard on F10, Hebrew in vector fonts.
+- **Works offline:** your folders mirrored on disk; read, flag and move, and the server catches up later.
+- **Find** narrows the list as you type; **Search server** looks through the messages' text.
+- **Many messages at once:** mark, flag, move or delete a selection together.
+- **Translate** messages, or a few chosen words, on your own network.
+- **People by name** from EContact, and calendar invitations straight into ECal.
 - **EMail check**, a small accessory, tells you about new mail while EMail isn't running.
+- **Any Atari:** TOS 1.04 to 4.x, EmuTOS, MagiC and MiNT, from a 1 MB ST to a Falcon.
 
 ![EMail on a Falcon in 256 colours: folders, the inbox and a message with its quoted reply in colour](docs/screenshot.png)
 
@@ -33,15 +37,9 @@ one or all together in `EMAIL-x.y.zip`:
 | `EMAIL.RSC`, `EMAILNV.RSC`, `*.ICN` | the desktop icon ([which one](docs/GUIDE.md#the-desktop-icon)) |
 
 1. Copy `EMAIL.PRG`, `EMAIL.HYP` and `EMAIL.REF` to a folder of their own, such as `C:\EMAIL\`.
-2. Set up the Gateway on a Raspberry Pi with [AERA-Gateway](https://github.com/whomper/AERA-Gateway):
-
-   ```
-   sudo apt install -y git && git clone https://github.com/whomper/AERA-Gateway ~/AERA-Gateway &&
-     ~/AERA-Gateway/update-pi.sh --allow ATARI_IP --mail IMAP_SERVER SMTP_SERVER[:587] [POP3_SERVER]
-   ```
-
-   Or, on a Falcon or TT, copy `TLS.OVL`, `CACERT.PEM` and `ROOTS.DAT` beside `EMAIL.PRG` and switch on
-   **Options > Direct connection**.
+2. Set up [AERA-Gateway](https://github.com/whomper/AERA-Gateway) on a Raspberry Pi with your
+   provider's servers. Or, on a Falcon or TT, copy `TLS.OVL`, `CACERT.PEM` and `ROOTS.DAT` beside
+   `EMAIL.PRG` and switch on **Options > Direct connection**.
 3. Start EMail and fill in your account in **Options > Accounts**. Gmail, iCloud, Yahoo and Fastmail need
    an [app password](docs/GUIDE.md#app-passwords-gmail-icloud-yahoo-fastmail).
 4. Press **Help** for the [user guide](docs/GUIDE.md).
@@ -50,12 +48,13 @@ To update, copy the new files over the old ones. Every step and tip: [docs/DETAI
 
 ## How it reaches the servers
 
-```
-ST, STE:     Atari (EMAIL.PRG) --plain, home LAN--> Raspberry Pi (emailgate.py) --TLS--> provider
-Falcon, TT:  Atari (EMAIL.PRG + TLS.OVL: TLS 1.2, RSA on the DSP) ---------------TLS--> provider
-```
-
-Speeds and details: [docs/DETAILS.md](docs/DETAILS.md#how-it-reaches-the-servers).
+Mail providers want encrypted connections, which an ST can't make at a usable speed.
+[AERA-Gateway](https://github.com/whomper/AERA-Gateway), a Raspberry Pi on your home network, does that
+for any Atari: EMail talks plain IMAP, POP3 and SMTP to it, and it reaches your provider over TLS. It also
+translates. On a Falcon or TT it is optional: a Direct
+connection does TLS on the Atari itself. Setting it up, every provider and option: the
+[Gateway's README](https://github.com/whomper/AERA-Gateway#readme); speeds:
+[docs/DETAILS.md](docs/DETAILS.md#performance-gateway-68030-and-dsp).
 
 ## Building
 
@@ -72,22 +71,16 @@ Releases, `TLS.OVL` and the DSP code: [docs/DEVELOPING.md](docs/DEVELOPING.md).
 
 ```
 src/      the mail core: IMAP, POP3, SMTP, MIME, the local store
-ui/       the GEM program; emailchk.c is EMAILCHK.ACC
-atari/    EMail's own part of the TOS runtime
-common/   code shared with the other AERA programs (from AERA-Atari)
-gateway/  the Raspberry Pi gateways, a copy of AERA-Gateway's
+ui/       the GEM program, and EMail check (emailchk.c)
+common/   code shared with the other AERA programs, from AERA-Atari
 tests/    unit, fuzz and integration tests, the Hatari rigs
-tools/    the help file, syncing, releases, TLS measurements
-docs/     the user guide and the pictures
 ```
+
+The other folders, and every test and rig: [docs/DEVELOPING.md](docs/DEVELOPING.md).
 
 ## Tests
 
-```sh
-make test                  # charsets, MIME, bidi, the fuzz inputs, the gateway's tests
-make itest                 # IMAP, POP3, SMTP against a local Dovecot (TLS=1, FALCON=1 too)
-tests/hatari/net_test.py   # EMAIL.PRG in the Hatari emulator; every rig: docs/DEVELOPING.md
-```
+`make test` runs the unit and fuzz tests and the gateway's; the rest is in [docs/DEVELOPING.md](docs/DEVELOPING.md#tests).
 
 ## Licence
 
