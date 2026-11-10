@@ -69,9 +69,10 @@ def asked(method, path):
 
 
 def popup_rows(shot, before):
-    """the pop-up's rows: the height of what changed under the button, by 16 lines"""
+    """the pop-up's rows: the height of what changed from the button down, by its 18-pixel rows (it
+    opens over its button, the current choice on it: D27)"""
     a, b = Image.open(before).convert("RGB"), Image.open(shot).convert("RGB")
-    box = (POPUP[0] - 60, POPUP[1] + 10, POPUP[0] + 60, POPUP[1] + 120)
+    box = (POPUP[0] - 60, POPUP[1] - 12, POPUP[0] + 60, POPUP[1] + 120)
     d = ImageChops.difference(a.crop(box), b.crop(box)).getbbox()
     return 0 if not d else round((d[3] - d[1] - 6) / 18.0)
 
@@ -150,7 +151,7 @@ try:
     n = popup_rows(r.shot("4-popup"), plain)
     check("after the job the pop-up asks the list again", len(asked("GET", "/languages")) == gets + 1, str(gate.log))
     check("... and lists English, German and Hebrew", n == 3, "%d rows" % n)
-    r.click(POPUP[0] - 20, POPUP[1] + 38)   # its second row: German
+    r.click(POPUP[0] - 20, POPUP[1] + 18)   # the row under the ticked one (English): German
     time.sleep(2)
     r.click(*OK)
     time.sleep(3)
