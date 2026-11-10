@@ -241,7 +241,7 @@ short  d_check(short x, short y, const char *s, short on);
 void   d_end(void);
 OBJECT *d_tree(void);
 #include "alert.h"		/* alert(): common/ui */
-void dlg_keys(void);			/* Help: the keys */
+void dlg_keys_box(void);			/* Help: the keys */
 
 /* menu commands (main.c) */
 enum {

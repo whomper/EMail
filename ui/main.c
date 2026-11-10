@@ -49,7 +49,7 @@ void editor_init(void);
 static void help_key_pressed(void)
 {
 	if (help_key(opt.workdir, "email.hyp", 0, "Keys"))
-		dlg_keys();
+		dlg_keys_box();
 }
 
 /* ---------------- menu ---------------- */
@@ -1335,7 +1335,7 @@ static void command(short cmd)
 	switch (cmd) {
 	case C_ABOUT: dlg_about(); break;
 	case C_HELP: help_key_pressed(); break;
-	case C_KEYS: dlg_keys(); break;
+	case C_KEYS: dlg_keys_box(); break;
 	case C_CUT:
 	case C_COPY:
 	case C_PASTE: clip_command(cmd); break;

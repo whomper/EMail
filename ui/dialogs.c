@@ -1538,7 +1538,7 @@ void words_box(const char *title, const char *text, long n)
 	free(rows);
 }
 
-void dlg_keys(void)
+void dlg_keys_box(void)
 {
 	static const char *lines[] = {
 		"^N  new message        \x01^N check mail (^K)",
