@@ -89,6 +89,7 @@ typedef struct {
 	short wrap;		/* compose wrap column */
 	short main_x, main_y, main_w, main_h;	/* main window, 0 = not yet placed */
 	short pane_w, pane_h;	/* folders pane width, message list height (pixels) */
+	short nofolders;	/* the folder pane hidden (Folder > Folder pane, \x01^S: D45) */
 	short ed_x, ed_y, ed_w, ed_h;		/* the editor window */
 	short font_id, font_pt;	/* text font: VDI font id (1 = system) and size */
 	short hebfont;		/* where the font has its Hebrew letters: HEB_* */

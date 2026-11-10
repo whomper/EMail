@@ -105,6 +105,7 @@ static const MBAR_ITEM m_edit[] = {
 	{ 0, 0, 0 }
 };
 static const MBAR_ITEM m_fold[] = {
+	{ "Folder pane", "\x01^S", C_FOLDERPANE },	/* shows or hides it (Erez, 10 Nov 2026: D45) */
 	{ "Show folders", 0, C_FOLDERS },
 	{ "Refresh folder list", 0, C_REFRESH },
 	{ "New folder...", 0, C_NEWFOLDER },
@@ -194,6 +195,7 @@ void menu_update(void)
 	check(C_OFFLINE, opt.offline);
 	check(C_FALCON, opt.falcon);
 	check(C_TRANSLATE, opt.translate);
+	check(C_FOLDERPANE, !opt.nofolders);
 	check(C_LOG, opt.log);
 }
 
@@ -1412,6 +1414,7 @@ static void command(short cmd)
 		}
 		break;
 	case C_FOLDERS: main_open(); break;
+	case C_FOLDERPANE: win_folders_toggle(); break;
 	case C_REFRESH: {
 		short i;
 		char server[160];
@@ -1568,7 +1571,7 @@ static int shortcut(short kstate, short key)
 		case 0x2d: cmd = C_CUT; break;		/* X */
 		case 0x2f: cmd = C_PASTE; break;	/* V */
 		case 0x20: cmd = shift ? C_SEND : C_NONE; break;	/* D */
-		case 0x1f: cmd = C_SAVEOUT; break;	/* S: into the Outbox */
+		case 0x1f: cmd = shift ? C_FOLDERPANE : C_SAVEOUT; break;	/* S: into the Outbox; Shift: the folder pane (D45) */
 		case 0x14: cmd = C_ATTACH; break;	/* T */
 		case 0x30: cmd = C_ABOOK; break;	/* B */
 		case 0x33: cmd = C_SETTINGS; break;	/* , */
@@ -1590,9 +1593,19 @@ static int shortcut(short kstate, short key)
 			return 1;
 		}
 	}
+	/* Insert opens the context menu where the selection is, or at the
+	   pane's top left (Erez, 10 Nov 2026: D17) */
+	if (scan == 0x52 && !(kstate & (K_LSHIFT | K_RSHIFT)) && top && top->rclick && (top->pane || top == &w_editor)) {
+		short x = top->work.x, y = top->work.y + top->head_h;
+		if (top->insert_at)
+			top->insert_at(top, &x, &y);
+		top->rclick(top, x, y);
+		return 1;
+	}
 	/* Tab moves the keyboard to the next pane */
 	if (scan == 0x0f && top && top->pane) {
-		win_focus(top == &w_folders ? &w_list : top == &w_list ? &w_reader : &w_folders);
+		win_focus(top == &w_folders ? &w_list : top == &w_list ? &w_reader :
+			  opt.nofolders ? &w_list : &w_folders);	/* a hidden pane is passed over */
 		return 1;
 	}
 	/* Delete removes the message unless the editor has the keyboard */

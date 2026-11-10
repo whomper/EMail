@@ -32,6 +32,7 @@ struct WIN {
 	void (*click)(WIN *w, short mx, short my, short clicks, short kstate);
 	int  (*key)(WIN *w, short kstate, short key);	/* 1 = handled */
 	void (*rclick)(WIN *w, short mx, short my);	/* right button: context menu */
+	void (*insert_at)(WIN *w, short *x, short *y);	/* where Insert opens it: the selection (D17) */
 	void (*closed)(WIN *w);
 	void (*resized)(WIN *w);
 	void (*scrolled)(WIN *w);
@@ -92,6 +93,7 @@ int win_icon_on_top(void);		/* the top window is iconified */
 int  win_mouse(short mx, short my, short button, short clicks, short kstate);
 void win_hover(short mx, short my);
 void win_focus(WIN *w);
+void win_folders_toggle(void);
 void win_relayout(void);			/* after a font change */
 void win_redraw_all(void);
 extern int win_skip_open_redraw;	/* main.c: the first whole-window WM_REDRAW is left */
@@ -249,7 +251,7 @@ enum {
 	C_CUT, C_COPY, C_PASTE, C_SELALL, C_FIND,
 	C_REPLY, C_REPLYALL, C_FORWARD, C_UNREAD, C_MARKREAD, C_FLAG, C_MOVE, C_DELETE,
 	C_SEND, C_SAVEOUT, C_ATTACH, C_ABOOK,
-	C_FOLDERS, C_REFRESH, C_NEWFOLDER, C_RENFOLDER, C_DELFOLDER,
+	C_FOLDERS, C_FOLDERPANE, C_REFRESH, C_NEWFOLDER, C_RENFOLDER, C_DELFOLDER,
 	C_ACCOUNTS, C_SETTINGS, C_FONT, C_OFFLINE, C_FALCON, C_TRANSLATE, C_LOG
 };
 void ui_command(short cmd);

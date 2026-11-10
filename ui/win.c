@@ -152,9 +152,18 @@ static void layout(void)
 		lh = minh;
 	opt.pane_w = fw;
 	opt.pane_h = lh;
-	set_pane(&w_folders, mwork.x, mwork.y, fw, mwork.h);
-	set_pane(&w_list, mwork.x + fw + DIV, mwork.y, mwork.w - fw - DIV, lh);
-	set_pane(&w_reader, mwork.x + fw + DIV, mwork.y + lh + DIV, mwork.w - fw - DIV, mwork.h - lh - DIV);
+	if (opt.nofolders) {
+		/* the folder pane hidden (D45): the list and the message take
+		   the window's width; the pane keeps its width for when it
+		   comes back */
+		set_pane(&w_folders, mwork.x, mwork.y, 0, 0);
+		set_pane(&w_list, mwork.x, mwork.y, mwork.w, lh);
+		set_pane(&w_reader, mwork.x, mwork.y + lh + DIV, mwork.w, mwork.h - lh - DIV);
+	} else {
+		set_pane(&w_folders, mwork.x, mwork.y, fw, mwork.h);
+		set_pane(&w_list, mwork.x + fw + DIV, mwork.y, mwork.w - fw - DIV, lh);
+		set_pane(&w_reader, mwork.x + fw + DIV, mwork.y + lh + DIV, mwork.w - fw - DIV, mwork.h - lh - DIV);
+	}
 	w_list.head_h = ch + 3 + find_row_h();	/* Find's row above the column titles */
 	for (i = 0; i < NPANE; i++) {
 		WIN *w = panes[i];
@@ -172,7 +181,7 @@ static GRECT div_v(void)
 	GRECT r;
 	r.x = w_folders.box.x + w_folders.box.w;
 	r.y = mwork.y;
-	r.w = DIV;
+	r.w = opt.nofolders ? 0 : DIV;	/* none with the pane hidden */
 	r.h = mwork.h;
 	return r;
 }
@@ -716,6 +725,18 @@ void win_close(WIN *w)
 }
 
 /* keyboard focus to a pane (its header goes dark) */
+/* Folder > Folder pane, \x01^S: the folder pane shown or hidden (D45) */
+void win_folders_toggle(void)
+{
+	opt.nofolders = !opt.nofolders;
+	if (opt.nofolders && focus == &w_folders)
+		win_focus(&w_list);
+	layout();
+	main_redraw(0);
+	store_save_settings();
+	menu_update();
+}
+
 void win_focus(WIN *w)
 {
 	WIN *old = focus;
@@ -1031,7 +1052,7 @@ static void divider_drag(int vertical)
 static int on_divider(short mx, short my, int vertical)
 {
 	GRECT r = vertical ? div_v() : div_h();
-	if (main_h <= 0)
+	if (main_h <= 0 || (vertical && opt.nofolders))
 		return 0;
 	if (vertical) {
 		r.x -= 3;

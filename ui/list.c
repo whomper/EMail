@@ -1108,6 +1108,15 @@ void message_menu(short mx, short my, int with_open)
 	}
 }
 
+/* Insert's menu at the selected row's top left (D17) */
+static void insert_at(WIN *w, short *x, short *y)
+{
+	if (sel >= w->top && sel < w->top + win_rows(w)) {
+		*x = w->work.x;
+		*y = w->work.y + w->head_h + (short)((sel - w->top) * ch);
+	}
+}
+
 static void rclick(WIN *w, short mx, short my)
 {
 	long i;
@@ -1201,6 +1210,7 @@ void list_init(void)
 	w_list.draw = draw;
 	w_list.click = click;
 	w_list.rclick = rclick;
+	w_list.insert_at = insert_at;
 	w_list.key = key;
 	strcpy(w_list.title, "Messages");
 }

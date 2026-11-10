@@ -294,6 +294,15 @@ static void click(WIN *w, short mx, short my, short clicks, short kstate)
 	folders_select(ent[i].a, ent[i].fi);
 }
 
+/* Insert's menu at the selected folder's row (D17) */
+static void insert_at(WIN *w, short *x, short *y)
+{
+	if (sel >= w->top && sel < w->top + win_rows(w)) {
+		*x = w->work.x;
+		*y = w->work.y + (short)((sel - w->top) * ch);
+	}
+}
+
 static void rclick(WIN *w, short mx, short my)
 {
 	long i = w->top + (my - w->work.y) / ch;
@@ -427,6 +436,7 @@ void folders_init(void)
 	w_folders.draw = draw;
 	w_folders.click = click;
 	w_folders.rclick = rclick;
+	w_folders.insert_at = insert_at;
 	w_folders.key = key;
 	strcpy(w_folders.title, "Folders");
 }

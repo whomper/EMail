@@ -475,6 +475,7 @@ static void set_opt(const char *k, const char *v)
 	else if (!strcmp(k, "wrap")) opt.wrap = n < 40 ? 40 : n > 78 ? 78 : n;
 	else if (!strcmp(k, "main")) shorts(v, &opt.main_x, 4);
 	else if (!strcmp(k, "panes")) shorts(v, &opt.pane_w, 2);
+	else if (!strcmp(k, "sidebar")) opt.nofolders = atoi(v) == 0;
 	else if (!strcmp(k, "editor")) shorts(v, &opt.ed_x, 4);
 	else if (!strcmp(k, "font")) shorts(v, &opt.font_id, 2);
 	else if (!strcmp(k, "falcon")) {
@@ -704,6 +705,7 @@ int store_save_settings(void)
 		"MAIN", "%d,%d,%d,%d", opt.main_x, opt.main_y, opt.main_w, opt.main_h);
 	put_fmt(&b, "dividers: folder pane width, message list height, in pixels",
 		"PANES", "%d,%d", opt.pane_w, opt.pane_h);
+	put_fmt(&b, "the folder pane: 1 shown, 0 hidden (Folder > Folder pane)", "SIDEBAR", "%d", !opt.nofolders);
 	put_fmt(&b, "editor window x,y,width,height in pixels; 0,0,0,0 = let EMail place it",
 		"EDITOR", "%d,%d,%d,%d", opt.ed_x, opt.ed_y, opt.ed_w, opt.ed_h);
 	put_fmt(&b, "text font: GDOS font id (1 = system font), size (system font: 0, 8 small, 16 large)",

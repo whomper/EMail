@@ -1316,6 +1316,17 @@ static void click(WIN *w, short mx, short my, short clicks, short kstate)
 	move_to(line, col);
 }
 
+/* Insert's menu at the cursor (D17) */
+static void insert_at(WIN *w, short *x, short *y)
+{
+	short cols = TEXT_COLS(w->work.w), hoff = 0, c;
+	if (cy < w->top || cy >= w->top + win_rows(w))
+		return;
+	c = cursor_col(cy, cx, cols, &hoff);
+	*x = TEXT_X(w->work.x) + (c < 0 ? 0 : c) * cw;
+	*y = w->work.y + w->head_h + (short)((cy - w->top) * ch);
+}
+
 static void rclick(WIN *w, short mx, short my)
 {
 	const char *lab[9];
@@ -1350,6 +1361,7 @@ void editor_init(void)
 	w_editor.key = key;
 	w_editor.click = click;
 	w_editor.rclick = rclick;
+	w_editor.insert_at = insert_at;
 	w_editor.closed = closed;
 	w_editor.resized = resized;
 	strcpy(w_editor.title, " New message ");

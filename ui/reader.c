@@ -1216,6 +1216,22 @@ static void click(WIN *w, short mx, short my, short clicks, short kstate)
 
 void message_menu(short mx, short my, int with_open);
 
+/* Insert's menu at the chosen words, the first of them in sight (D17) */
+static void insert_at(WIN *w, short *x, short *y)
+{
+	long n, rows = win_rows(w);
+	TSRUN run[4];
+	view_now();
+	if (!cur_msg || !ts_has(&sel, &view))
+		return;
+	for (n = w->top; n < w->top + rows; n++)
+		if (ts_rects(&sel, &view, n, run, 4) > 0) {
+			*x = (short)run[0].x0;
+			*y = w->work.y + (short)((n - w->top) * ch);
+			return;
+		}
+}
+
 static void rclick(WIN *w, short mx, short my)
 {
 	long i = w->top + (my - w->work.y) / ch, k = link_at(mx, my);
@@ -1285,6 +1301,7 @@ void reader_init(void)
 	w_reader.draw = draw;
 	w_reader.click = click;
 	w_reader.rclick = rclick;
+	w_reader.insert_at = insert_at;
 	w_reader.key = key;
 	w_reader.resized = resized;
 	strcpy(w_reader.title, "Message");
