@@ -46,6 +46,7 @@ enum { T_KEEP, T_LOG, T_FALCON, T_DSP, T_COLOUR, T_PFILE, T_START, T_LEAVE };
 #define NTICK 8
 static short tick_box[NTICK], tick_lbl[NTICK], tick_var[NTICK], nticks;
 static short d_tick(short x, short y, const char *label, short var);
+static void d_title(short w, const char *title);
 
 void d_begin(short w, short h)
 {
@@ -423,11 +424,14 @@ static short d_do_named(const char *name, short edit)
 {
 	short x, y, w, h, r;
 	dlg_name(name);
+	if (band_obj)
+		dlg_band(band_obj);	/* in a window its title says it (3.5) */
 	dlg_open(tree, &x, &y, &w, &h);
 	do
 		r = form_loop(edit) & 0x7fff;
 	while (tick_hit(r));	/* a bitmap tick (5.6): changed, and on */
 	dlg_close();
+	band_obj = 0;
 	tree[r].ob_state &= ~SELECTED;
 	nlf = npw = 0;
 	return r;
@@ -475,9 +479,9 @@ int dlg_account(ACCOUNT *a)
 	   pixels apart so the frames don't touch */
 	a_gap = gl_hchar >= 16 ? 3 : 2;
 	d_begin(62, (short)(21 + (16 * a_gap + gl_hchar - 1) / gl_hchar));
-	d_add(G_STRING, 0, 0, (long)"Mail account", 2, 1, 12, 1);
-	d_text(16, 1, opt.falcon ? "Direct connection: the provider's servers"
-				 : "the Gateway's servers and login");
+	d_title(62, "Mail account");
+	d_text(2, 1, opt.falcon ? "Direct connection: the provider's servers"
+				: "The Gateway's servers and login");
 	d_text(2, AY(3), "Account name:");
 	f_name = d_framed(d_long(17, AY(3), name, 30, sizeof(name) - 1, 0));
 	d_text(2, AY(4), "Your name:");
@@ -614,6 +618,19 @@ static TEDINFO *d_ted(const char *text, short just, short color)
 static void d_band(short w, const char *title)
 {
 	band_obj = d_add(G_BOXTEXT, 0, 0, (long)d_ted(title, 0, 0x1071), 0, 0, w, 1);
+}
+
+/* a dialog's title as the family's black band across its top (D22): in
+   a MiNT or MagiC window the window's title says it instead (dlg_band) */
+static char band_text[8][64];
+static short band_next;
+
+static void d_title(short w, const char *title)
+{
+	char *t = band_text[band_next++ & 7];
+	t[0] = ' ';
+	str_copy(t + 1, title, sizeof(band_text[0]) - 1);
+	d_band(w, t);
 }
 
 static short d_tick(short x, short y, const char *label, short var)
@@ -1255,7 +1272,7 @@ int dlg_ask(const char *title, const char *label, char *buf, short cap)
 		len = 46;		/* it shows that much, and holds cap */
 	str_copy(field, buf, (size_t)cap + 1);
 	d_begin(len + 6 > 40 ? len + 6 : 40, 8);
-	d_add(G_STRING, 0, 0, (long)title, 2, 1, (short)strlen(title), 1);
+	d_title(len + 6 > 40 ? len + 6 : 40, title);
 	d_text(2, 3, label);
 	f = d_framed(d_long(2, 4, field, len, cap, 0));
 	d_button((len + 6 > 40 ? len + 6 : 40) - 24, 6, 10, "Cancel", EXIT);
@@ -1293,7 +1310,7 @@ static short pick_w(const char *title, const char **items, short n, short lw)
 	if (tw > lw + 2)
 		lw = tw > PW ? PW : tw - 2;
 	d_begin(lw + 8, PROWS + 8);
-	d_add(G_STRING, 0, 0, (long)title, 2, 1, (short)strlen(title), 1);
+	d_title(lw + 8, title);
 	box = d_add(G_BOX, 0, 0, 0x00FF1100L, 2, 3, lw, PROWS);
 	for (i = 0; i < PROWS; i++)
 		row[i] = d_add(G_STRING, TOUCHEXIT, 0, (long)shown[i], 2, 3 + i, lw, 1);
@@ -1339,6 +1356,8 @@ static short pick_w(const char *title, const char **items, short n, short lw)
 		if (result == -1) {
 			/* first time round: open the dialog */
 			dlg_name(title);
+			if (band_obj)
+				dlg_band(band_obj);	/* in a window its title says it (3.5) */
 			dlg_open(tree, &x, &y, &w, &h);
 			result = -2;
 		} else {
@@ -1387,6 +1406,7 @@ static short pick_w(const char *title, const char **items, short n, short lw)
 	}
 	dlg_area(&x, &y, &w, &h);	/* where it is now: it may have been moved */
 	dlg_close();
+	band_obj = 0;
 	pick_area.x = x;
 	pick_area.y = y;
 	pick_area.w = w;
@@ -1591,7 +1611,7 @@ void words_box(const char *title, const char *text, long n)
 		nr = 1;
 	}
 	d_begin(TB_W + 4, nr + 6);
-	d_add(G_STRING, 0, 0, (long)title, 2, 1, (short)strlen(title), 1);
+	d_title(TB_W + 4, title);
 	for (i = 0; i < nr; i++)
 		d_text(2, (short)(3 + i), rows[i]);
 	d_button(TB_W - 8, nr + 4, 10, "OK", EXIT | DEFAULT);
@@ -1621,7 +1641,7 @@ void dlg_keys_box(void)
 	};
 	short i, n = (short)(sizeof(lines) / sizeof(lines[0]));
 	d_begin(52, n + 6);
-	d_add(G_STRING, 0, 0, (long)"Keys", 2, 1, 4, 1);
+	d_title(52, "Keys");
 	for (i = 0; i < n; i++)
 		d_text(3, 3 + i, lines[i]);
 	d_button(40, n + 4, 10, "OK", EXIT | DEFAULT);
