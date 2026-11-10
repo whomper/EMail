@@ -813,7 +813,10 @@ static int scroll_copy(WIN *w, GRECT *a, long d)
 	GRECT r, strip;
 	short pxy[8], dy;
 	long rows = win_rows(w);
-	if (!w->pane || main_h <= 0 || main_iconified || !d || d >= rows || -d >= rows)
+	/* a copy pays only while it keeps most of the pane: a page (rows - 1,
+	   W5) is drawn whole, as the speed rig wants (copying one line and
+	   drawing the rest in a strip took an 8 MHz ST 50 ms more) */
+	if (!w->pane || main_h <= 0 || main_iconified || !d || d > rows / 2 || -d > rows / 2)
 		return 0;
 	dy = (short)((d < 0 ? -d : d) * w->line_h);
 	if (dy >= a->h)
