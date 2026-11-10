@@ -169,13 +169,54 @@ void font_reselect(void)
 	ch = keep_ch;
 }
 
+/* a GDOS font's name for its id, and the other way (FONT= keeps the name,
+   D43: an id is the order the fonts were loaded in, which ASSIGN.SYS or
+   NVDI may change) */
+static int font_name_of(short id, char *out)
+{
+	short i, n = gdos_fonts > 0 ? gdos_fonts : 0;
+	char name[34];
+	for (i = 2; i <= n + 1; i++)
+		if (vqt_name(vdi_h, i, name) == id) {
+			short l = 32;
+			name[32] = 0;
+			while (l > 0 && (name[l - 1] == ' ' || !name[l - 1]))
+				l--;
+			name[l] = 0;
+			strcpy(out, name);
+			return 1;
+		}
+	return 0;
+}
+
+static short font_id_of(const char *want)
+{
+	short i, n = gdos_fonts > 0 ? gdos_fonts : 0;
+	char name[34];
+	for (i = 2; i <= n + 1; i++) {
+		short id = vqt_name(vdi_h, i, name), l = 32;
+		name[32] = 0;
+		while (l > 0 && (name[l - 1] == ' ' || !name[l - 1]))
+			l--;
+		name[l] = 0;
+		if (!strcmp(name, want))
+			return id;
+	}
+	return 1;
+}
+
 void font_apply(void)
 {
 	if (opt.font_id != 1 && gdos_fonts < 0 && vq_gdos())
 		gdos_fonts = vst_load_fonts(vdi_h, 0);
+	if (opt.font_name[0])
+		opt.font_id = font_id_of(opt.font_name);	/* FONT=name,points */
+	else if (opt.font_id != 1 && !font_name_of(opt.font_id, opt.font_name))
+		opt.font_id = 1;			/* the old FONT=id,pt, named for the next save */
 	if (!set_font(opt.font_id, opt.font_pt)) {
 		opt.font_id = 1;
 		opt.font_pt = 0;
+		opt.font_name[0] = 0;
 		set_font(1, 0);
 	}
 }
@@ -229,8 +270,13 @@ static short format_of(short id)
 /* OK: the font for the windows, kept in EMAIL.INF */
 static void take(fontsel *s)
 {
+	if (s->gdos >= 0)
+		gdos_fonts = s->gdos;	/* the fonts the dialog loaded: their names are asked below */
 	opt.font_id = s->id;
 	opt.font_pt = s->pt;
+	opt.font_name[0] = 0;
+	if (s->id != 1 && !font_name_of(s->id, opt.font_name))
+		opt.font_id = 1;
 	font_apply();
 	store_save_settings();
 	win_relayout();

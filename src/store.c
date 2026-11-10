@@ -473,11 +473,28 @@ static void set_opt(const char *k, const char *v)
 	else if (!strcmp(k, "log")) opt.log = n;
 	else if (!strcmp(k, "offline")) offline_inf = n != 0;
 	else if (!strcmp(k, "wrap")) opt.wrap = n < 40 ? 40 : n > 78 ? 78 : n;
-	else if (!strcmp(k, "main")) shorts(v, &opt.main_x, 4);
+	else if (!strcmp(k, "window")) shorts(v, &opt.main_x, 4);
+	else if (!strcmp(k, "main") && !opt.main_w) shorts(v, &opt.main_x, 4);	/* the old key, read once: WINDOW= wins (D44) */
 	else if (!strcmp(k, "panes")) shorts(v, &opt.pane_w, 2);
 	else if (!strcmp(k, "sidebar")) opt.nofolders = atoi(v) == 0;
 	else if (!strcmp(k, "editor")) shorts(v, &opt.ed_x, 4);
-	else if (!strcmp(k, "font")) shorts(v, &opt.font_id, 2);
+	else if (!strcmp(k, "font")) {
+		/* FONT=name,points (D43); the old FONT=id,pt read once (D44) */
+		const char *c = strrchr(v, ',');
+		if (v[0] >= '0' && v[0] <= '9') {
+			shorts(v, &opt.font_id, 2);
+		} else if (c) {
+			size_t l = (size_t)(c - v);
+			if (l >= sizeof(opt.font_name))
+				l = sizeof(opt.font_name) - 1;
+			memcpy(opt.font_name, v, l);
+			opt.font_name[l] = 0;
+			opt.font_pt = (short)atoi(c + 1);
+			if (!strcasecmp(opt.font_name, "system"))
+				opt.font_name[0] = 0;
+			opt.font_id = opt.font_name[0] ? -1 : 1;	/* the id is found by its name (font.c) */
+		}
+	}
 	else if (!strcmp(k, "falcon")) {
 		falcon_inf = n != 0;
 		opt.falcon = tls_available && falcon_usable && falcon_inf;
@@ -702,14 +719,14 @@ int store_save_settings(void)
 	put_str(&b, "added below new messages from every account; \\n starts a new line (up to 4)",
 		"SIGNATURE", opt.signature);
 	put_fmt(&b, "main window x,y,width,height in pixels; 0,0,0,0 = let EMail place it",
-		"MAIN", "%d,%d,%d,%d", opt.main_x, opt.main_y, opt.main_w, opt.main_h);
+		"WINDOW", "%d,%d,%d,%d", opt.main_x, opt.main_y, opt.main_w, opt.main_h);
 	put_fmt(&b, "dividers: folder pane width, message list height, in pixels",
 		"PANES", "%d,%d", opt.pane_w, opt.pane_h);
 	put_fmt(&b, "the folder pane: 1 shown, 0 hidden (Folder > Folder pane)", "SIDEBAR", "%d", !opt.nofolders);
 	put_fmt(&b, "editor window x,y,width,height in pixels; 0,0,0,0 = let EMail place it",
 		"EDITOR", "%d,%d,%d,%d", opt.ed_x, opt.ed_y, opt.ed_w, opt.ed_h);
-	put_fmt(&b, "text font: GDOS font id (1 = system font), size (system font: 0, 8 small, 16 large)",
-		"FONT", "%d,%d", opt.font_id, opt.font_pt);
+	put_fmt(&b, "text font: its name (System: the system font), size in points (the system font: 0, 8 small, 16 large)",
+		"FONT", "%s,%d", opt.font_name[0] ? opt.font_name : "System", opt.font_pt);
 	put_fmt(&b, "the font's Hebrew letters: 0 = Atari places, 1 = ISO-8859-8, 2 = DOS 862 (Options > Font)",
 		"HEBFONT", "%d", opt.hebfont);
 	put_fmt(&b, "1 = Direct connection: TLS on the Atari (TLS.OVL, a 68020 or better), straight to the providers; 0 = through the Gateway",

@@ -277,9 +277,9 @@ finally:
 
 fl = font_line()
 if skipped:
-    check("email.inf keeps the system font", fl.split(",")[0].strip() in ("", "1"), "FONT=" + fl)
+    check("email.inf keeps the system font", fl.split(",")[0].strip() in ("", "1", "System"), "FONT=" + fl)
 else:
-    check("email.inf says FONT= the GDOS font", bool(fl) and fl.split(",")[0].strip() not in ("", "1"),
+    check("email.inf says FONT= the GDOS font, by its name (D43)", bool(fl) and fl.split(",")[0].strip() not in ("", "1", "System"),
           "FONT=" + fl)
 
 # 2. started again in that font, offline: from what is on disk

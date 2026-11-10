@@ -92,6 +92,7 @@ typedef struct {
 	short nofolders;	/* the folder pane hidden (Folder > Folder pane, \x01^S: D45) */
 	short ed_x, ed_y, ed_w, ed_h;		/* the editor window */
 	short font_id, font_pt;	/* text font: VDI font id (1 = system) and size */
+	char font_name[34];	/* its name, as FONT= keeps it (D43); "" for the system font */
 	short hebfont;		/* where the font has its Hebrew letters: HEB_* */
 	short falcon;		/* Direct connection: TLS on the Atari (and its DSP), no gateway */
 	short dsp;		/* Direct connection may use the DSP (else the 68030 does it all) */
