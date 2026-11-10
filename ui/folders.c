@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "ui.h"
+#include "click.h"
 #include "theme.h"
 #include "../src/plat.h"
 #include "../src/mail.h"
@@ -267,10 +268,18 @@ void folders_select(ACCOUNT *a, FINFO *fi)
 static void click(WIN *w, short mx, short my, short clicks, short kstate)
 {
 	long i = w->top + (my - w->work.y) / ch;
-	(void)mx;
+	GRECT r;
+	short dx, dy;
 	(void)clicks;
 	(void)kstate;
 	if (i < 0 || i >= nent)
+		return;
+	/* done on the release over the row (5.8, click.h: W24) */
+	r.x = w->work.x;
+	r.y = w->work.y + (short)((i - w->top) * ch);
+	r.w = w->work.w;
+	r.h = ch;
+	if (press_track(&r, mx, my, 0, ui_press_message, &dx, &dy) != PRESS_IN)
 		return;
 	if (!ent[i].fi) {
 		/* the account line: check this account */

@@ -500,32 +500,53 @@ void editor_bar_redraw(void)
 	win_redraw(&w_editor, &r);
 }
 
-/* a click on the bar: the button acts at once, shown pressed a moment */
+/* a button of the bar shown pressed (inverted) or not */
+static void eb_invert(GRECT *r)
+{
+	short p[4];
+	wind_update(BEG_UPDATE);
+	graf_mouse(M_OFF, 0);
+	clip_on(r);
+	p[0] = r->x + 1;
+	p[1] = r->y + 1;
+	p[2] = r->x + r->w - 2;
+	p[3] = r->y + r->h - 2;
+	vswr_mode(vdi_h, 3);
+	vsf_interior(vdi_h, 1);
+	vsf_color(vdi_h, 1);
+	vr_recfl(vdi_h, p);
+	vswr_mode(vdi_h, 1);
+	attr_forget();
+	graf_mouse(M_ON, 0);
+	wind_update(END_UPDATE);
+}
+
+/* a press on the bar: the button sinks while it is held and the pointer
+   is on it, and acts when it is let go there (Erez, 9 Nov 2026: D32, 5.8);
+   let go elsewhere, nothing happens */
 static void bar_click(short mx, short my)
 {
 	int i;
 	for (i = 0; i < NEB; i++) {
 		GRECT r = eb[i];
-		short p[4];
+		short x = mx, y = my, b = 1, k, in = 1;
 		if (!on_rect(&r, mx, my))
 			continue;
-		wind_update(BEG_UPDATE);
-		graf_mouse(M_OFF, 0);
-		clip_on(&r);
-		p[0] = r.x + 1;
-		p[1] = r.y + 1;
-		p[2] = r.x + r.w - 2;
-		p[3] = r.y + r.h - 2;
-		vswr_mode(vdi_h, 3);
-		vsf_interior(vdi_h, 1);
-		vsf_color(vdi_h, 1);
-		vr_recfl(vdi_h, p);
-		vswr_mode(vdi_h, 1);
-		attr_forget();
-		graf_mouse(M_ON, 0);
-		wind_update(END_UPDATE);
-		evnt_timer_(80);
-		editor_bar_redraw();
+		eb_invert(&r);
+		while (b & 1) {
+			int now;
+			evnt_timer_(10);
+			graf_mkstate(&x, &y, &b, &k);
+			now = on_rect(&r, x, y);
+			if (now != in) {
+				eb_invert(&r);
+				in = now;
+			}
+		}
+		if (in)
+			eb_invert(&r);
+		if (!in)
+			return;
 		switch (i) {
 		case EB_SEND: editor_send(1); break;
 		case EB_OUTBOX: editor_send(0); break;

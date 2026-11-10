@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "ui.h"
+#include "click.h"
 #include "theme.h"
 #include "../src/mail.h"
 #include "../src/compose.h"
@@ -601,6 +602,14 @@ static void people_setup(void)
 static short kept[8][8];
 static int nkept;
 static char *kept_start;		/* a VA_START that came meanwhile */
+
+void ui_press_message(short *msg)
+{
+	if (msg[0] == WM_REDRAW)
+		win_message(msg);	/* a window uncovered while a row is held */
+	else
+		ui_modal_message(msg);
+}
 
 void ui_modal_message(const short *msg)
 {
@@ -1249,8 +1258,9 @@ static short double_click(short mx, short my)
 {
 	static unsigned long last;
 	static short lx, ly;
-	unsigned long now = pf_ms();
-	short n = (now - last < 400 && mx - lx < 4 && lx - mx < 4 && my - ly < 4 && ly - my < 4) ? 2 : 1;
+	unsigned long now = pf_ms(), t = press_dclick();	/* the desktop's double-click time (click.h, W24) */
+	short n = (now - last < t && mx - lx < CLICK_SLOP && lx - mx < CLICK_SLOP && my - ly < CLICK_SLOP &&
+		   ly - my < CLICK_SLOP) ? 2 : 1;
 	last = n == 2 ? 0 : now;
 	lx = mx;
 	ly = my;

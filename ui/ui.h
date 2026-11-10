@@ -56,7 +56,8 @@ extern short ap_id;
 /* EContact (main.c, common/ui/people_ask.c): names for addresses, and
    people picked in its window */
 #include "people_ask.h"
-void ui_modal_message(const short *msg);	/* a modal loop's MU_MESAG */
+void ui_modal_message(const short *msg);
+void ui_press_message(short *msg);	/* the same, for press_track (click.h) */	/* a modal loop's MU_MESAG */
 void ui_redraws(void);		/* queued redraws now, before a long wait */
 void editor_names_came(void);
 void editor_picked(const PERSON *list, int n);

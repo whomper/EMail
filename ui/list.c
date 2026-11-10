@@ -1027,14 +1027,40 @@ static void click(WIN *w, short mx, short my, short clicks, short kstate)
 		mark_click(i, kstate);
 		return;
 	}
-	if (clicks < 2 && i >= 0 && i < nview && drag_messages(i, mx, my))
+	if (clicks < 2 && i >= 0 && i < nview) {
+		/* a single press: the row highlighted at once, its message shown
+		   in the next turns, as a key does (Erez, 4 Nov 2026: the item
+		   chosen is selected before the action behind it); held and moved,
+		   a drag onto a folder (press_track: 5.8, W24). A row of several
+		   selected keeps them for the drag, and is chosen alone on release */
+		GRECT r;
+		short dx, dy;
+		int keep = nmarks > 1 && marked(i);
+		r.x = w->work.x;
+		r.y = w->work.y + w->head_h + (short)((i - w->top) * ch);
+		r.w = w->work.w;
+		r.h = ch;
+		if (!keep) {
+			later = 1;
+			select_row(i, 0);
+			later = 0;
+		}
+		switch (press_track(&r, mx, my, 0, ui_press_message, &dx, &dy)) {
+		case PRESS_DRAG:
+			drag_messages(i, mx, my);
+			break;
+		case PRESS_IN:
+			if (keep) {
+				later = 1;
+				select_row(i, 0);
+				later = 0;
+			}
+			break;
+		}
 		return;
-	/* a single click: the row highlighted at once, the message shown in
-	   the next turns, as a key does (Erez, 4 Nov 2026: the item chosen
-	   is selected before the action behind it) */
-	later = clicks < 2;
-	select_row(i, clicks > 1);
+	}
 	later = 0;
+	select_row(i, clicks > 1);	/* the double click: the message opened */
 }
 
 /* the message menu, shared with the reader */
