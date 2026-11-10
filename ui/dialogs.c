@@ -40,9 +40,17 @@ OBJECT *d_tree(void)
 	return tree;
 }
 
+static short s_on[8];			/* keep, log, falcon, dsp, colour, people file, start; an account's leave */
+enum { T_KEEP, T_LOG, T_FALCON, T_DSP, T_COLOUR, T_PFILE, T_START, T_LEAVE };
+
+#define NTICK 8
+static short tick_box[NTICK], tick_lbl[NTICK], tick_var[NTICK], nticks;
+static short d_tick(short x, short y, const char *label, short var);
+
 void d_begin(short w, short h)
 {
 	static short eyes_made;
+	nticks = 0;	/* a dialog's ticks are its own */
 	if (!eyes_made) {
 		make_eyes();
 		eyes_made = 1;
@@ -85,6 +93,25 @@ short d_add(short type, short flags, short state, long spec, short x, short y, s
 	return i;
 }
 
+/* the objects added after box become its children, placed relative to it
+   (EFTP's d_nest: a list's rows inside its well, C10) */
+static void d_nest(short box)
+{
+	short i;
+	if (last_child == box)
+		return;
+	tree[box].ob_head = box + 1;
+	tree[box].ob_tail = last_child;
+	tree[last_child].ob_next = box;
+	for (i = box + 1; i <= last_child; i++) {
+		tree[i].ob_x -= tree[box].ob_x;
+		tree[i].ob_y -= tree[box].ob_y;
+	}
+	tree[box].ob_next = 0;
+	tree[0].ob_tail = box;
+	last_child = box;
+}
+
 short d_text(short x, short y, const char *s)
 {
 	return d_add(G_STRING, 0, 0, (long)s, x, y, (short)strlen(s), 1);
@@ -113,11 +140,6 @@ static short d_edit(short x, short y, char *buf, short len, char kind)
 short d_button(short x, short y, short w, const char *s, short flags)
 {
 	return d_add(G_BUTTON, SELECTABLE | flags, 0, (long)s, x, y, w, 1);
-}
-
-short d_check(short x, short y, const char *s, short on)
-{
-	return d_add(G_BUTTON, SELECTABLE, on ? SELECTED : 0, (long)s, x, y, (short)strlen(s) + 2, 1);
 }
 
 void d_end(void)
@@ -395,12 +417,16 @@ static short form_loop(short start)
 
 /* the dialog opened (over the screen on TOS, in a window of the AES's on
    MiNT and MagiC: dialog.h), run and put away; name: its window's title */
+static int tick_hit(short r);
+
 static short d_do_named(const char *name, short edit)
 {
 	short x, y, w, h, r;
 	dlg_name(name);
 	dlg_open(tree, &x, &y, &w, &h);
-	r = form_loop(edit) & 0x7fff;
+	do
+		r = form_loop(edit) & 0x7fff;
+	while (tick_hit(r));	/* a bitmap tick (5.6): changed, and on */
 	dlg_close();
 	tree[r].ob_state &= ~SELECTED;
 	nlf = npw = 0;
@@ -425,7 +451,7 @@ int dlg_account(ACCOUNT *a)
 	/* as long as the account's own (store.h); the fields show less */
 	static char name[32], full[64], email[96], host[64], port[7], user[96], pass[64],
 		    shost[64], sport[7], suser[96], spass[64];
-	short f_name, f_full, f_email, f_imap, f_pop, f_host, f_port, f_user, f_pass, f_leave,
+	short f_name, f_full, f_email, f_imap, f_pop, f_host, f_port, f_user, f_pass,
 	      f_shost, f_sport, f_suser, f_spass, b_ok, b_del, r;
 
 	str_copy(name, a->name, sizeof(name));
@@ -471,7 +497,9 @@ int dlg_account(ACCOUNT *a)
 	d_text(2, AY(10), "Password:");
 	f_pass = d_framed(d_long(17, AY(10), pass, 30, sizeof(pass) - 1, '*'));
 	/* 3 pixels down: the 3D outset (5.6) clear of the password above */
-	f_leave = d_check(17, AYP(11, 3), "POP3: leave mail on the server", a->leave);
+	nticks = 0;
+	s_on[T_LEAVE] = a->leave;
+	d_tick(17, AYP(11, 3), "POP3: leave mail on the server", T_LEAVE);	/* a tick (D23) */
 
 	d_text(2, AY(13), "Outgoing (SMTP)");
 	d_text(2, AY(14), "Server:");
@@ -523,7 +551,7 @@ int dlg_account(ACCOUNT *a)
 		str_copy(a->user, user, sizeof(a->user));
 		str_copy(a->pass, pass, sizeof(a->pass));
 	}
-	a->leave = selected(f_leave);
+	a->leave = s_on[T_LEAVE];
 	if (opt.falcon) {
 		str_copy(a->dsmtphost, shost, sizeof(a->dsmtphost));
 		a->dsmtpport = (unsigned short)atoi(sport);
@@ -563,11 +591,6 @@ static char s_zone[40], s_zlabel[42], s_check[4], s_page[5], s_wrap[3];
 static char s_sig[SIG_ROWS][SIG_CAP + 1];	/* the signature, a line a row */
 #define PDIR_W 32
 static char s_pdir[sizeof(opt.peopledir)];	/* EContact's folder */
-static short s_on[7];			/* keep, log, falcon, dsp, colour, people file, start */
-enum { T_KEEP, T_LOG, T_FALCON, T_DSP, T_COLOUR, T_PFILE, T_START };
-
-#define NTICK 8
-static short tick_box[NTICK], tick_lbl[NTICK], tick_var[NTICK], nticks;
 static short page_of[DMAX], npages, cur_page, page_tab[7];
 static short pages_obj;		/* the box the pages show in */
 
@@ -608,6 +631,22 @@ static void tick_draw(short k)
 {
 	tree[tick_box[k]].ob_spec = (long)(s_on[tick_var[k]] ? &tick_on_blk : &tick_off_blk);
 	dlg_draw(tree, tick_box[k]);
+}
+
+/* r a tick or its label: switched, drawn, 1 */
+static int tick_hit(short r)
+{
+	short k;
+	for (k = 0; k < nticks; k++)
+		if (r == tick_box[k] || r == tick_lbl[k]) {
+			if (!(tree[tick_box[k]].ob_state & DISABLED)) {
+				s_on[tick_var[k]] = !s_on[tick_var[k]];
+				tick_draw(k);
+				evnt_timer_(120);
+			}
+			return 1;
+		}
+	return 0;
 }
 
 /* rows of a part: y in characters plus a few pixels per framed field
@@ -722,23 +761,28 @@ static void lang_label(void)
    installed (Settings > Languages... changes them); -1 for none chosen */
 static short lang_pick(short x, short y)
 {
-	static langs_nm names[TR_LANGS_MAX];
+	static char names[TR_LANGS_MAX][LANGS_NAME + 1];
 	static const char *labels[TR_LANGS_MAX];
 	static short code_of[TR_LANGS_MAX];
 	const TR_LANGS *l = xlate_installed();
-	short n = 0, k, r;
+	short n = 0, k, r, sel = 0;
 	if (!l)
 		return -1;
 	for (k = 0; k < l->n && n < TR_LANGS_MAX; k++)
 		if (l->l[k].installed || !strcmp(l->l[k].code, "en")) {
-			lang_name_of(l->l[k].code, names[n], l);
+			/* the current choice ticked (D27, 5.7) */
+			int cur = !strcmp(l->l[k].code, s_lang);
+			names[n][0] = '\x08';
+			lang_name_of(l->l[k].code, names[n] + cur, l);
+			if (cur)
+				sel = n;
 			labels[n] = names[n];
 			code_of[n] = k;
 			n++;
 		}
 	if (!n)
 		return -1;
-	r = popup(x, y, labels, n);
+	r = popup_over(x, y, labels, n, sel);	/* over its button, the ticked row on it */
 	if (r >= 0)
 		str_copy(s_lang, l->l[code_of[r]].code, sizeof(s_lang));
 	return r;
@@ -880,6 +924,31 @@ static void band_badge(void)
 }
 
 /* the dialog stays open while ticks and pages change */
+/* Settings' numbers in their ranges, or an alert that says what to type
+   (Erez, 9 Nov 2026: D30, the words approved): the page shown with the
+   field, which gets the cursor; nothing is saved until they are */
+static short f_page, f_wrap, s_ok_obj, s_next_edit;
+
+static int settings_numbers_ok(void)
+{
+	short pg = (short)atoi(s_page), wr = (short)atoi(s_wrap), page = 0, field = 0;
+	if (pg < 20 || pg > 1000) {
+		alert(1, "[1][Messages to load at a time:|type a number from 20 to 1000.][ OK ]");
+		page = page_of[f_page];
+		field = f_page;
+	} else if (wr < 40 || wr > 78) {
+		alert(1, "[1][Wrap lines at column:|type a number from 40 to 78.][ OK ]");
+		page = page_of[f_wrap];
+		field = f_wrap;
+	}
+	if (!field)
+		return 1;
+	if (page && page != cur_page)
+		show_page(page, 1);
+	s_next_edit = field;
+	return 0;
+}
+
 static short settings_run(short pages_box)
 {
 	short x, y, w, h, r, k;
@@ -890,17 +959,9 @@ static short settings_run(short pages_box)
 	dlg_open(tree, &x, &y, &w, &h);
 	band_badge();
 	for (;;) {
-		r = form_loop(first_edit()) & 0x7fff;
-		for (k = 0; k < nticks; k++)
-			if (r == tick_box[k] || r == tick_lbl[k]) {
-				if (tree[tick_box[k]].ob_state & DISABLED)
-					break;
-				s_on[tick_var[k]] = !s_on[tick_var[k]];
-				tick_draw(k);
-				evnt_timer_(120);
-				break;
-			}
-		if (k < nticks)
+		r = form_loop(s_next_edit ? s_next_edit : first_edit()) & 0x7fff;
+		s_next_edit = 0;
+		if (tick_hit(r))
 			continue;
 		for (k = 1; k <= npages; k++)
 			if (r == page_tab[k])
@@ -926,7 +987,7 @@ static short settings_run(short pages_box)
 			tree[r].ob_state &= ~SELECTED;
 			objc_offset(tree, r, &bx, &by);
 			popup_put_back = 1;	/* no pop-up drawn yet (the list may not come) */
-			k = lang_pick(bx, by + tree[r].ob_height);
+			k = lang_pick(bx, by);
 			if (!popup_put_back)
 				win_redraw_area(&popup_area);
 			if (k >= 0)
@@ -960,6 +1021,11 @@ static short settings_run(short pages_box)
 				dlg_draw(tree, 0);
 				band_badge();
 			}
+			continue;
+		}
+		if (r == s_ok_obj && !settings_numbers_ok()) {
+			tree[r].ob_state &= ~SELECTED;
+			dlg_draw(tree, r);
 			continue;
 		}
 		break;
@@ -1037,7 +1103,7 @@ static void part_mail(short x, short y)
 	d_field(x + FX, ROW(0), s_check, 3, '9');
 	d_add(G_STRING, 0, 0, (long)"min", x + FX + 4, ROW(0), 3, 1);
 	d_add(G_STRING, 0, 0, (long)"Messages to load at a time", x, ROW(1), 26, 1);
-	d_field(x + FX, ROW(1), s_page, 4, '9');
+	f_page = d_field(x + FX, ROW(1), s_page, 4, '9');
 	d_tick(x, ROW(2), "Keep read messages on disk", T_KEEP);
 	d_tick(x, ROW(3), "Start offline, with the mail on disk", T_START);
 }
@@ -1046,7 +1112,7 @@ static void part_writing(short x, short y)
 {
 	rows_at(y);
 	d_add(G_STRING, 0, 0, (long)"Wrap my lines at column", x, ROW(0), 23, 1);
-	d_field(x + FX, ROW(0), s_wrap, 2, '9');
+	f_wrap = d_field(x + FX, ROW(0), s_wrap, 2, '9');
 }
 
 /* four rows in one frame, as one box to write in */
@@ -1094,7 +1160,7 @@ static void part_connection(short x, short y)
 	d_tick(x, ROW(1), "Direct connection: TLS on this Atari", T_FALCON);
 	d_add(G_STRING, 0, 0, (long)"(68020 or better); off: the Gateway", x + 3, ROW(2), 35, 1);
 	d_tick(x + 3, ROW(3), "Use the DSP for the signatures", T_DSP);
-	d_tick(x, ROW(4), "Write a protocol log (EMAIL.LOG)", T_LOG);
+	d_tick(x, ROW(4), "Write a log (EMAIL.LOG)", T_LOG);
 	/* the Gateway's translation (Options > Translate): on this page, not
 	   the first one Settings draws as it opens (its time on an ST) */
 	d_add(G_STRING, 0, 0, (long)"Translate messages into", x, ROW(5), 23, 1);
@@ -1156,20 +1222,15 @@ int dlg_settings(void)
 	short ok, box, r;
 	settings_load();
 	box = settings_sidebar(&ok);
+	s_ok_obj = ok;
 	r = settings_run(box);
 	if (r != ok)
 		return 0;
 	str_copy(opt.tzname, s_zone, sizeof(opt.tzname));
 	str_copy(opt.translate_to, s_lang, sizeof(opt.translate_to));
 	opt.check = (short)atoi(s_check);
-	opt.page = (short)atoi(s_page);
-	if (opt.page < 20)
-		opt.page = 20;
-	if (opt.page > 1000)
-		opt.page = 1000;
+	opt.page = (short)atoi(s_page);		/* in range: settings_numbers_ok */
 	opt.wrap = (short)atoi(s_wrap);
-	if (opt.wrap < 40 || opt.wrap > 78)
-		opt.wrap = 72;
 	opt.keepcache = s_on[T_KEEP];
 	opt.startoffline = s_on[T_START];
 	opt.log = s_on[T_LOG];
@@ -1236,6 +1297,7 @@ static short pick_w(const char *title, const char **items, short n, short lw)
 	box = d_add(G_BOX, 0, 0, 0x00FF1100L, 2, 3, lw, PROWS);
 	for (i = 0; i < PROWS; i++)
 		row[i] = d_add(G_STRING, TOUCHEXIT, 0, (long)shown[i], 2, 3 + i, lw, 1);
+	d_nest(box);	/* the rows inside the well (C10) */
 	b_up = d_add(G_BOXCHAR, TOUCHEXIT, 0, 0x01FF1100L, lw + 3, 3, 2, 1);
 	b_down = d_add(G_BOXCHAR, TOUCHEXIT, 0, 0x02FF1100L, lw + 3, 2 + PROWS, 2, 1);
 	f_count = d_add(G_STRING, 0, 0, (long)count, 2, PROWS + 4, lw, 1);
@@ -1543,7 +1605,7 @@ void dlg_keys_box(void)
 	static const char *lines[] = {
 		"^N  new message        \x01^N check mail (^K)",
 		"^R  reply              \x01^R reply to all",
-		"\x01^F forward            \x01^U mark as unread",
+		"\x01^F forward            ^J  mark as unread",
 		"^G  flag / unflag      ^M  move to a folder",
 		"Del delete             ^A  select all",
 		"^F  find in the folder \x01Return  search server",

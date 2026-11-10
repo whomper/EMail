@@ -61,7 +61,7 @@ def run(name, machine, ovl, option_y):
         r.click(340, option_y[0])        # Options
         time.sleep(1)
         r.shot("%s-1-menu" % name)
-        r.click(380, option_y[1])        # Direct connection (TLS)
+        r.click(380, option_y[1])        # Direct connection
         time.sleep(6)
         after = r.shot("%s-2" % name)
         r.key(K["RETURN"])               # the alert's OK, if there is one
@@ -78,7 +78,7 @@ def run(name, machine, ovl, option_y):
 
 # the Options menu and its Direct connection item (640x480 and 640x400:
 # the menu bar's items are 16 pixels apart either way)
-FALCON = (8, 104)
+FALCON = (8, 136)             # Options: Direct connection, its eighth row (Translate has its section, D5)
 
 d, inf, log, crash = run("missing", "Falcon:16", False, FALCON)
 check("Falcon without TLS.OVL: an alert", d > 0.01, "%.1f%% of the screen" % (100 * d))

@@ -19,6 +19,7 @@
  */
 #include <string.h>
 #include "ui.h"
+#include "arrowed.h"
 #include "theme.h"
 #include "util.h"
 #include "bidi.h"
@@ -1110,15 +1111,15 @@ static void slider_message(WIN *w, short *msg)
 	/* one WM_ARROWED a step: TOS 3 and 4's second one for a click is
 	   dropped by common's evnt_multi_ (guidelines 5.1, one click, one
 	   step); a held button's repeats come as the AES sends them */
-	long rows = win_rows(w), max = w->total - rows;
+	long rows = win_rows(w), max = w->total - rows, page = rows > 1 ? rows - 1 : 1;	/* W5 */
 	if (msg[0] == WM_VSLID) {
 		if (max > 0)
 			win_scroll_to(w, (long)msg[4] * max / 1000);
 		return;
 	}
 	switch (msg[4]) {
-	case 0: win_scroll_to(w, w->top - rows); break;
-	case 1: win_scroll_to(w, w->top + rows); break;
+	case 0: win_scroll_to(w, w->top - page); break;
+	case 1: win_scroll_to(w, w->top + page); break;
 	case 2: win_scroll_to(w, w->top - 1); break;
 	case 3: win_scroll_to(w, w->top + 1); break;
 	}
@@ -1183,6 +1184,24 @@ static void main_message(short *msg)
 		main_closed();
 		break;
 	case WM_ARROWED:
+		/* the arrows scroll the pane under the pointer, else the
+		   message pane, whose the window's sliders are (D37) */
+		if (!main_iconified) {
+			WIN *pw[3];
+			ARROW_PANE ap[3];
+			short n = 0, k;
+			pw[0] = &w_folders;
+			pw[1] = &w_list;
+			pw[2] = &w_reader;
+			for (k = 0; k < 3; k++)
+				if (pw[k]->total > win_rows(pw[k])) {	/* one with scrolling to do */
+					ap[n].r = pw[k]->box;
+					ap[n].id = k;
+					n++;
+				}
+			slider_message(pw[arrow_target(ap, n, 2)], msg);
+		}
+		break;
 	case WM_VSLID:
 		if (!main_iconified)
 			slider_message(&w_reader, msg);

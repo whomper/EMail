@@ -316,7 +316,7 @@ static void rclick(WIN *w, short mx, short my)
 	}
 	if (!fi) {
 		const char *lab[] = { "Check mail", "New message", "Edit account...", "-", "Refresh folder list" };
-		r = popup(mx, my, lab, 5);
+		r = popup_m(mx, my, lab, 5);
 		if (r >= 0)
 			if (!popup_put_back)	/* not the menu's ghost while it works */
 				win_redraw_area(&popup_area);
@@ -352,7 +352,7 @@ static void rclick(WIN *w, short mx, short my)
 		lab[5] = a->pop ? "~New folder..." : "New folder...";
 		lab[6] = can_delete ? "Rename folder..." : "~Rename folder...";
 		lab[7] = can_delete ? "Delete folder..." : "~Delete folder...";
-		r = popup(mx, my, lab, 8);
+		r = popup_m(mx, my, lab, 8);
 		if (r >= 0)
 			if (!popup_put_back)
 				win_redraw_area(&popup_area);

@@ -1330,7 +1330,7 @@ static void rclick(WIN *w, short mx, short my)
 	lab[6] = "Cut line          ^X";	/* (no Hebrew keyboard: F10 only; Erez, 7 Nov 2026) */
 	lab[7] = "Copy line         ^C";
 	lab[8] = "Paste             ^V";
-	r = popup(mx, my, lab, 9);
+	r = popup_m(mx, my, lab, 9);
 	switch (r) {
 	case 0: editor_send(1); break;
 	case 1: editor_send(0); break;

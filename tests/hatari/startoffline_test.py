@@ -28,7 +28,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.normpath(os.path.join(HERE, "..", ".."))
 IMAP, SMTP = 10143, 10025
 OPTIONS = (345, 8)          # the Options menu's title
-WORK_OFFLINE = (345, 92)    # its fifth row: Accounts, Settings, Font, a line, Work offline
+WORK_OFFLINE = (345, 124)   # its seventh row: Accounts, Settings, Font, a line, Translate, a line, Work offline
 
 work, machine, more = rig.cli("Falcon")
 os.makedirs(work, exist_ok=True)

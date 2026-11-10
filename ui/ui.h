@@ -237,7 +237,6 @@ void   d_begin(short w, short h);
 short  d_add(short type, short flags, short state, long spec, short x, short y, short w, short h);
 short  d_text(short x, short y, const char *s);
 short  d_button(short x, short y, short w, const char *s, short flags);
-short  d_check(short x, short y, const char *s, short on);
 void   d_end(void);
 OBJECT *d_tree(void);
 #include "alert.h"		/* alert(): common/ui */

@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "ui.h"
+#include "click.h"
 #include "theme.h"
 #include "../src/mail.h"
 #include "util.h"
@@ -924,7 +925,7 @@ static int drag_messages(long i, short mx, short my)
 		graf_mkstate(&x, &y, &b, &k);
 		if (!(b & 1))
 			return 0;
-		if (x - mx > 3 || mx - x > 3 || y - my > 3 || my - y > 3)
+		if (x - mx >= CLICK_SLOP || mx - x >= CLICK_SLOP || y - my >= CLICK_SLOP || my - y >= CLICK_SLOP)	/* the family's 4 pixels (W21) */
 			break;
 		evnt_timer_(10);
 	}
@@ -1046,14 +1047,14 @@ void message_menu(short mx, short my, int with_open)
 	fresh();
 	if (nmarks > 1) {
 		/* for all the selected messages */
-		static const char *blab[] = { "Mark as read", "Mark as unread   ^U", "Flag / unflag    ^G",
+		static const char *blab[] = { "Mark as read", "Mark as unread   ^J", "Flag             ^G",
 					      "-", "Move to...       ^M", "Download again", "-", "Delete          Del" };
 		static const short bcmd[] = { C_MARKREAD, C_UNREAD, C_FLAG, 0, C_MOVE, C_REFETCH, 0, C_DELETE };
 		const char *l[8];
 		memcpy(l, blab, sizeof(l));
 		if (!imap)
 			l[5] = "~Download again";
-		r = popup(mx, my, l, 8);
+		r = popup_m(mx, my, l, 8);
 		if (r >= 0 && bcmd[r]) {
 			if (!popup_put_back)	/* not the menu's ghost while it works */
 				win_redraw_area(&popup_area);
@@ -1074,13 +1075,13 @@ void message_menu(short mx, short my, int with_open)
 	}
 	lab[n] = shown ? "Reply            ^R" : "~Reply            ^R";
 	cmd[n++] = C_REPLY;
-	lab[n] = shown ? "Reply to all     ^E" : "~Reply to all     ^E";
+	lab[n] = shown ? "Reply to all    \x01^R" : "~Reply to all    \x01^R";
 	cmd[n++] = C_REPLYALL;
 	lab[n] = shown ? "Forward         \x01^F" : "~Forward         \x01^F";
 	cmd[n++] = C_FORWARD;
 	lab[n] = "-";
 	cmd[n++] = 0;
-	lab[n] = (h->flags & MF_SEEN) ? "Mark as unread   ^U" : "Mark as read";
+	lab[n] = (h->flags & MF_SEEN) ? "Mark as unread   ^J" : "Mark as read";
 	cmd[n++] = (h->flags & MF_SEEN) ? C_UNREAD : C_MARKREAD;
 	lab[n] = (h->flags & MF_FLAGGED) ? "Remove the flag  ^G" : "Flag             ^G";
 	cmd[n++] = C_FLAG;
@@ -1092,7 +1093,7 @@ void message_menu(short mx, short my, int with_open)
 	cmd[n++] = 0;
 	lab[n] = "Delete          Del";
 	cmd[n++] = C_DELETE;
-	r = popup(mx, my, lab, n);
+	r = popup_m(mx, my, lab, n);
 	if (r < 0)
 		return;
 	if (cmd[r] == -1) {
@@ -1127,23 +1128,23 @@ static void rclick(WIN *w, short mx, short my)
 
 static int key(WIN *w, short kstate, short k)
 {
-	short scan = KEY_SCAN(k);
-	long rows = win_rows(w);
+	short scan = KEY_SCAN(k), sh = key_shift(kstate, k) != 0;	/* Shift as the busy AES leaves it */
+	long rows = win_rows(w), page = rows > 1 ? rows - 1 : 1;	/* a page keeps a row (W5) */
 	fresh();
 	switch (scan) {
 	case 0x48:	/* up (shift: page) */
 		later = 1;
-		select_row(sel < 0 ? 0 : sel - ((kstate & 3) ? rows : 1), 0);
+		select_row(sel < 0 ? 0 : sel - (sh ? page : 1), 0);
 		later = 0;
 		return 1;
 	case 0x50:	/* down */
 		later = 1;
-		select_row(sel < 0 ? 0 : sel + ((kstate & 3) ? rows : 1), 0);
+		select_row(sel < 0 ? 0 : sel + (sh ? page : 1), 0);
 		later = 0;
 		return 1;
 	case 0x47:	/* Clr/Home: first, shift: last */
 		later = 1;
-		select_row((kstate & 3) ? nview - 1 : 0, 0);
+		select_row(sh ? nview - 1 : 0, 0);
 		later = 0;
 		return 1;
 	case 0x1c:	/* Return: read it (or load more, on that row) */

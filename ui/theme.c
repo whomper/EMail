@@ -38,7 +38,7 @@ static const short want16[NPEN][3] = {
 	{  467,  467,  467 },	/* P_LINE */
 	{  733,  733,  733 },	/* P_PANEL */
 	{    0,    0,    0 },	/* P_HEAD */
-	{    0,    0,  533 },	/* P_SEL */
+	{    0,    0,  667 },	/* P_SEL: the family's one selection colour (D42) */
 	{    0,    0,  533 },	/* P_ACCENT */
 	{ 1000,    0,    0 },	/* P_FLAG */
 	{    0,    0,  533 },	/* P_Q1 */

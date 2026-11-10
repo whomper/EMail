@@ -1224,7 +1224,7 @@ static void rclick(WIN *w, short mx, short my)
 		/* on the words chosen: copy them, or their translation in a box
 		   (Erez, 7 Nov 2026: whatever Options > Translate says) */
 		static const char *const lab[] = { "Copy              ^C", "Translate..." };
-		short r = popup(mx, my, lab, 2);
+		short r = popup_m(mx, my, lab, 2);
 		if (r >= 0 && !popup_put_back)
 			win_redraw_area(&popup_area);
 		if (r == 0) {
@@ -1241,7 +1241,7 @@ static void rclick(WIN *w, short mx, short my)
 	}
 	if (k >= 0) {
 		static const char *const lab[] = { "Open link", "Copy link" };
-		short r = popup(mx, my, lab, 2);
+		short r = popup_m(mx, my, lab, 2);
 		if (r == 0)
 			open_link(links[k].url);
 		else if (r == 1)
@@ -1253,7 +1253,7 @@ static void rclick(WIN *w, short mx, short my)
 		static const char *const lab[] = { "Save attachment...", "Add to ECal" };
 		short a = lines[i].attach, inv = mime_is_calendar(&cur_msg->parts[a]);
 		/* an invitation: Add to ECal first, beside Save */
-		short r = popup(mx, my, inv ? lab + 1 : lab, inv ? 2 : 1);
+		short r = popup_m(mx, my, inv ? lab + 1 : lab, inv ? 2 : 1);
 		if (inv && r == 0)
 			reader_to_ecal(a);
 		else if (r == (inv ? 1 : 0))
@@ -1265,13 +1265,14 @@ static void rclick(WIN *w, short mx, short my)
 
 static int key(WIN *w, short kstate, short k)
 {
-	long rows = win_rows(w);
+	long rows = win_rows(w), page = rows > 1 ? rows - 1 : 1;	/* a page keeps a line (W5) */
+	int sh = key_shift(kstate, k) != 0;
 	switch (KEY_SCAN(k)) {
-	case 0x48: win_scroll_to(w, w->top - ((kstate & 3) ? rows : 1)); return 1;
-	case 0x50: win_scroll_to(w, w->top + ((kstate & 3) ? rows : 1)); return 1;
+	case 0x48: win_scroll_to(w, w->top - (sh ? page : 1)); return 1;
+	case 0x50: win_scroll_to(w, w->top + (sh ? page : 1)); return 1;
 	case 0x39: win_scroll_to(w, w->top + rows - 1); return 1;	/* space */
 	case 0x0e: win_scroll_to(w, w->top - rows + 1); return 1;	/* backspace */
-	case 0x47: win_scroll_to(w, (kstate & 3) ? w->total : 0); return 1;
+	case 0x47: win_scroll_to(w, sh ? w->total : 0); return 1;
 	}
 	return 0;
 }

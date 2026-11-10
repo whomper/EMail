@@ -81,10 +81,10 @@ static const MBAR_ITEM m_msg[] = {
 	{ "Reply to all", "\x01^R", C_REPLYALL },
 	{ "Forward", "\x01^F", C_FORWARD },
 	{ "-", 0, 0 },
-	{ "Find...", "^F", C_FIND },
+	{ "Find", "^F", C_FIND },
 	{ "-", 0, 0 },
 	{ "Mark as read", 0, C_MARKREAD },
-	{ "Mark as unread", "\x01^U", C_UNREAD },
+	{ "Mark as unread", "^J", C_UNREAD },
 	{ "Flag", "^G", C_FLAG },
 	{ "Move to...", "^M", C_MOVE },
 	{ "Delete", "Del", C_DELETE },
@@ -119,10 +119,11 @@ static const MBAR_ITEM m_opts[] = {
 	{ "Settings...", "^,", C_SETTINGS },
 	{ "Font...", 0, C_FONT },
 	{ "-", 0, 0 },
+	{ "Translate", 0, C_TRANSLATE },	/* a section of its own (Erez, 9 Nov 2026: D5) */
+	{ "-", 0, 0 },
 	{ "Work offline", 0, C_OFFLINE },
-	{ "Direct connection (TLS)", 0, C_FALCON },
-	{ "Translate", 0, C_TRANSLATE },
-	{ "Protocol log", 0, C_LOG },
+	{ "Direct connection", 0, C_FALCON },
+	{ "Write a log", 0, C_LOG },
 	{ 0, 0, 0 }
 };
 static const MBAR_ITEM m_help[] = {
@@ -482,7 +483,7 @@ static void start_browser(const char *url)
 			   : "[2][No web browser is running.|EMail can close and start|EWeb on this link.]"
 			     "[Open in EWeb|Copy link|Cancel]");
 	if (r == 2) {
-		main_status(clip_put(url, (long)strlen(url)) ? "The link is on the clipboard." :
+		main_status(clip_put(url, (long)strlen(url)) ? "Copied to the clipboard." :
 							       "Couldn't write the clipboard.");
 		return;
 	}
@@ -1554,7 +1555,8 @@ static int shortcut(short kstate, short key)
 		case 0x31: cmd = shift ? C_CHECK : C_NEW; break;	/* N */
 		case 0x25: cmd = C_CHECK; break;	/* K */
 		case 0x10: cmd = C_QUIT; break;		/* Q */
-		case 0x16: cmd = shift ? C_UNREAD : C_CLOSE; break;	/* U */
+		case 0x16: cmd = C_CLOSE; break;	/* U */
+		case 0x24: cmd = C_UNREAD; break;	/* J: Mark as unread, off Shift+^U (Erez, 9 Nov 2026: D1) */
 		case 0x11: cmd = C_NEXTWIN; break;	/* W */
 		case 0x13: cmd = shift ? C_REPLYALL : C_REPLY; break;	/* R */
 		case 0x12: cmd = C_REPLYALL; break;	/* E */

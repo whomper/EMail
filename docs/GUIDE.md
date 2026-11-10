@@ -226,8 +226,8 @@ log in until you give it a new one.
 
 ## Direct connection
 
-EMail works in one of two ways, chosen with **Options > Direct connection
-(TLS)** or "Direct connection: TLS on this Atari" in Options > Settings >
+EMail works in one of two ways, chosen with **Options > Direct connection**
+or "Direct connection: TLS on this Atari" in Options > Settings >
 Connection (this was called Falcon mode before 1.56):
 
 - **Off** (the default, any Atari): EMail talks plainly to the Raspberry
@@ -690,7 +690,7 @@ says so and sends you to **Settings > Languages**.
 |--------------|----------------------------|--------------|-------------------------|
 | Ctrl+N       | new message                | Shift+Ctrl+N | check mail (or Ctrl+K)  |
 | Ctrl+R       | reply                      | Shift+Ctrl+R | reply to all (or Ctrl+E) |
-| Shift+Ctrl+F | forward                    | Shift+Ctrl+U | mark as unread          |
+| Shift+Ctrl+F | forward                    | Ctrl+J       | mark as unread          |
 | Ctrl+G       | flag / unflag              | Ctrl+M       | move to a folder        |
 | Ctrl+C       | copy                       | Ctrl+X       | cut                     |
 | Ctrl+V       | paste                      | Ctrl+F       | find in the folder      |
@@ -913,7 +913,7 @@ NVDI's colours. For EmuTOS,
   in its place) the passwords go into EMAIL.INF as they are, and EMail
   says so once each time it starts; once `EMAIL.KEY` can be written,
   they are encrypted the next time EMail saves its settings.
-- **Options > Protocol log** writes the conversation with the servers to
+- **Options > Write a log** writes the conversation with the servers to
   `EMAIL.LOG` (passwords are hidden); it shows exactly what a server said.
   It is written in blocks, and at once at every step (connecting,
   logging in, an error), so after a crash or a reset it holds what led
