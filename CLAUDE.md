@@ -127,7 +127,10 @@ These come from AERA-Atari's repo template and are the same in every app's CLAUD
   (`build/fakecontact.acc`).
 - **A candidate's test round** is EMail's section of AERA-Atari's
   `standards/TEST-MATRIX.md` (hub 5e0039a, 7 Nov 2026):
-  - `net_test.py` on Falcon:256, EMail's own 256-colour run;
+  - `net_test.py` on Erez's configuration, `Falcon-4:256` with `AERA_WITH_NVDI=1` (Erez, 10 Nov 2026;
+    AERA-Atari 148df17, `machines.ERZ_MACHINE`): it replaces the Falcon:256 run and the plain Falcon
+    (16-colour) net run, at the next release EMail makes anyway (the rig change goes with that commit).
+    Without TOS images or NVDI here it runs on EmuTOS and is reported "stand-in, not Erez's configuration";
   - `emailchk_test.py` on ST-1 only, with the KB-free reading in the same boot (the Falcon monthly);
   - no `drag_test.py` on ST:mono, no ST:med badge run;
   - `people_file_test.py` only when the people code changes;
