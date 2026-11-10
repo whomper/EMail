@@ -701,7 +701,8 @@ says so and sends you to **Settings > Languages**.
 | Ctrl+U       | close the window           | Ctrl+W       | the next window on top  |
 | Tab          | next pane                  | Ctrl+Q       | quit                    |
 | Ctrl+,       | settings                   | Undo         | cancel a dialog         |
-| Esc          | empty a field; stop        |              |                         |
+| Esc          | empty a field; stop        | Shift+Ctrl+S | show or hide the folders |
+| Insert       | the menu of what's chosen  |              |                         |
 | Shift+click  | add/remove one message     | Right button | what you can do there   |
 | Control+click| select a range             |              |                         |
 
@@ -709,6 +710,10 @@ The keys are the AERA programs' own (Ctrl+S saves, Ctrl+U closes a
 window, Ctrl+W brings EMail's other window to the top, Ctrl+, opens the
 settings, Ctrl+F finds), with Mail's on the Mac for the rest. Closing the main window
 ends EMail. Without a help viewer, Help offers the list of keys.
+
+**Insert opens the menu** that the right button opens, for what is
+chosen: the selected message or folder, the words chosen in the message,
+or where the cursor is while you write.
 
 **Undo cancels, Esc empties a field.** In any dialog box, Undo does what
 Cancel does (or the button that does nothing, such as Later): nothing is
@@ -868,6 +873,10 @@ The folder list is read from the server at the first check of a session:
 when EMail starts, or, when it starts offline, as it goes online. Folder >
 Refresh folder list reads it
 again after you changed it elsewhere.
+
+**Folder > Folder pane** (Shift+Ctrl+S) hides the folder pane, so the
+message list and the message take the whole window, and shows it again;
+EMail remembers which.
 
 ## The desktop icon
 
