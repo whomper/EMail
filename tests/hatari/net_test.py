@@ -129,6 +129,17 @@ try:
         kept = "FALCON=1" in inf
         print("on an ST: the Direct connection kept for the Falcon:", kept)
         ok = ok and kept
+    # and quit: each step of it in EMAIL.LOG, to the last, and no
+    # CRASH.LOG (Erez, 10 Nov 2026: two bombs as EMail quit)
+    r.ctrl("q")
+    time.sleep(12)
+    log = open(rig.ci_path(hd, "email.log"), errors="replace").read()
+    steps = [l.split(" -- quit: ", 1)[1].strip() for l in log.splitlines() if " -- quit: " in l]
+    print("quit steps:", steps)
+    crashed = any(n.lower() == "crash.log" for n in os.listdir(hd))
+    quit_ok = len(steps) == 5 and steps[-1] == "out of the AES" and not crashed
+    print("quit: all five steps logged, no CRASH.LOG:", quit_ok)
+    ok = ok and quit_ok
 finally:
     r.stop()
     bridge.terminate()

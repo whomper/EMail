@@ -1639,6 +1639,14 @@ static void quit_clearing(const char *account, const char *folder)
 
 /* EMail crashed and CRASH.LOG is written: say so and leave GEM tidy.
    Only the AES and VDI: the heap may be what went wrong */
+/* each step of quitting into the protocol log at once: if the Atari
+   bombs after the window has gone, the last line says where (Erez,
+   10 Nov 2026: two bombs as EMail quits; EFTP's quit_step) */
+static void quit_step(const char *what)
+{
+	conn_log("EMail", " -- quit: ", what, (long)strlen(what));
+}
+
 static void crash_quit(const char *what)
 {
 	char a[200];
@@ -2016,12 +2024,22 @@ int main(void)
 	store_save_settings();
 	win_close(&w_editor);
 	main_close();
+	quit_step("the window closed");
 	store_save_settings();
+	quit_step("settings saved");
 	theme_exit();			/* the palette back as it was */
 	menu_bar(mb.tree, 0);
 	av_exit();
 	v_clsvwk(vdi_h);
-	appl_exit();
+	quit_step("colours, menu bar and VDI given back");
 	crash_remove();
+	{
+		const char *o = crash_over();
+		char t[220];
+		snprintf(t, sizeof(t), "crash catcher off%s%s", *o ? "; hooked over it: " : "", o);
+		quit_step(t);
+	}
+	appl_exit();
+	quit_step("out of the AES");
 	return 0;
 }
