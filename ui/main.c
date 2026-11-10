@@ -1456,7 +1456,7 @@ static void command(short cmd)
 			people_setup();
 			set_logging();
 			store_save_settings();
-			theme_init();
+			email_theme_init();
 			win_redraw_all();
 			list_refresh();
 			win_redraw(&w_reader, 0);
@@ -1781,7 +1781,7 @@ int main(void)
 	if (store_plain_passwords && !store_lost_passwords)
 		store_save_settings();		/* encrypt them right away */
 	falcon_dsp_init();
-	theme_init();
+	email_theme_init();
 	font_apply();
 	hebrew_kbd_hook = hebrew_changed;
 	hebrew_kbd = 0;		/* off at the start, F10 only (Erez, 8 Nov 2026; guideline 5.3) */
