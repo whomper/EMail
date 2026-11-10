@@ -20,14 +20,18 @@
 #include "click.h"
 #include "dirlist.h"
 #include "filepick.h"
+#include "fsel.h"
 
 /* the tree: 42 by 24 cells */
 enum { O_ROOT, O_BAND, O_DRIVE, O_PATH, O_PATHT, O_UP, O_FOLDERS, O_TYPE, O_SORT, O_NAMEL, O_MASK, O_LIST, O_INFO,
        O_ALL, O_NONE, O_CANCEL, O_ADD, O_N };
 static OBJECT tree[O_N];
-static TEDINFO ted_band, ted_path, ted_mask;
-static char s_path[FP_PATH], s_mask[13], t_mask[13], v_mask[13], s_drive[8], s_type[20], s_sort[16],
-	s_info[48];
+static TEDINFO ted_band, ted_path, ted_mask, ted_drive, ted_folders, ted_type, ted_sort;
+static char s_path[FP_PATH], s_mask[13], t_mask[13], v_mask[13], s_drive[8], s_folders[16], s_type[20],
+	s_sort[16], s_info[48];
+
+/* the pop-up buttons' widths in cells (5.7: the words, the arrow in the last cell) */
+enum { W_DRIVE = 5, W_FOLDERS = 12, W_TYPE = 15, W_SORT = 11 };
 
 static void obj_in(short p, short i, short type, short flags, short state, long spec, short x, short y, short w,
 		   short h)
@@ -74,6 +78,27 @@ static void ted(TEDINFO *t, char *text, char *tmpl, char *valid, short just, sho
 
 static const FP_SPEC *spec;
 
+/* a pop-up button's text (5.7, as Settings' set_popup makes it): a space, the words (cut to leave a cell
+   before the arrow), the system font's down arrow in the last of w cells */
+static void pop_label(char *buf, short w, const char *words)
+{
+	short n = (short)strlen(words);
+	if (n > w - 3)
+		n = (short)(w - 3);
+	memset(buf, ' ', (size_t)w);
+	buf[w] = 0;
+	memcpy(buf + 1, words, (size_t)n);
+	buf[w - 1] = 2;
+}
+
+/* ... and the object: an outlined G_BOXTEXT, left-justified, TOUCHEXIT (not a G_BUTTON: C9) */
+static void pop_button(short o, TEDINFO *t, char *buf, short w, short x, short y, const char *words)
+{
+	pop_label(buf, w, words);
+	ted(t, buf, "", "", 0, 0x1180, -1);
+	obj(o, G_BOXTEXT, TOUCHEXIT, 0, (long)t, x, y, w, 1);
+}
+
 static void build(void)
 {
 	memset(tree, 0, sizeof(tree));
@@ -82,16 +107,16 @@ static void build(void)
 	/* the title band: hidden in a dialog window, whose title names it */
 	ted(&ted_band, (char *)spec->title, "", "", 2, 0x1071, 0);	/* (white text, transparent, on black) */
 	obj(O_BAND, G_BOXTEXT, 0, 0, (long)&ted_band, 0, 0, 42, 1);
-	obj(O_DRIVE, G_BUTTON, SELECTABLE | TOUCHEXIT, 0, (long)s_drive, 1, 2, 5, 1);
+	pop_button(O_DRIVE, &ted_drive, s_drive, W_DRIVE, 1, 2, "C:");
 	/* the folder: its text in a white well (not typed into: the drive,
 	   the folders, Up and a double click change it) */
 	obj(O_PATH, G_BOX, 0, 0, 0x00FF1100L, 7, 2, 30, 1);
 	ted(&ted_path, s_path, "", "", 0, 0x1100, 0);
 	obj_in(O_PATH, O_PATHT, G_TEXT, 0, 0, (long)&ted_path, 1, 0, 28, 1);
 	obj(O_UP, G_BOXCHAR, TOUCHEXIT, 0, 0x01FF1100L, 38, 2, 3, 1);
-	obj(O_FOLDERS, G_BUTTON, SELECTABLE | TOUCHEXIT, 0, (long)"Folders \x02", 1, 4, 12, 1);
-	obj(O_TYPE, G_BUTTON, SELECTABLE | TOUCHEXIT, 0, (long)s_type, 14, 4, 15, 1);
-	obj(O_SORT, G_BUTTON, SELECTABLE | TOUCHEXIT, 0, (long)s_sort, 30, 4, 11, 1);
+	pop_button(O_FOLDERS, &ted_folders, s_folders, W_FOLDERS, 1, 4, "Folders");
+	pop_button(O_TYPE, &ted_type, s_type, W_TYPE, 14, 4, "");
+	pop_button(O_SORT, &ted_sort, s_sort, W_SORT, 30, 4, "");
 	obj(O_NAMEL, G_STRING, 0, 0, (long)"Name", 1, 6, 4, 1);
 	ted(&ted_mask, s_mask, t_mask, v_mask, 0, 0x1180, -1);
 	obj(O_MASK, G_FBOXTEXT, EDITABLE, 0, (long)&ted_mask, 7, 6, 13, 1);
@@ -100,8 +125,9 @@ static void build(void)
 	obj(O_INFO, G_STRING, 0, 0, (long)s_info, 1, (short)(4 << 8 | 18), 40, 1);
 	obj(O_ALL, G_BUTTON, SELECTABLE | EXIT, 0, (long)"All", 1, (short)(4 << 8 | 20), 5, 1);
 	obj(O_NONE, G_BUTTON, SELECTABLE | EXIT, 0, (long)"None", 7, (short)(4 << 8 | 20), 6, 1);
-	obj(O_CANCEL, G_BUTTON, SELECTABLE | EXIT, 0, (long)"Cancel", 24, (short)(4 << 8 | 20), 8, 1);
-	obj(O_ADD, G_BUTTON, SELECTABLE | EXIT | DEFAULT, 0, (long)spec->ok, 33, (short)(4 << 8 | 20), 8, 1);
+	/* Cancel then OK, 10 wide, at W - 24 and W - 12 (5.10, D26) */
+	obj(O_CANCEL, G_BUTTON, SELECTABLE | EXIT, 0, (long)"Cancel", 18, (short)(4 << 8 | 20), 10, 1);
+	obj(O_ADD, G_BUTTON, SELECTABLE | EXIT | DEFAULT, 0, (long)spec->ok, 30, (short)(4 << 8 | 20), 10, 1);
 	tree[O_N - 1].ob_flags |= LASTOB;
 	tree[0].ob_next = -1;
 	rsrc_obfix_all(tree, O_N);
@@ -116,20 +142,93 @@ static int top, cur = -1, anchor = -1;
 static GRECT lr;			/* the list's rows (inside the well) */
 static short rows, rh, sw;
 
+/* A folder's entries with their long names. TOS gives GEMDOS's 8+3, and on MiNT, in the TOS domain and in the MiNT
+   domain alike, Fsfirst and Fsnext leave out every name that doesn't fit the DTA's 14 bytes: on an ext2 or VFAT
+   drive a folder of long names looked empty or short (a tester, 9 Nov 2026; the hub's rig, FreeMiNT 1.17: of
+   six files, the two that fit 8+3). Where MiNT is (its cookie) the folder is read with Dopendir in its own mode 0
+   (the names as the file system has them, case kept) and Dxreaddir, which gives each entry's kind, size and
+   time in one call; no Pdomain: Fopen takes a long name in either domain (the same rig) and Fsfirst stays what
+   it was elsewhere (TOS, EmuTOS, MagiC). Hidden and system files and names that begin with a dot (hidden on
+   ext2) are left out, as Fsfirst with attribute 0x10 leaves them. 1: read; 0: no MiNT or no Dxreaddir */
+typedef struct {
+	unsigned short mode;
+	long index;
+	short dev, rdev, nlink, uid, gid;
+	long size, blksize, nblocks;
+	unsigned short mtime, mdate, atime, adate, ctime, cdate;
+	short attr, reserved2;
+	long reserved3[2];
+} XATTR;
+#define S_IFMT 0170000
+#define S_IFDIR 0040000
+#define S_IFREG 0100000
+#define S_IFLNK 0120000
+
+static int read_mint(void)
+{
+	static char buf[4 + DL_NAME + 4], full[FP_PATH + DL_NAME + 2];
+	XATTR xa;
+	long h, r, xr = 0;
+	size_t n = strlen(dir_now);
+	int first = 1;
+	snprintf(full, sizeof(full), "%s", dir_now);
+	h = Dopendir(dir_now, 0);
+	if (h < 0)
+		return 0;
+	while ((r = Dxreaddir((short)sizeof(buf), h, buf, &xa, &xr)) == 0) {
+		const char *name = buf + 4;
+		unsigned type = xa.mode & S_IFMT;
+		short at = xa.attr;
+		unsigned short date = xa.mdate, time = xa.mtime;
+		long size = xa.size;
+		first = 0;
+		if (xr < 0 || name[0] == '.' || strlen(name) + n + 1 >= sizeof(full))
+			continue;
+		if (type == S_IFLNK) {		/* a link: what it points to (Fxattr 0 follows it) */
+			snprintf(full + n, sizeof(full) - n, "%s", name);
+			if (Fxattr(0, full, &xa) != 0)
+				continue;
+			type = xa.mode & S_IFMT;
+			at = xa.attr;
+			date = xa.mdate;
+			time = xa.mtime;
+			size = xa.size;
+		}
+		if ((type != S_IFDIR && type != S_IFREG) || (at & 0x06))
+			continue;
+		if (!dl_add(&dl, name, size, date, time, type == S_IFDIR))
+			break;
+	}
+	Dclosedir(h);
+	return r == -49 || !first;	/* (ENMFILES: the end; the first call failing, -32: no Dxreaddir: Fsfirst) */
+}
+
+static int mint_here(void)
+{
+	static short k = -1;		/* worked out once: a cookie walk is a Supexec call */
+	if (k < 0)
+		k = get_cookie(0x4D694E54L) != 0;	/* MiNT */
+	return k;
+}
+
 static void read_folder(void)
 {
 	char mask[FP_PATH + 4];
-	DTA *old = Fgetdta(), dta;
+	DTA *old, dta;
 	graf_mouse(BUSYBEE, 0);
 	dl_clear(&dl);
-	snprintf(mask, sizeof(mask), "%s*.*", dir_now);
-	Fsetdta(&dta);
-	if (Fsfirst(mask, 0x10) == 0)
-		do {
-			if (!dl_add(&dl, dta.d_fname, dta.d_length, dta.d_date, dta.d_time, (dta.d_attrib & 0x10) != 0))
-				break;
-		} while (Fsnext() == 0);
-	Fsetdta(old);
+	if (!mint_here() || !read_mint()) {
+		dl_clear(&dl);
+		old = Fgetdta();
+		snprintf(mask, sizeof(mask), "%s*.*", dir_now);
+		Fsetdta(&dta);
+		if (Fsfirst(mask, 0x10) == 0)
+			do {
+				if (!dl_add(&dl, dta.d_fname, dta.d_length, dta.d_date, dta.d_time, (dta.d_attrib & 0x10) != 0))
+					break;
+			} while (Fsnext() == 0);
+		Fsetdta(old);
+	}
 	dl_sort(&dl);
 	top = 0;
 	cur = anchor = dl.nview ? 0 : -1;
@@ -140,7 +239,11 @@ static void read_folder(void)
 static void show_path(void)
 {
 	size_t n = strlen(dir_now), room = 28;
-	snprintf(s_drive, sizeof(s_drive), "%c: \x02", dir_now[0] ? dir_now[0] : 'C');
+	char d[3];
+	d[0] = dir_now[0] ? dir_now[0] : 'C';
+	d[1] = ':';
+	d[2] = 0;
+	pop_label(s_drive, W_DRIVE, d);
 	if (n <= 2)
 		snprintf(s_path, sizeof(s_path), "\\");
 	else if (n - 2 <= room)
@@ -203,6 +306,21 @@ static void draw_obj(short o)
 	dlg_draw(tree, o);
 }
 
+/* a name from x, in the room up to the column at `stop` (the size's or the date's, a cell between): an 8+3
+   name (12 cells) is never cut; a long name (MiNT) that doesn't fit ends in "..." */
+static void name_at(short x, short y, const char *name, short stop, short fl)
+{
+	long n = (long)strlen(name), room = (stop - x) / gl_wchar - 1;
+	if (room < 12)
+		room = 12;
+	if (n <= room) {
+		text_at(x, y, name, n, (short)n, fl);
+		return;
+	}
+	text_at(x, y, name, room - 3, (short)room, fl);
+	text_at(x + (short)(room - 3) * gl_wchar, y, "...", 3, 3, fl);
+}
+
 /* row r of the view, in its place (-1 rows past the end: blank) */
 static void row_at(int r, GRECT *clip)
 {
@@ -238,10 +356,10 @@ static void row_at(int r, GRECT *clip)
 		f.h = fh;
 		frame(&f, c);
 		line_col(f.x + 2, f.y - 2, f.x + 5, f.y - 2, c);
-		text_at(x + 2 * gl_wchar + 4, y, e->name, (long)strlen(e->name), 12, fl);
+		name_at(x + 2 * gl_wchar + 4, y, e->name, lr.x + w - 4 - 8 * gl_wchar, fl);
 	} else {
-		text_at(x + 2 * gl_wchar + 4, y, e->name, (long)strlen(e->name), 12, fl);
 		dl_size_text(e->size, sz);
+		name_at(x + 2 * gl_wchar + 4, y, e->name, lr.x + w - 4 - (short)(9 + strlen(sz)) * gl_wchar, fl);
 		text_at(lr.x + w - 4 - (short)(9 + strlen(sz)) * gl_wchar, y, sz, (long)strlen(sz), 6, fl);
 	}
 	dl_date_text(e->date, dt);
@@ -461,10 +579,27 @@ static void open_row(int r)
 
 /* ---- the pop-ups ---- */
 
-static void below(short o, short *x, short *y)
+/* The one place a pop-up is opened from (D27): the ticked row over its
+   button, the AES's own pop-ups' way and Settings' (settings.c
+   over_button): rows are a line and 2 pixels high from 2 pixels down, their
+   text a pixel in, so the top is `sel` rows and 3 pixels above the button.
+   popup_over() does it now (hub item 6). The button is drawn again after: the pop-up covered it. */
+static short pop_over(short o, const char *const *lab, short n, short sel)
 {
-	objc_offset(tree, o, x, y);
-	*y += tree[o].ob_height;
+	short x, y, r;
+	if (sel < 0 || sel >= n)
+		sel = 0;
+	objc_offset(tree, o, &x, &y);
+	r = popup_over(x, y, lab, n, sel);
+	tree[o].ob_state &= ~SELECTED;
+	if (dlg_in_window() || popup_put_back) {
+		draw_obj(o);		/* the screen under it is back, or the AES draws it */
+	} else {
+		draw_obj(0);		/* it wasn't kept (no memory): the dialog again, and its list */
+		place();
+		draw_list();
+	}
+	return r;
 }
 
 static void pop_drive(void)
@@ -473,16 +608,17 @@ static void pop_drive(void)
 	const char *p[26];
 	char drv[26];
 	long map = Drvmap();
-	short x, y, n = 0, k;
+	short n = 0, k, sel = 0;
 	int i;
 	for (i = 0; i < 26; i++)
 		if (map & (1L << i)) {
-			snprintf(lab[n], sizeof(lab[n]), "%c %c: ", dir_now[0] == 'A' + i ? '\x08' : ' ', 'A' + i);
+			if (dir_now[0] == 'A' + i)
+				sel = n;
+			snprintf(lab[n], sizeof(lab[n]), "%s%c:", dir_now[0] == 'A' + i ? "\x08" : "", 'A' + i);
 			p[n] = lab[n];
 			drv[n++] = (char)('A' + i);
 		}
-	below(O_DRIVE, &x, &y);
-	k = popup(x, y, p, n);
+	k = pop_over(O_DRIVE, p, n, sel);
 	if (k >= 0) {
 		char d[4];
 		d[0] = drv[k];
@@ -497,50 +633,52 @@ static void pop_folders(char recent[FP_RECENT][FP_PATH])
 {
 	static char lab[FP_RECENT][44];
 	const char *p[FP_RECENT];
-	short x, y, n = 0, k;
+	short n = 0, k, sel = 0;
 	int i;
 	for (i = 0; i < FP_RECENT && recent[i][0]; i++) {
 		size_t len = strlen(recent[i]);
+		const char *tick = "";
+		if (!strcmp(recent[i], dir_now)) {	/* the folder shown is the ticked one */
+			tick = "\x08";
+			sel = n;
+		}
 		if (len <= 38)
-			snprintf(lab[n], sizeof(lab[n]), "  %s ", recent[i]);
+			snprintf(lab[n], sizeof(lab[n]), "%s%s", tick, recent[i]);
 		else
-			snprintf(lab[n], sizeof(lab[n]), "  ...%s ", recent[i] + len - 35);
+			snprintf(lab[n], sizeof(lab[n]), "%s...%s", tick, recent[i] + len - 35);
 		p[n] = lab[n];
 		n++;
 	}
 	if (!n) {
 		static char lab0[44];
 		const char *none[1];
-		snprintf(lab0, sizeof(lab0), "~  %s ", spec->none);
+		snprintf(lab0, sizeof(lab0), "~%s", spec->none);
 		none[0] = lab0;
-		below(O_FOLDERS, &x, &y);
-		popup(x, y, none, 1);
+		pop_over(O_FOLDERS, none, 1, 0);
 		return;
 	}
-	below(O_FOLDERS, &x, &y);
-	k = popup(x, y, p, n);
+	k = pop_over(O_FOLDERS, p, n, sel);
 	if (k >= 0)
 		go(recent[k]);
 }
 
 static void set_labels(void)
 {
-	snprintf(s_type, sizeof(s_type), "%s \x02", dl_type_name(&dl, dl.type));
-	snprintf(s_sort, sizeof(s_sort), "%s \x02", dl_sort_name(dl.sort));
+	pop_label(s_type, W_TYPE, dl_type_name(&dl, dl.type));
+	pop_label(s_sort, W_SORT, dl_sort_name(dl.sort));
 }
 
 static void pop_type(void)
 {
 	static char lab[DL_TYPES][20];
 	const char *p[DL_TYPES];
-	short x, y, k;
+	short k;
 	int i;
 	for (i = 0; i < dl.ntypes; i++) {
-		snprintf(lab[i], sizeof(lab[i]), "%c %s ", i == dl.type ? '\x08' : ' ', dl_type_name(&dl, i));
+		snprintf(lab[i], sizeof(lab[i]), "%s%s", i == dl.type ? "\x08" : "", dl_type_name(&dl, i));
 		p[i] = lab[i];
 	}
-	below(O_TYPE, &x, &y);
-	k = popup(x, y, p, (short)dl.ntypes);
+	k = pop_over(O_TYPE, p, (short)dl.ntypes, (short)dl.type);
 	if (k >= 0 && k != dl.type) {
 		dl.type = k;
 		dl_filter(&dl);
@@ -557,14 +695,13 @@ static void pop_sort(void)
 {
 	static char lab[DS_N][16];
 	const char *p[DS_N];
-	short x, y, k;
+	short k;
 	int i;
 	for (i = 0; i < DS_N; i++) {
-		snprintf(lab[i], sizeof(lab[i]), "%c %s ", i == dl.sort ? '\x08' : ' ', dl_sort_name(i));
+		snprintf(lab[i], sizeof(lab[i]), "%s%s", i == dl.sort ? "\x08" : "", dl_sort_name(i));
 		p[i] = lab[i];
 	}
-	below(O_SORT, &x, &y);
-	k = popup(x, y, p, DS_N);
+	k = pop_over(O_SORT, p, DS_N, (short)dl.sort);
 	if (k >= 0 && k != dl.sort) {
 		dl.sort = k;
 		dl_sort(&dl);
@@ -719,9 +856,71 @@ static int button(short o)
 	return graf_watchbox(tree, o, SELECTED, 0);
 }
 
+/* the rigs' console: where the buttons are, "EPLAY geom type=x,y,w,h ..." (spec->log names the app) */
+static void log_geom(void)
+{
+	static const struct {
+		const char *name;
+		short o;
+	} k[] = { { "drive", O_DRIVE }, { "folders", O_FOLDERS }, { "type", O_TYPE }, { "sort", O_SORT },
+		  { "mask", O_MASK }, { "cancel", O_CANCEL }, { "add", O_ADD }, { "list", O_LIST } };
+	char b[240];
+	int i, n;
+	n = snprintf(b, sizeof(b), "%s geom", spec->log);
+	for (i = 0; i < 8; i++) {
+		short x, y;
+		objc_offset(tree, k[i].o, &x, &y);
+		n += snprintf(b + n, sizeof(b) - n, " %s=%d,%d,%d,%d", k[i].name, x, y, tree[k[i].o].ob_width,
+			      tree[k[i].o].ob_height);
+	}
+	snprintf(b + n, sizeof(b) - n, "\n");
+	nf_debug(b);
+}
+
+/* the filter field changed: the list narrowed as it is */
+static void mask_changed(void)
+{
+	snprintf(dl.mask, sizeof(dl.mask), "%s", s_mask);
+	dl_filter(&dl);
+	top = 0;
+	cur = anchor = dl.nview ? 0 : -1;
+	draw_list();
+	show_info();
+}
+
+short filepick_system;
+
+/* "Use the system file selector" (Erez, 9 Nov 2026): the AES's own, through fsel_exinput (titled where the AES is 1.4
+   or newer: gem.c), on the folder dir and its files whatever their type (the AES's mask is one, and the app's types
+   are several). One file, which plain TOS gives and nothing more; it goes to add() once, the folder it was
+   chosen in is left in dir with its '\\' and put first in recent[], as the dialog does. idle() isn't called while
+   the selector is open: it is the AES's, and the app is waiting in it. The click that closed it is settled
+   (fsel_settle: a double click's second press would reach the app's window as a click of its own). 1 or 0 on Cancel. */
+static int run_system(const FP_SPEC *sp, char *dir, char recent[FP_RECENT][FP_PATH], void (*add)(const char *path))
+{
+	static char path[FP_PATH + 4], folder[FP_PATH], name[DL_NAME], full[FP_PATH + DL_NAME];
+	short button = 0;
+	if (dir[0])
+		snprintf(path, sizeof(path), "%s*.*", dir);
+	else
+		snprintf(path, sizeof(path), "%c:\\*.*", (char)('A' + Dgetdrv()));
+	name[0] = 0;
+	fsel_exinput(path, name, &button, sp->title);
+	fsel_settle();
+	if (!button || !name[0] || !dl_folder_of(path, folder, sizeof(folder)) ||
+	    !dl_join(folder, name, full, sizeof(full)))
+		return 0;
+	snprintf(dir, FP_PATH, "%s", folder);
+	dl_recent_front(recent[0], FP_PATH, FP_RECENT, folder);
+	add(full);
+	return 1;
+}
+
 int filepick_run(const FP_SPEC *sp, char *dir, char recent[FP_RECENT][FP_PATH], void (*add)(const char *path),
 		 void (*idle)(void))
 {
+	if (filepick_system)
+		return run_system(sp, dir, recent, add);
 	short x, y, w, h, idx = 0, m[8];
 	int done = 0, added = 0, i;
 	AEVENT e;
@@ -751,6 +950,8 @@ int filepick_run(const FP_SPEC *sp, char *dir, char recent[FP_RECENT][FP_PATH], 
 	pic_begin("add");
 	dlg_open(tree, &x, &y, &w, &h);
 	dlg_more(more);
+	if (spec->log)
+		log_geom();
 	if (!dlg_in_window()) {
 		/* (TOS: the tree drawn; the list with it, before the first event
 		   call. In a window the AES's redraw draws both: more) */
@@ -788,21 +989,23 @@ int filepick_run(const FP_SPEC *sp, char *dir, char recent[FP_RECENT][FP_PATH], 
 				dl_select_all(&dl, 1);
 				draw_list();
 				show_info();
-			} else if (a == 27 && !s_mask[0])	/* Esc, the field empty: Cancel */
-				done = 1;
-			else {
+			} else if (a == 27) {
+				/* Esc empties the filter field and never cancels, empty or not: the
+				   dialog closes by Cancel or Undo (3.5, D28) */
+				if (s_mask[0]) {
+					objc_edit(tree, O_MASK, 0, &idx, ED_END);
+					s_mask[0] = 0;
+					draw_obj(O_MASK);
+					objc_edit(tree, O_MASK, 0, &idx, ED_INIT);
+					mask_changed();
+				}
+			} else {
 				/* the mask: typed into, the list narrowed as it is */
 				char was[13];
 				strcpy(was, s_mask);
 				objc_edit(tree, O_MASK, e.kreturn, &idx, ED_CHAR);
-				if (strcmp(was, s_mask)) {
-					snprintf(dl.mask, sizeof(dl.mask), "%s", s_mask);
-					dl_filter(&dl);
-					top = 0;
-					cur = anchor = dl.nview ? 0 : -1;
-					draw_list();
-					show_info();
-				}
+				if (strcmp(was, s_mask))
+					mask_changed();
 			}
 		}
 		if ((e.which & MU_BUTTON) && !done) {
@@ -855,7 +1058,7 @@ int filepick_run(const FP_SPEC *sp, char *dir, char recent[FP_RECENT][FP_PATH], 
 		/* the selected files and folders in the list's order (a folder
 		   with its subfolders: its name ending in '\'); with none, the
 		   file at the keys' place */
-		char p[FP_PATH + 16];
+		static char p[FP_PATH + DL_NAME + 2];	/* (a long name and the folder before it: never cut) */
 		int any = dl_selected(&dl, 0);
 		for (i = 0; i < dl.nview; i++) {
 			DENT *f = dl_at(&dl, i);
@@ -865,15 +1068,8 @@ int filepick_run(const FP_SPEC *sp, char *dir, char recent[FP_RECENT][FP_PATH], 
 			add(p);
 			added++;
 		}
-		if (added) {
-			/* the folder to the front of the Folders pop-up */
-			int k;
-			for (k = 0; k < FP_RECENT - 1 && strcmp(recent[k], dir_now); k++)
-				;
-			for (; k > 0; k--)
-				strcpy(recent[k], recent[k - 1]);
-			strcpy(recent[0], dir_now);
-		}
+		if (added)			/* the folder to the front of the Folders pop-up */
+			dl_recent_front(recent[0], FP_PATH, FP_RECENT, dir_now);
 	}
 	snprintf(dir, FP_PATH, "%s", dir_now);
 	dl_free(&dl);
