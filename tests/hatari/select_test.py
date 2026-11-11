@@ -97,8 +97,6 @@ try:
     # the dialog's arrows, its second row (Archive) and OK on a 640x480 screen
     if True:
         dx, dy, rx, ry, ox, oy = 420, 321, 250, 161, 380, 385
-        if machine.endswith(":mono"):    # 640x400: the dialog, centred, 40 pixels higher
-            dy, ry, oy = dy - 40, ry - 40, oy - 40
         r.click(dx, dy)                  # next page, in place
         time.sleep(2)
         r.shot("s3-page2")
@@ -111,7 +109,7 @@ try:
         # the whole list drawn again on the first press lost the second
         # (Erez, 11 Nov 2026)
         r.move(rx, ry)
-        r.xdo("click", "--repeat", "2", "--delay", os.environ.get("DCLICK_MS", "70"), "1")    # a quick one: 70 ms between
+        r.xdo("click", "--repeat", "2", "--delay", "70", "1")    # a quick one: 70 ms between
         time.sleep(25)
         r.shot("s5-moved")
         m = imaplib.IMAP4("127.0.0.1", IMAP)
