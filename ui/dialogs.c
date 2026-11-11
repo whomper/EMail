@@ -1407,10 +1407,15 @@ static short pick_w(const char *title, const char **items, short n, short lw)
 						result = cur;
 						break;
 					}
-					/* only the two rows that change, drawn on the press: the
-					   whole list drawn again flickered, and took so long that
-					   a quick second click came while it drew and was taken
-					   for the first one's release (Erez, 11 Nov 2026) */
+					/* the press let go first, then only the two rows that
+					   change drawn: the whole list drawn again flickered,
+					   and any drawing before the release is waited for lets
+					   a quick second press be taken for the first one's
+					   release (Erez, 11 Nov 2026; on an ST even two rows'
+					   worth: common/ui/dialog.h) */
+#ifdef DLG_CLICK
+					dlg_touch_up();
+#endif
 					if (old != cur && old >= first && old < first + PROWS) {
 						tree[row[old - first]].ob_state = 0;
 						dlg_draw(tree, row[old - first]);
