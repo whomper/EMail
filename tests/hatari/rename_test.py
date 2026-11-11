@@ -87,7 +87,7 @@ try:
     time.sleep(1)
     r.shot("r1-menu")
     if True:
-        x, y = 260, 75                   # its fourth item on a 640x480 screen
+        x, y = 260, 91                   # its fifth item on a 640x480 screen (Folder pane first, D45)
         r.click(x, y)                    # Rename folder...
         time.sleep(2)
         r.shot("r2-dialog")

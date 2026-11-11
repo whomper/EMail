@@ -130,13 +130,13 @@ try:
     time.sleep(10)
     before, got = inf(), fetches()
 
-    menu(272, 123)                       # Folder > Download all messages
+    menu(272, 139)                       # Folder > Download all messages (Folder pane first, D45)
     r.shot("e1-download-all")
     r.key(K["ESC"])
     time.sleep(3)
     check("Download all, Esc: nothing downloaded", fetches() == got)
 
-    menu(272, 59)                        # Folder > New folder...
+    menu(272, 75)                        # Folder > New folder... (Folder pane first, D45)
     r.type("Zzz")
     time.sleep(0.5)
     r.shot("e2-new-folder")

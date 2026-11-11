@@ -140,7 +140,7 @@ try:
     r.click(272, 9)                      # menu: Folder
     r.shot("a2-menu")
     mark("A2 begin")
-    r.click(300, 125)                    # Download all messages
+    r.click(300, 141)                    # Download all messages (under Folder pane, D45)
     time.sleep(2)
     r.shot("a2-ask")
     r.key(K["RETURN"])                   # Download

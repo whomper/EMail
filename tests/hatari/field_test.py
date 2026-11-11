@@ -165,7 +165,7 @@ try:
     check("a signature row holds a line of %d and shows 40" % len(SIG), inf_value("signature") == SIG)
     check("EContact's folder holds a path of %d and shows 32" % len(PDIR), inf_value("peopledir") == PDIR)
 
-    menu(272, 59)                        # Folder > New folder...
+    menu(272, 75)                        # Folder > New folder... (Folder pane first, D45)
     r.type(FOLDER, pace=0.05)
     time.sleep(0.5)
     r.shot("f4-new-folder")
