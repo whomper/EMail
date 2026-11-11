@@ -129,9 +129,16 @@ try:
         kept = "FALCON=1" in inf
         print("on an ST: the Direct connection kept for the Falcon:", kept)
         ok = ok and kept
-    # and quit: each step of it in EMAIL.LOG, to the last, and no
-    # CRASH.LOG (Erez, 10 Nov 2026: two bombs as EMail quit)
-    r.ctrl("q")
+    # and quit, with the mouse: File > Quit (ClaudeST 2.2 to 2.5 lost it
+    # when a menu line went; hub, 11 Nov 2026); each step of it in
+    # EMAIL.LOG, to the last, and no CRASH.LOG (Erez, 10 Nov 2026: two
+    # bombs as EMail quit)
+    if machine.endswith(":med"):                     # 640x200: the window is shown doubled
+        r.ctrl("q")
+    else:
+        r.move(12 * 8, 8)                            # " File " (after "  " and " EMail ")
+        time.sleep(1.5)
+        r.click(12 * 8, 19 + 7 * 16 + 8)             # its eighth line, of 16 pixels: Quit
     time.sleep(12)
     log = open(rig.ci_path(hd, "email.log"), errors="replace").read()
     steps = [l.split(" -- quit: ", 1)[1].strip() for l in log.splitlines() if " -- quit: " in l]
