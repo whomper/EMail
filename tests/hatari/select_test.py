@@ -6,7 +6,7 @@
 Like net_test.py (Dovecot here, FAKESTNG.PRG and serial_bridge.py for the
 network), with 16 extra folders so the move dialog pages. EMail selects
 two messages with Shift+click, opens Move (^M), pages the folder list
-down and back, picks Archive and moves both; the test checks the server.
+down and back, chooses the first folder, then double-clicks Archive quickly\n(70 ms between the clicks), which moves both; the test checks the server.
 
     select_test.py WORKDIR [MACHINE]     (needs Xvfb, xdotool, dovecot)
 """
@@ -102,10 +102,14 @@ try:
         r.shot("s3-page2")
         r.click(dx, dy - 11 * 16)        # back up (the up arrow)
         time.sleep(2)
-        r.click(rx, ry)                  # a folder
+        r.click(rx, ry - 16)             # the first folder: chosen, nothing moved
         time.sleep(1)
         r.shot("s4-chosen")
-        r.click(ox, oy)                  # OK
+        # then Archive with a quick double click, which takes it (no OK):
+        # the whole list drawn again on the first press lost the second
+        # (Erez, 11 Nov 2026)
+        r.move(rx, ry)
+        r.xdo("click", "--repeat", "2", "--delay", "70", "1")    # a quick one: 70 ms between
         time.sleep(25)
         r.shot("s5-moved")
         m = imaplib.IMAP4("127.0.0.1", IMAP)

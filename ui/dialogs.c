@@ -1298,6 +1298,7 @@ static short pick_w(const char *title, const char **items, short n, short lw)
 	static char shown[PROWS][PW + 2], count[40];
 	short first = 0, cur = -1, row[PROWS], box, b_up, b_down, b_ok, b_cancel, f_count;
 	short x, y, w, h, r, i, result = -1, tw = (short)strlen(title);
+	int fill = 1;		/* 0: the rows as they are on the screen */
 
 	if (pick_from > 0 && pick_from < n) {
 		cur = pick_from;
@@ -1325,6 +1326,8 @@ static short pick_w(const char *title, const char **items, short n, short lw)
 	for (;;) {
 		/* fill the rows from `first`; the chosen one inverted */
 		short k;
+		if (!fill)
+			goto ask;	/* a row chosen: only it and the one before were drawn */
 		for (k = 0; k < PROWS; k++) {
 			short it = first + k, len = 0;
 			memset(shown[k], ' ', lw);
@@ -1368,6 +1371,8 @@ static short pick_w(const char *title, const char **items, short n, short lw)
 			dlg_draw(tree, f_count);
 			dlg_draw(tree, b_ok);
 		}
+	ask:
+		fill = 1;
 		r = dlg_do(tree, 0, b_cancel);	/* Esc and Undo: Cancel (3.5) */
 		{
 			int dbl = (r & 0x8000) != 0;
@@ -1396,9 +1401,28 @@ static short pick_w(const char *title, const char **items, short n, short lw)
 			}
 			for (k = 0; k < PROWS; k++)
 				if (r == row[k] && first + k < n) {
+					short old = cur;
 					cur = first + k;
-					if (dbl)
+					if (dbl) {
 						result = cur;
+						break;
+					}
+					/* only the two rows that change, drawn on the press: the
+					   whole list drawn again flickered, and took so long that
+					   a quick second click came while it drew and was taken
+					   for the first one's release (Erez, 11 Nov 2026) */
+					if (old != cur && old >= first && old < first + PROWS) {
+						tree[row[old - first]].ob_state = 0;
+						dlg_draw(tree, row[old - first]);
+					}
+					tree[row[k]].ob_state = SELECTED;
+					if (old != cur)
+						dlg_draw(tree, row[k]);
+					if (old < 0) {
+						tree[b_ok].ob_state = 0;
+						dlg_draw(tree, b_ok);
+					}
+					fill = 0;
 				}
 			if (result >= 0)
 				break;
