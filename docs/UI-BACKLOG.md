@@ -41,3 +41,8 @@ For 2.18 or later (Erez, 12 Nov 2026): "Hebrew in fonts" goes from every app. Dr
 `HEBFONT=` key (an old one read and ignored), `heb_font_map` and the ISO 8859-8 / PC 862 code, its tests and the
 guide's text; one line in the notes (an ISO or 862 Hebrew bitmap font now shows accented Latin letters). Not into
 the Font dialog.
+
+For 2.18 or later (Erez, 12 Nov 2026; guidelines 6.1, AERA-Atari a4b8a1a): EMAIL.INF written only when a setting
+changed. `store_save_settings` writes the whole file at every quit (twice); it keeps the text last read or written
+and skips an identical one. Test: quit twice with nothing changed, the file untouched; change one thing, written
+once. EMAILCHK.ACC already writes only on change.
