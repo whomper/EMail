@@ -36,3 +36,8 @@ when it is there.
 
 Find (D4, MD10): decided by Erez on 10 Nov 2026, `Find` where it is; nothing to do (the label lost its dots in 2.15).
 Nothing to do: Accounts... is in Options already (D13); `Open|Later` fits (W25).
+
+For 2.18 or later (Erez, 12 Nov 2026): "Hebrew in fonts" goes from every app. Drop the Settings item, the
+`HEBFONT=` key (an old one read and ignored), `heb_font_map` and the ISO 8859-8 / PC 862 code, its tests and the
+guide's text; one line in the notes (an ISO or 862 Hebrew bitmap font now shows accented Latin letters). Not into
+the Font dialog.
