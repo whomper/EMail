@@ -12,7 +12,7 @@ An e-mail program for the Atari ST, STE, TT and Falcon, written in C for GEM.
 - **Works offline:** your folders mirrored on disk; read, flag and move, and the server catches up later.
 - **Find** narrows the list as you type; **Search server** looks through the messages' text.
 - **Many messages at once:** mark, flag, move or delete a selection together.
-- **Translate** messages, or a few chosen words, on your own network.
+- **Translate** messages, or a few chosen words, on your own network, into the languages you install on it.
 - **People by name** from EContact, and calendar invitations straight into ECal.
 - **EMail check**, a small accessory, tells you about new mail while EMail isn't running.
 - **Any Atari:** TOS 1.04 to 4.x, EmuTOS, MagiC and MiNT, from a 1 MB ST to a Falcon.
@@ -89,4 +89,4 @@ GPL 2 or later: see [COPYING](COPYING). Copyright (C) 2026 AERA | Erez Yaary. It
 
 ---
 
-Part of **AERA** for Atari: [ECal](https://github.com/whomper/ECal) · [EContact](https://github.com/whomper/EContact) · [EMail](https://github.com/whomper/EMail) · [EFTP](https://github.com/whomper/EFTP) · [EHypView](https://github.com/whomper/EHypView) · [ClaudeST](https://github.com/whomper/ClaudeST) · [EWeb](https://github.com/whomper/EWeb) · [EUpdate](https://github.com/whomper/EUpdate) · 8-bit: [EDOS](https://github.com/whomper/EDOS) · [EFTP_XL](https://github.com/whomper/EFTP_XL) · Gateway: [AERA-Gateway](https://github.com/whomper/AERA-Gateway)
+Part of **AERA** for Atari: [ECal](https://github.com/whomper/ECal) · [EContact](https://github.com/whomper/EContact) · [EMail](https://github.com/whomper/EMail) · [EFTP](https://github.com/whomper/EFTP) · [EHypView](https://github.com/whomper/EHypView) · [ClaudeST](https://github.com/whomper/ClaudeST) · [EWeb](https://github.com/whomper/EWeb) · [EUpdate](https://github.com/whomper/EUpdate) · [EPDF](https://github.com/whomper/EPDF) · 8-bit: [EDOS](https://github.com/whomper/EDOS) · [EFTP_XL](https://github.com/whomper/EFTP_XL) · Gateway: [AERA-Gateway](https://github.com/whomper/AERA-Gateway)
