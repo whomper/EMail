@@ -34,5 +34,5 @@ when it is there.
 | 18 | ⇧^S hides the folder pane. New work; its menu place is still open: ask the hub first | D45, W20 | H | done, 2.16: Folder > Folder pane, the first line (Erez, 10 Nov 2026) |
 | 19 | Keyboard reach in dialogs (D25, C6) H; EMail's own `form_loop` onto `dlg_do` (C11) H; the password-copy flag (C12); window arrows to the pane under the pointer (D37): all [hub]. `-DDLG_CLICK` (C16) S | D25, C6, C11, C12, C16, D37 | -DDLG_CLICK and D37 (arrowed.c) done, 2.15; the rest (C11, D25, C12) 2.17 |
 
-Still open, not to start: Find's words and place (D4, MD10).
+Find (D4, MD10): decided by Erez on 10 Nov 2026, `Find` where it is; nothing to do (the label lost its dots in 2.15).
 Nothing to do: Accounts... is in Options already (D13); `Open|Later` fits (W25).
