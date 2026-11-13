@@ -179,10 +179,17 @@ void editor_open(ACCOUNT *a, char *text, const char *irt, const char *refs)
 	w_editor.total = nl;
 	set_title();
 	ed_count++;			/* a pick for the last message isn't for this one */
-	win_open(&w_editor);
-	eb_layout(&w_editor);		/* the bar's height, before the rows are counted */
-	win_sliders(&w_editor);
-	win_redraw(&w_editor, 0);
+	{
+		int was_open = w_editor.h > 0;
+		win_open(&w_editor);
+		eb_layout(&w_editor);		/* the bar's height, before the rows are counted */
+		win_sliders(&w_editor);
+		/* a window just opened is drawn by the AES's WM_REDRAW, in the next
+		   turn: drawing it here as well drew it twice (an 8 MHz ST: 735 ms
+		   in one stretch); one already open is drawn now */
+		if (was_open)
+			win_redraw(&w_editor, 0);
+	}
 }
 
 /* visual column of logical column col within s[0..n), laid out the way

@@ -1879,11 +1879,13 @@ int main(void)
 
 	quiet = !crash_previous() && free_kb >= 300 && naccts && !store_lost_passwords;
 	start_mark("menu");
+	win_hold_draw = 1;
 	main_open();
 	start_mark("main_open");
 	folders_build();
 	list_load();
 	reader_clear();
+	win_hold_draw = 0;
 	start_mark("panes");
 	/* the whole window now, its pane bars and dividers too, not at the
 	   AES's first WM_REDRAW: that waits behind the welcome box or the

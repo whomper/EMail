@@ -408,11 +408,16 @@ static void draw_main(GRECT *clip)
 		draw_divider(&r);
 }
 
+/* 1 while EMail starts: the panes are filled without drawing, and the
+   window is drawn once, whole, by win_redraw_all (an 8 MHz ST drew the
+   folders and the list twice, 110 ms) */
+int win_hold_draw;
+
 /* redraw area of the main window through its rectangle list */
 static void main_redraw(GRECT *area)
 {
 	GRECT r, a;
-	if (main_h <= 0)
+	if (main_h <= 0 || (win_hold_draw && area))
 		return;
 	if (main_iconified) {	/* the icon, not the panes (area is the old window's) */
 		icon_window(main_h, 0);

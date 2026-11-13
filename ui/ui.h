@@ -79,6 +79,7 @@ WIN *win_find(short handle);
 void win_title(WIN *w, const char *title);
 void win_info(WIN *w, const char *info);
 void win_redraw(WIN *w, GRECT *area);		/* area NULL = everything */
+extern int win_hold_draw;	/* 1 at the start: the panes are drawn once, by win_redraw_all */
 void win_redraw_lines(WIN *w, long first, long n);
 void win_sliders(WIN *w);
 void win_sliders_later(WIN *w);
