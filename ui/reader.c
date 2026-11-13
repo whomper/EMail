@@ -1103,6 +1103,49 @@ void reader_save_attachment(short i)
 	status("");
 }
 
+/* a PDF attachment written as EMail's PDF\NAME.PDF, then given to EPDF
+   (main.c's open_in_epdf); the file stays for EPDF to read, the next one
+   of the same name overwrites it */
+static void reader_to_epdf(short i)
+{
+	char dir[200], path[220], name[16], *data;
+	long len;
+	int ok;
+	short_name(cur_msg->parts[i].name, name);
+	if (!strchr(name, '.'))
+		strcat(name, ".pdf");
+	path_join(dir, sizeof(dir), opt.workdir, "pdf");
+	pf_mkdir(dir);
+	path_join(path, sizeof(path), dir, name);
+	busy(1);
+	data = mime_part_data(cur_raw, &cur_msg->parts[i], &len);
+	ok = data && pf_save(path, data, len) >= 0;
+	free(data);
+	busy(0);
+	if (!ok) {
+		alert(1, "[1][Can't write|%s][ OK ]", path);
+		return;
+	}
+	open_in_epdf(path);
+}
+
+/* a click on a PDF attachment: open it in EPDF, save it, or nothing
+   (Erez, 13 Nov 2026) */
+static void reader_pdf(short i)
+{
+	char name[31], *p;	/* an alert line holds 30 */
+	short r;
+	str_copy(name, cur_msg->parts[i].name[0] ? cur_msg->parts[i].name : "The attachment", sizeof(name));
+	for (p = name; *p; p++)
+		if (*p == '|' || *p == '[' || *p == ']')
+			*p = ' ';	/* the alert's own marks */
+	r = alert(1, "[2][%s|is a PDF document.][Open in EPDF|Save...|Cancel]", name);
+	if (r == 1)
+		reader_to_epdf(i);
+	else if (r == 2)
+		reader_save_attachment(i);
+}
+
 #define AV_STARTED 0x4738
 
 /* ECal's AV_STARTED for our VA_START, up to 3 s; the rest wait as in
@@ -1206,7 +1249,10 @@ static void click(WIN *w, short mx, short my, short clicks, short kstate)
 	}
 	if (i < 0 || i >= nlines || lines[i].kind != L_ATTACH)
 		return;
-	if (!mime_is_calendar(&cur_msg->parts[lines[i].attach]))
+	if (mime_is_pdf(&cur_msg->parts[lines[i].attach])) {
+		if (clicks == 1)		/* a double click's second asks no more */
+			reader_pdf(lines[i].attach);
+	} else if (!mime_is_calendar(&cur_msg->parts[lines[i].attach]))
 		reader_save_attachment(lines[i].attach);
 	else if (clicks >= 2)			/* (a click alone opens no dialog: the second comes) */
 		reader_to_ecal(lines[i].attach);
@@ -1267,9 +1313,19 @@ static void rclick(WIN *w, short mx, short my)
 	}
 	if (i >= 0 && i < nlines && lines[i].kind == L_ATTACH) {
 		static const char *const lab[] = { "Save attachment...", "Add to ECal" };
+		static const char *const plab[] = { "Open in EPDF", "Save attachment..." };
 		short a = lines[i].attach, inv = mime_is_calendar(&cur_msg->parts[a]);
+		short r;
+		if (mime_is_pdf(&cur_msg->parts[a])) {	/* a PDF: Open in EPDF first, as its click offers */
+			r = popup_m(mx, my, plab, 2);
+			if (r == 0)
+				reader_to_epdf(a);
+			else if (r == 1)
+				reader_save_attachment(a);
+			return;
+		}
 		/* an invitation: Add to ECal first, beside Save */
-		short r = popup_m(mx, my, inv ? lab + 1 : lab, inv ? 2 : 1);
+		r = popup_m(mx, my, inv ? lab + 1 : lab, inv ? 2 : 1);
 		if (inv && r == 0)
 			reader_to_ecal(a);
 		else if (r == (inv ? 1 : 0))

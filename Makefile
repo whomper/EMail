@@ -206,6 +206,17 @@ $(OBJDIR)/fakehelp.acc: tests/atari/fakeweb.c $(addprefix $(OBJDIR)/,$(addsuffix
 		$(addprefix $(OBJDIR)/,$(addsuffix .o,$(FAKECAL))) $(OBJDIR)/nf.o -lgcc
 	python3 common/tools/elf2tos.py $(OBJDIR)/fakehelp.elf $@
 
+# a stand-in for EPDF (its VA_START, and its program on plain TOS), for
+# tests/hatari/pdf_test.py: C:\EPDF.LOG (never released)
+$(OBJDIR)/fakeepdf.acc: tests/atari/fakeweb.c $(addprefix $(OBJDIR)/,$(addsuffix .o,$(FAKECAL))) $(OBJDIR)/nf.o
+	$(CC) $(CFLAGS) -DFAKE_NAME='"EPDF"' -DFAKE_LOG='"C:\\EPDF.LOG"' -c -o $(OBJDIR)/fakeepdf.o $<
+	$(CC) $(LDFLAGS) -o $(OBJDIR)/fakeepdf.elf $(OBJDIR)/fakeepdf.o \
+		$(addprefix $(OBJDIR)/,$(addsuffix .o,$(FAKECAL))) $(OBJDIR)/nf.o -lgcc
+	python3 common/tools/elf2tos.py $(OBJDIR)/fakeepdf.elf $@
+
+$(OBJDIR)/fakeepdf.prg: $(OBJDIR)/fakeepdf.acc
+	python3 common/tools/elf2tos.py $(OBJDIR)/fakeepdf.elf $@
+
 $(OBJDIR) binary:
 	mkdir -p $@
 

@@ -721,6 +721,12 @@ int mime_is_calendar(const MIMEPART *p)
 	       (n > 4 && str_istarts(p->name + n - 4, ".ics"));
 }
 
+int mime_is_pdf(const MIMEPART *p)
+{
+	long n = (long)strlen(p->name);
+	return str_istarts(p->type, "application/pdf") || (n > 4 && str_istarts(p->name + n - 4, ".pdf"));
+}
+
 /* an invitation's SUMMARY (RFC 5545: "SUMMARY;LANGUAGE=en:...", folded
    onto lines that start with a space, \, \; \n escaped), in the Atari
    character set; NULL when it has none */

@@ -45,6 +45,7 @@ static void defaults(void)
 	opt.peoplefile = 0;
 	opt.peopledir[0] = 0;
 	opt.browser[0] = 0;
+	opt.epdf[0] = 0;
 	opt.translate = 0;
 	str_copy(opt.translate_to, "en", sizeof(opt.translate_to));
 	opt.wrap = 72;
@@ -503,6 +504,7 @@ static void set_opt(const char *k, const char *v)
 	else if (!strcmp(k, "peoplefile")) opt.peoplefile = n != 0;
 	else if (!strcmp(k, "peopledir")) str_copy(opt.peopledir, v, sizeof(opt.peopledir));
 	else if (!strcmp(k, "browser")) str_copy(opt.browser, v, sizeof(opt.browser));
+	else if (!strcmp(k, "epdf")) str_copy(opt.epdf, v, sizeof(opt.epdf));
 	else if (!strcmp(k, "translate")) opt.translate = n != 0;
 	else if (!strcmp(k, "translateto")) {
 		if (v[0] && strlen(v) < sizeof(opt.translate_to))
@@ -740,6 +742,8 @@ int store_save_settings(void)
 	put_path(&b, "EContact's folder, where its contacts file is (C:\\ECONTACT)", "PEOPLEDIR", opt.peopledir);
 	put_path(&b, "EWeb, started on a link when no web browser runs (C:\\EWEB\\EWEB.PRG; empty: asked once)",
 		 "BROWSER", opt.browser);
+	put_path(&b, "EPDF, started on a PDF attachment when it isn't running (C:\\EPDF\\EPDF.PRG; empty: asked once)",
+		 "EPDF", opt.epdf);
 	put_fmt(&b, "1 = each message is shown translated by the Gateway (Options > Translate), 0 = as it came",
 		"TRANSLATE", "%d", opt.translate);
 	put_str(&b, "the language messages are translated into, a two-letter code (en English, he Hebrew)",

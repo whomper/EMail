@@ -152,6 +152,19 @@ static void t_mime(void)
 	d = mime_part_data(multipart, &m->parts[0], &n);
 	CHECK(n == 8 && !memcmp(d, "\x89PNG\r\n\x1a\n", 8), "attachment data %ld", n);
 	free(d);
+	CHECK(m->nparts && !mime_is_pdf(&m->parts[0]), "a PNG is no PDF");
+	{
+		MIMEPART p;
+		memset(&p, 0, sizeof(p));
+		p.type = "application/pdf";
+		p.name = "";
+		CHECK(mime_is_pdf(&p), "application/pdf is a PDF");
+		p.type = "application/octet-stream";
+		p.name = "Invoice.PDF";
+		CHECK(mime_is_pdf(&p), "an octet-stream named .PDF is a PDF");
+		p.name = "pdf";
+		CHECK(!mime_is_pdf(&p), "a name that is only \"pdf\" is not");
+	}
 	CHECK(mime_date("Thu, 08 Oct 2026 18:30:00 +0300") == 1791473400UL,
 	      "date %lu", mime_date("Thu, 08 Oct 2026 18:30:00 +0300"));
 	mime_free(m);

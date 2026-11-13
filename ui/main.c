@@ -438,29 +438,29 @@ static const char *link_page(const char *url)
 	return ok ? path : 0;
 }
 
-/* EWeb's program: the one EMail was told, else beside EMail, else
-   asked for once (and kept in EMAIL.INF) */
-static int find_browser(char *out, int size)
+/* a program of the family: the one EMail was told (keep, from EMAIL.INF),
+   else beside EMail, else asked for once (and kept in EMAIL.INF). names:
+   the files to look for, the first one's name offered in the file
+   selector; ask: its title */
+static int find_prg(char *keep, int keepsize, const char *const *names, short n, const char *ask,
+		    char *out, int size)
 {
-	/* EWeb's ST edition first on a 68000 */
-	static const char *const names[2][2] = { { "ewebst.prg", "eweb.prg" }, { "eweb.prg", "ewebst.prg" } };
-	int big = get_cookie(0x5F435055L) >= 20;	/* _CPU: a 68020 or better */
 	char path[200], name[16];
 	short button = 0, k;
 	char *e;
-	if (opt.browser[0] && pf_exists(opt.browser)) {
-		str_copy(out, opt.browser, size);
+	if (keep[0] && pf_exists(keep)) {
+		str_copy(out, keep, size);
 		return 1;
 	}
-	for (k = 0; k < 2; k++) {
-		path_join(out, size, opt.workdir, names[big][k]);
+	for (k = 0; k < n; k++) {
+		path_join(out, size, opt.workdir, names[k]);
 		if (pf_exists(out))
 			return 1;
 	}
 	str_copy(path, opt.workdir[0] ? opt.workdir : "C:", sizeof(path) - 4);
 	strcat(path, "\\*.prg");
-	strcpy(name, names[big][0]);
-	if (!fsel_exinput(path, name, &button, "Where is EWeb (EWEB.PRG)?") || !button || !name[0])
+	strcpy(name, names[0]);
+	if (!fsel_exinput(path, name, &button, ask) || !button || !name[0])
 		return 0;
 	if ((e = strrchr(path, '\\')) != 0)
 		e[1] = 0;
@@ -468,20 +468,70 @@ static int find_browser(char *out, int size)
 	strncat(out, name, size - strlen(out) - 1);
 	if (!pf_exists(out))
 		return 0;
-	str_copy(opt.browser, out, sizeof(opt.browser));
+	str_copy(keep, out, keepsize);
 	store_save_settings();
 	return 1;
+}
+
+/* EWeb's program (its ST edition first on a 68000) */
+static int find_browser(char *out, int size)
+{
+	static const char *const names[2][2] = { { "ewebst.prg", "eweb.prg" }, { "eweb.prg", "ewebst.prg" } };
+	int big = get_cookie(0x5F435055L) >= 20;	/* _CPU: a 68020 or better */
+	return find_prg(opt.browser, sizeof(opt.browser), names[big], 2, "Where is EWeb (EWEB.PRG)?", out, size);
+}
+
+/* 1: the AES runs a program beside EMail (MagiC, MultiTOS, XaAES) */
+static int multitasking(void)
+{
+	return get_cookie(0x4D616758L) != 0 ||				/* MagX */
+	       (get_cookie(0x4D694E54L) != 0 && aes_version() >= 0x0400);	/* MiNT */
+}
+
+/* prg started with arg (125 characters at most) as its command line:
+   beside EMail where the AES runs both, on plain TOS in its place once
+   EMail has quit (who and on what, for the status line: "EWeb", "on the
+   link") */
+static void start_prg(const char *prg, const char *arg, const char *who, const char *on)
+{
+	char tail[128], dir[200], said[80], *e;
+	short len = (short)strlen(arg);
+	if (len > 125)
+		len = 125;
+	tail[0] = (char)len;
+	memcpy(tail + 1, arg, len);
+	tail[1 + len] = 0;
+	/* the program's folder made the current one: EmuTOS and MiNT start it
+	   there; TOS 1.04 and 4.04 start it in the desktop's folder, and the
+	   program finds its files from its own path (app_dir, guidelines 6.1) */
+	str_copy(dir, prg, sizeof(dir));
+	if ((e = strrchr(dir, '\\')) != 0)
+		e[1] = 0;
+	if (dir[0] && dir[1] == ':') {
+		Dsetdrv((dir[0] & ~0x20) - 'A');
+		Dsetpath(dir + 2);
+	}
+	if (!shel_write(1, 1, 0, (char *)prg, tail)) {
+		alert(1, "[1][Couldn't start|%s.][ OK ]", prg);
+		return;
+	}
+	if (multitasking()) {
+		snprintf(said, sizeof(said), "%s is starting %s.", who, on);
+	} else {
+		snprintf(said, sizeof(said), "Quitting: %s starts %s.", who, on);
+		quit = 1;
+	}
+	main_status(said);
 }
 
 /* EWeb started on url: beside EMail where the AES runs both (MagiC,
    MultiTOS, XaAES); on plain TOS in its place, once EMail has quit */
 static void start_browser(const char *url)
 {
-	int multi = get_cookie(0x4D616758L) != 0 ||				/* MagX */
-		    (get_cookie(0x4D694E54L) != 0 && aes_version() >= 0x0400);	/* MiNT */
-	char prg[200], tail[128], dir[200], *e;
+	int multi = multitasking();
+	char prg[200];
 	const char *arg = url;
-	short r, len;
+	short r;
 	r = alert(1, multi ? "[2][No web browser is running.|Start EWeb on this link?][Open in EWeb|Copy link|Cancel]"
 			   : "[2][No web browser is running.|EMail can close and start|EWeb on this link.]"
 			     "[Open in EWeb|Copy link|Cancel]");
@@ -500,29 +550,35 @@ static void start_browser(const char *url)
 		alert(1, "[1][Can't write LINK.HTM|in EMail's folder.][ OK ]");
 		return;
 	}
-	len = (short)strlen(arg);
-	tail[0] = (char)len;
-	memcpy(tail + 1, arg, len + 1);
-	/* EWeb's folder made the current one: EmuTOS and MiNT start it there;
-	   TOS 1.04 and 4.04 start it in the desktop's folder, and EWeb finds
-	   its files from its own path (app_dir, guidelines 6.1) */
-	str_copy(dir, prg, sizeof(dir));
-	if ((e = strrchr(dir, '\\')) != 0)
-		e[1] = 0;
-	if (dir[0] && dir[1] == ':') {
-		Dsetdrv((dir[0] & ~0x20) - 'A');
-		Dsetpath(dir + 2);
-	}
-	if (!shel_write(1, 1, 0, prg, tail)) {
-		alert(1, "[1][Couldn't start|%s.][ OK ]", prg);
+	start_prg(prg, arg, "EWeb", "on the link");
+}
+
+/* a PDF document (path, written in EMail's folder) to EPDF: the running
+   one by VA_START, else EPDF started on it: beside EMail where the AES
+   runs both, on plain TOS in its place once EMail has quit (Erez, 13 Nov
+   2026) */
+void open_in_epdf(const char *path)
+{
+	static const char *const names[2] = { "epdf.prg", "epdfst.prg" };
+	char arg[230], prg[200];
+	snprintf(arg, sizeof(arg), strchr(path, ' ') ? "'%s'" : "%s", path);
+	if (av_send("EPDF", arg)) {
+		main_status("The document is open in EPDF.");
 		return;
 	}
-	if (multi) {
-		main_status("EWeb is starting on the link.");
-	} else {
-		main_status("Quitting: EWeb starts on the link.");
-		quit = 1;
+	if (!multitasking() &&
+	    alert(1, "[2][EPDF isn't running. EMail can|close and start EPDF on|this document.][Start EPDF|Cancel]") != 1)
+		return;
+	if (!find_prg(opt.epdf, sizeof(opt.epdf), names, 2, "Where is EPDF (EPDF.PRG)?", prg, sizeof(prg)))
+		return;
+	if (!multitasking() && editor_dirty() &&
+	    alert(2, "[2][You are still writing a message.|Quit anyway?][Quit|Cancel]") != 1)
+		return;
+	if (strlen(arg) > 125) {
+		alert(1, "[1][The document's path is too|long to start EPDF on.|Save it nearer the root.][ OK ]");
+		return;
 	}
+	start_prg(prg, arg, "EPDF", "on the document");
 }
 
 /* a link in a message: mailto: starts a new message; a web address goes

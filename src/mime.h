@@ -43,6 +43,8 @@ char *mime_text_utf8(const char *raw, long len, long *outlen);
 char *mime_part_data(const char *raw, const MIMEPART *p, long *outlen);
 /* 1: a calendar invitation (text/calendar, application/ics, or *.ics), for ECal */
 int mime_is_calendar(const MIMEPART *p);
+/* 1: a PDF document (application/pdf, or *.pdf), for EPDF */
+int mime_is_pdf(const MIMEPART *p);
 
 /* the unfolded value of header `name` in the header block hdr[0..n), malloc'ed, or NULL */
 char *mime_header(const char *hdr, long n, const char *name);

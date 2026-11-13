@@ -213,6 +213,7 @@ extern unsigned long cur_uid;
 void reader_save_attachment(short i);
 void reader_to_ecal(short i);		/* an invitation to ECal (INVITE.ICS, VA_START) */
 void open_link(const char *url);	/* a link in a message: mailto: here, the web to a browser */
+void open_in_epdf(const char *path);	/* a PDF document to EPDF, started if need be (main.c) */
 
 void editor_open(ACCOUNT *a, char *text, const char *in_reply_to, const char *references);
 int  editor_dirty(void);
