@@ -129,6 +129,18 @@ try:
     p.begin()
     # each from the function that starts the work (after_event), to the next
     # event call: the turn that shows a message, the one that opens the editor
+    if os.environ.get("ONLY_PAGES"):
+        # a page down the list, then the letter's (Tab to it), each from
+        # win_scroll_to to the next event call
+        p.after_event = "win_scroll_to"
+        print(p.action("a page down the list (Shift+Down)", lambda: r.key("shift+Down")), flush=True)
+        r.key("Home")
+        time.sleep(3)
+        r.key("Tab")
+        time.sleep(2)
+        r.still()
+        print(p.action("a page down the letter (Shift+Down)", lambda: r.key("shift+Down")), flush=True)
+        os.environ["ONLY_NEW"] = os.environ["ONLY_LETTER"] = "1"
     if os.environ.get("ONLY_INBOX"):
         # the Inbox's index read again from disk, as at the start: Outbox,
         # then back to the Inbox in the folder pane

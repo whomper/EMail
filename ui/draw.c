@@ -83,6 +83,16 @@ void fill(GRECT *r, short color)
 	pxy[1] = r->y;
 	pxy[2] = r->x + r->w - 1;
 	pxy[3] = r->y + r->h - 1;
+	if ((color == 0 || color == 1) && scr_cpu_wins()) {
+		/* white or black on a 68000: by the CPU where text_plain draws
+		   straight into the screen, else the VDI (common/ui/text.h); the
+		   VDI's own attributes are left as they were. A page of the
+		   letter cleared: most of its 62 ms in TOS on an 8 MHz ST */
+		scr_fill(vdi_h, pxy, color);
+		white = *r;
+		white_set = !color;
+		return;
+	}
 	if (!a_fill) {		/* solid, no border: all of ours */
 		vsf_interior(vdi_h, 1);
 		vsf_perimeter(vdi_h, 0);
