@@ -161,6 +161,12 @@ static int set_font(short id, short pt)
 	return 1;
 }
 
+/* the text font now, as one number: it changed when this does */
+long font_key(void)
+{
+	return (long)cur_id * 1000L + cur_pt;
+}
+
 /* back to the text font after drawing in another */
 void font_reselect(void)
 {

@@ -409,6 +409,12 @@ static void draw_main(GRECT *clip)
 		draw_divider(&r);
 }
 
+/* 1 while a page scrolled is drawn (win_scroll_to): drawn on the
+   off-screen bitmap and copied at once where there is one (offpage.h);
+   other redraws go straight to the screen, as before (a message shown
+   through the bitmap took a Falcon with NVDI 30 ms more) */
+int win_page_draw;
+
 /* 1 while EMail starts: the panes are filled without drawing, and the
    window is drawn once, whole, by win_redraw_all (an 8 MHz ST drew the
    folders and the list twice, 110 ms) */
@@ -439,12 +445,15 @@ static void main_redraw_off(GRECT *a)
 	short scr = vdi_h;
 	wind_update(BEG_UPDATE);
 	graf_mouse(M_OFF, 0);
+	static long off_font = -1;	/* the font set on the bitmap's workstation */
 	vdi_h = off_handle();
-	font_reselect();
+	if (off_font != font_key()) {	/* a workstation keeps its font: set when it changed */
+		font_reselect();
+		off_font = font_key();
+	}
 	clip_on(a);
 	draw_main(a);
 	vdi_h = scr;
-	font_reselect();
 	attr_forget();
 	wind_get(main_h, WF_FIRSTXYWH, &r.x, &r.y, &r.w, &r.h);
 	while (r.w > 0 && r.h > 0) {
@@ -471,7 +480,7 @@ static void main_redraw(GRECT *area)
 	a = area ? *area : mwork;
 	if (!intersect(&mwork, &a))
 		return;
-	if (off_handle() && within_text(&a)) {
+	if (win_page_draw && off_handle() && within_text(&a)) {
 		main_redraw_off(&a);
 		return;
 	}
@@ -993,8 +1002,11 @@ void win_scroll_to(WIN *w, long top)
 		GRECT a = w->work;
 		a.y += w->head_h;
 		a.h -= w->head_h;
-		if (!scroll_copy(w, &a, top - old))
+		if (!scroll_copy(w, &a, top - old)) {
+			win_page_draw = 1;
 			win_redraw(w, &a);
+			win_page_draw = 0;
+		}
 	}
 	if (w->scrolled)
 		w->scrolled(w);
