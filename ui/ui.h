@@ -79,8 +79,7 @@ WIN *win_find(short handle);
 void win_title(WIN *w, const char *title);
 void win_info(WIN *w, const char *info);
 void win_redraw(WIN *w, GRECT *area);		/* area NULL = everything */
-extern int win_hold_draw;
-extern int win_page_draw;	/* 1 while a page scrolled is drawn: off the screen where it can be */	/* 1 at the start: the panes are drawn once, by win_redraw_all */
+extern int win_hold_draw;	/* 1 at the start: the panes are drawn once, by win_redraw_all */
 void win_redraw_lines(WIN *w, long first, long n);
 void win_sliders(WIN *w);
 void win_sliders_later(WIN *w);
@@ -281,7 +280,6 @@ void font_apply(void);		/* opt.font_id/pt -> cw, ch */
 void font_sys_push(void);	/* the system font, for a popup or the About box */
 void font_sys_pop(void);	/* back to the window's font */
 void font_reselect(void);	/* the text font again, after drawing in another */
-long font_key(void);		/* the text font now, as one number */
 extern short font_cells;	/* how a GDOS font's runs are drawn, bold too: */
 #define FC_RUNS 0		/* in one call (the system font; a GDOS font a cell wide to the pixel) */
 #define FC_CELLS 1		/* a character to a cell (a proportional font) */

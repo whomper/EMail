@@ -20,7 +20,6 @@
 #include <string.h>
 #include "ui.h"
 #include "arrowed.h"
-#include "offpage.h"
 #include "theme.h"
 #include "util.h"
 #include "bidi.h"
@@ -409,63 +408,10 @@ static void draw_main(GRECT *clip)
 		draw_divider(&r);
 }
 
-/* 1 while a page scrolled is drawn (win_scroll_to): drawn on the
-   off-screen bitmap and copied at once where there is one (offpage.h);
-   other redraws go straight to the screen, as before (a message shown
-   through the bitmap took a Falcon with NVDI 30 ms more) */
-int win_page_draw;
-
 /* 1 while EMail starts: the panes are filled without drawing, and the
    window is drawn once, whole, by win_redraw_all (an 8 MHz ST drew the
    folders and the list twice, 110 ms) */
 int win_hold_draw;
-
-/* 1 if a lies within one pane's text, below its header: what a page
-   draws, and nothing there is the AES's (the pane bars are: objc_draw
-   draws on the screen, never on a bitmap) */
-static int within_text(const GRECT *a)
-{
-	short i;
-	for (i = 0; i < NPANE; i++) {
-		const WIN *w = panes[i];
-		short y = w->work.y + w->head_h;
-		if (a->x >= w->work.x && a->x + a->w <= w->work.x + w->work.w &&
-		    a->y >= y && a->y + a->h <= w->work.y + w->work.h)
-			return 1;
-	}
-	return 0;
-}
-
-/* area drawn on the off-screen bitmap and copied to the screen at once,
-   through the rectangle list: a page appears whole, not row by row
-   (Erez, 13 Nov 2026; under NVDI: offpage.h) */
-static void main_redraw_off(GRECT *a)
-{
-	GRECT r;
-	short scr = vdi_h;
-	wind_update(BEG_UPDATE);
-	graf_mouse(M_OFF, 0);
-	static long off_font = -1;	/* the font set on the bitmap's workstation */
-	vdi_h = off_handle();
-	if (off_font != font_key()) {	/* a workstation keeps its font: set when it changed */
-		font_reselect();
-		off_font = font_key();
-	}
-	clip_on(a);
-	draw_main(a);
-	vdi_h = scr;
-	attr_forget();
-	wind_get(main_h, WF_FIRSTXYWH, &r.x, &r.y, &r.w, &r.h);
-	while (r.w > 0 && r.h > 0) {
-		GRECT c = r;
-		if (intersect(a, &c))
-			off_copy(scr, c.x, c.y, c.w, c.h);
-		wind_get(main_h, WF_NEXTXYWH, &r.x, &r.y, &r.w, &r.h);
-	}
-	clip_on(a);	/* the screen's clip again, as a draw leaves it */
-	graf_mouse(M_ON, 0);
-	wind_update(END_UPDATE);
-}
 
 /* redraw area of the main window through its rectangle list */
 static void main_redraw(GRECT *area)
@@ -480,10 +426,6 @@ static void main_redraw(GRECT *area)
 	a = area ? *area : mwork;
 	if (!intersect(&mwork, &a))
 		return;
-	if (win_page_draw && off_handle() && within_text(&a)) {
-		main_redraw_off(&a);
-		return;
-	}
 	wind_update(BEG_UPDATE);
 	graf_mouse(M_OFF, 0);
 	wind_get(main_h, WF_FIRSTXYWH, &r.x, &r.y, &r.w, &r.h);
@@ -1002,11 +944,8 @@ void win_scroll_to(WIN *w, long top)
 		GRECT a = w->work;
 		a.y += w->head_h;
 		a.h -= w->head_h;
-		if (!scroll_copy(w, &a, top - old)) {
-			win_page_draw = 1;
+		if (!scroll_copy(w, &a, top - old))
 			win_redraw(w, &a);
-			win_page_draw = 0;
-		}
 	}
 	if (w->scrolled)
 		w->scrolled(w);

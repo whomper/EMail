@@ -20,7 +20,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "ui.h"
-#include "offpage.h"
 #include "../src/plat.h"
 #include "fontsel.h"
 #include "text.h"
@@ -161,12 +160,6 @@ static int set_font(short id, short pt)
 	return 1;
 }
 
-/* the text font now, as one number: it changed when this does */
-long font_key(void)
-{
-	return (long)cur_id * 1000L + cur_pt;
-}
-
 /* back to the text font after drawing in another */
 void font_reselect(void)
 {
@@ -216,7 +209,6 @@ void font_apply(void)
 {
 	if (opt.font_id != 1 && gdos_fonts < 0 && vq_gdos())
 		gdos_fonts = vst_load_fonts(vdi_h, 0);
-	off_fonts();			/* and on the off-screen bitmap, where there is one */
 	if (opt.font_name[0])
 		opt.font_id = font_id_of(opt.font_name);	/* FONT=name,points */
 	else if (opt.font_id != 1 && !font_name_of(opt.font_id, opt.font_name))
