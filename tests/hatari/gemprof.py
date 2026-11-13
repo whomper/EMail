@@ -132,6 +132,10 @@ try:
     if os.environ.get("ONLY_PAGES"):
         # a page down the list, then the letter's (Tab to it), each from
         # win_scroll_to to the next event call
+        # as speed.py: three messages down first, so that the page scrolls
+        r.key("Down", "Down", "Down")
+        time.sleep(4)
+        r.still()
         p.after_event = "win_scroll_to"
         print(p.action("a page down the list (Shift+Down)", lambda: r.key("shift+Down")), flush=True)
         r.key("Home")
