@@ -61,8 +61,15 @@ ATARI   := libc tos plat_tos net_tos sting gem tls_ovl crash bigbuf
 UI      := main draw text notify aboutline win folders list find reader editor dialogs popup font fontsel about dsp_ovl theme etheme help av alert mbar aboutbox iconify clip clipedit dd busy people_ask dialog field av_people people_file panebar hebkey xlate translate textsel langs click arrowed offpage
 
 OBJDIR  := build
+# the main flows' hot loops first, after the start-up code (the
+# guidelines' Speed, the link-order recipe; Erez, 13 Nov 2026): a page
+# drawn (text.c's text_plain and fills, draw.c), a line laid out right to
+# left (bidi.c) and a message's text converted (charset.c) stay together
+# in a 68030's caches. common/atari/link.ld keeps the input order
+HOT     := text draw bidi charset
 OBJS    := $(OBJDIR)/crt0.o $(OBJDIR)/sting_s.o $(OBJDIR)/nf.o $(OBJDIR)/crash_s.o \
-           $(addprefix $(OBJDIR)/,$(addsuffix .o,$(CORE) ovl $(ATARI) $(UI)))
+           $(addprefix $(OBJDIR)/,$(addsuffix .o,$(HOT))) \
+           $(addprefix $(OBJDIR)/,$(addsuffix .o,$(filter-out $(HOT),$(CORE) ovl $(ATARI) $(UI))))
 HDRS    := $(wildcard src/*.h atari/*.h atari/include/*.h ui/*.h \
            common/src/*.h common/atari/*.h common/atari/include/*.h common/ui/*.h common/dsp/*.h)
 
