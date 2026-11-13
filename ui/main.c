@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "ui.h"
+#include "offpage.h"
 #include "click.h"
 #include "theme.h"
 #include "../src/mail.h"
@@ -1847,6 +1848,14 @@ int main(void)
 	falcon_dsp_init();
 	email_theme_init();
 	font_apply();
+	off_init(vdi_h);		/* a page drawn off the screen, where EdDI is (offpage.h) */
+#ifdef DRAW_TRACE
+	{
+		char t[80];
+		snprintf(t, sizeof(t), "OFFPAGE %s", off_state());
+		pf_debug(t);
+	}
+#endif
 	hebrew_kbd_hook = hebrew_changed;
 	hebrew_kbd = 0;		/* off at the start, F10 only (Erez, 8 Nov 2026; guideline 5.3) */
 	set_logging();
@@ -2111,6 +2120,7 @@ int main(void)
 	theme_exit();			/* the palette back as it was */
 	menu_bar(mb.tree, 0);
 	av_exit();
+	off_exit();
 	v_clsvwk(vdi_h);
 	quit_step("colours, menu bar and VDI given back");
 	crash_remove();

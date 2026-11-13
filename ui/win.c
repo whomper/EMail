@@ -20,6 +20,7 @@
 #include <string.h>
 #include "ui.h"
 #include "arrowed.h"
+#include "offpage.h"
 #include "theme.h"
 #include "util.h"
 #include "bidi.h"
@@ -413,6 +414,50 @@ static void draw_main(GRECT *clip)
    folders and the list twice, 110 ms) */
 int win_hold_draw;
 
+/* 1 if a lies within one pane's text, below its header: what a page
+   draws, and nothing there is the AES's (the pane bars are: objc_draw
+   draws on the screen, never on a bitmap) */
+static int within_text(const GRECT *a)
+{
+	short i;
+	for (i = 0; i < NPANE; i++) {
+		const WIN *w = panes[i];
+		short y = w->work.y + w->head_h;
+		if (a->x >= w->work.x && a->x + a->w <= w->work.x + w->work.w &&
+		    a->y >= y && a->y + a->h <= w->work.y + w->work.h)
+			return 1;
+	}
+	return 0;
+}
+
+/* area drawn on the off-screen bitmap and copied to the screen at once,
+   through the rectangle list: a page appears whole, not row by row
+   (Erez, 13 Nov 2026; under NVDI: offpage.h) */
+static void main_redraw_off(GRECT *a)
+{
+	GRECT r;
+	short scr = vdi_h;
+	wind_update(BEG_UPDATE);
+	graf_mouse(M_OFF, 0);
+	vdi_h = off_handle();
+	font_reselect();
+	clip_on(a);
+	draw_main(a);
+	vdi_h = scr;
+	font_reselect();
+	attr_forget();
+	wind_get(main_h, WF_FIRSTXYWH, &r.x, &r.y, &r.w, &r.h);
+	while (r.w > 0 && r.h > 0) {
+		GRECT c = r;
+		if (intersect(a, &c))
+			off_copy(scr, c.x, c.y, c.w, c.h);
+		wind_get(main_h, WF_NEXTXYWH, &r.x, &r.y, &r.w, &r.h);
+	}
+	clip_on(a);	/* the screen's clip again, as a draw leaves it */
+	graf_mouse(M_ON, 0);
+	wind_update(END_UPDATE);
+}
+
 /* redraw area of the main window through its rectangle list */
 static void main_redraw(GRECT *area)
 {
@@ -426,6 +471,10 @@ static void main_redraw(GRECT *area)
 	a = area ? *area : mwork;
 	if (!intersect(&mwork, &a))
 		return;
+	if (off_handle() && within_text(&a)) {
+		main_redraw_off(&a);
+		return;
+	}
 	wind_update(BEG_UPDATE);
 	graf_mouse(M_OFF, 0);
 	wind_get(main_h, WF_FIRSTXYWH, &r.x, &r.y, &r.w, &r.h);
