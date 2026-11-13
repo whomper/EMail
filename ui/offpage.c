@@ -3,17 +3,15 @@
 /*
  * offpage.c - a page drawn off the screen (offpage.h). The EdDI bindings
  * and the start-up test are ECal's (ui/win.c, its EdDI way); the logical
- * screen moved to a buffer, ECal's other way on plain TOS, isn't used:
- * Erez chose the bitmap under NVDI only (13 Nov 2026).
+ * screen moved to a buffer, ECal's other way on plain TOS, isn't here:
+ * EMail draws off the screen under NVDI only (Erez, 13 Nov 2026).
  */
 #include <string.h>
 #include "tos.h"
 #include "gem.h"
 #include "offpage.h"
 
-extern short scr_w, scr_h, planes;
-long get_cookie(long id);
-
+static short scr_w, scr_h, planes;
 static void *mem;		/* Mxalloc'd, NULL: none */
 static MFDB bm_mfdb;
 static short bm;		/* the bitmap's workstation, 0: none */
@@ -80,23 +78,27 @@ static int lands_in(unsigned char *b, short h)
 	return changed;
 }
 
-int off_init(short screen)
+int off_init(short screen, short w, short hgt, short nplanes, long spare)
 {
-	long size = (long)((scr_w + 15) / 16) * 2 * planes * scr_h, room;
+	long size, room;
 	unsigned char *b;
 	short h;
 	if (bm)
 		return 1;
+	scr_w = w;
+	scr_h = hgt;
+	planes = nplanes;
+	size = (long)((scr_w + 15) / 16) * 2 * planes * scr_h;
 	if (!get_cookie(0x45644449L)) {			/* EdDI */
 		state = "none: no EdDI";
 		return 0;
 	}
-	/* only with room to spare after it: a 4 MB Falcon in 256 colours
-	   gives 300 KB to it */
+	/* only with `spare` bytes left beside it: a 4 MB Falcon in 256
+	   colours gives 300 KB to it */
 	room = (long)Mxalloc(-1L, 3);
 	if (room < 0)
 		room = (long)Malloc(-1L);
-	if (planes < 1 || room < size + 256 + 512L * 1024) {
+	if (planes < 1 || room < size + 256 + spare) {
 		state = "none: too little memory";
 		return 0;
 	}

@@ -13,8 +13,11 @@
 
 #include "gem.h"
 
-/* after the VDI is open and the font set, with the screen's handle: 1 if a bitmap is there */
-int off_init(short screen);
+/* after the VDI is open and the font set: the screen's handle, its size
+   and planes, and the memory that must stay free beside the bitmap (a
+   screen's worth, w x hgt x planes bits, is taken); 1 if a bitmap is
+   there */
+int off_init(short screen, short w, short hgt, short nplanes, long spare);
 /* the bitmap's VDI handle, 0 when there is none */
 short off_handle(void);
 /* GDOS fonts loaded on the screen's workstation since: on the bitmap too */

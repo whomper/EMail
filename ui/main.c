@@ -1848,7 +1848,7 @@ int main(void)
 	falcon_dsp_init();
 	email_theme_init();
 	font_apply();
-	off_init(vdi_h);		/* a page drawn off the screen, where EdDI is (offpage.h) */
+	off_init(vdi_h, scr_w, scr_h, planes, 512L * 1024);	/* a page drawn off the screen, where EdDI is (offpage.h) */
 #ifdef DRAW_TRACE
 	{
 		char t[80];
