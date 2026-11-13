@@ -595,11 +595,72 @@ static void t_inf(void)
 	rmdir(dir);
 }
 
+/* a folder's index read back (fold_open), as EMail writes it and as older
+   EMails and other line ends left it: the same headers whatever path the
+   reader takes (memchr for the lines and tabs, UIDs in order at the end,
+   one out of order by the search); written again, the same file */
+static void t_index(void)
+{
+	static const char in[] =
+		"MAILIDX 4 77 12 50 3 0\n"
+		"5\t1\t100\t1790000000\tAvi <a@x>\tHello\tdana@x\t0\t120\n"
+		"7\t0\t2000\t1790000100\tDana\tA longer subject, with spaces\tdana@x\t120\t2000\r\n"
+		"6\t8\t30\t1790000050\tTal\tOut of order\tdana@x\n"
+		"9\t3\t40\t1790000200\t\t\t\t-1\t0";
+	static const char want[] =
+		"MAILIDX 4 77 12 50 3 0\n"
+		"5\t1\t100\t1790000000\tAvi <a@x>\tHello\tdana@x\t0\t120\n"
+		"6\t8\t30\t1790000050\tTal\tOut of order\tdana@x\t-1\t0\n"
+		"7\t0\t2000\t1790000100\tDana\tA longer subject, with spaces\tdana@x\t120\t2000\n"
+		"9\t3\t40\t1790000200\t\t\t\t-1\t0\n";
+	char dir[] = "/tmp/mail-idx-XXXXXX", path[200], *got;
+	ACCOUNT a;
+	FINFO fi;
+	FOLDER *f;
+	FILE *fp;
+	long n;
+	CHECK(mkdtemp(dir) != 0, "a folder for the index");
+	memset(&a, 0, sizeof(a));
+	memset(&fi, 0, sizeof(fi));
+	str_copy(a.dir, dir, sizeof(a.dir));
+	str_copy(fi.dir, "inbox", sizeof(fi.dir));
+	fi.opened = 1;
+	snprintf(path, sizeof(path), "%s/inbox", dir);
+	mkdir(path, 0755);
+	snprintf(path, sizeof(path), "%s/inbox/index.dat", dir);
+	fp = fopen(path, "wb");
+	fwrite(in, 1, sizeof(in) - 1, fp);
+	fclose(fp);
+	f = fold_open(&a, &fi);
+	CHECK(f && f->n == 4, "four headers read: %ld", f ? f->n : -1L);
+	if (f && f->n == 4) {
+		CHECK(f->uidvalidity == 77 && f->uidnext == 12 && f->window == 50 && f->exists == 3, "the MAILIDX line");
+		CHECK(f->h[0].uid == 5 && f->h[1].uid == 6 && f->h[2].uid == 7 && f->h[3].uid == 9, "in UID order");
+		CHECK(f->h[1].flags == 8 && f->h[1].size == 30 && !strcmp(f->h[1].subject, "Out of order") &&
+		      f->h[1].off == -1, "the out-of-order line, 7 fields");
+		CHECK(!strcmp(f->h[2].to, "dana@x") && f->h[2].plen == 2000, "the CR LF line: %s %ld", f->h[2].to,
+		      f->h[2].plen);
+		CHECK(f->h[3].date == 1790000200UL && !f->h[3].from[0] && f->h[3].off == -1,
+		      "the last line, empty fields, no line end");
+		f->dirty = 1;
+		CHECK(fold_save(f) == 0, "written again");
+		got = pf_load(path, &n);
+		CHECK(got && n == (long)sizeof(want) - 1 && !memcmp(got, want, n), "the same index: [%s]", got ? got : "");
+		free(got);
+		fold_close(f);
+	}
+	unlink(path);
+	snprintf(path, sizeof(path), "%s/inbox", dir);
+	rmdir(path);
+	rmdir(dir);
+}
+
 int main(void)
 {
 	t_num();
 	t_zone();
 	t_inf();
+	t_index();
 	t_charset();
 	t_mime();
 	t_links();
