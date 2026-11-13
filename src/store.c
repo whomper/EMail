@@ -1042,7 +1042,15 @@ HDR *fold_get(FOLDER *f, unsigned long uid)
 HDR *fold_add(FOLDER *f, unsigned long uid)
 {
 	int found;
-	long i = find(f, uid, &found);
+	long i;
+	/* past the last: where the index's lines, in UID order, all go (no
+	   search: 500 of them took 108 ms of an 8 MHz ST's Inbox opening) */
+	if (!f->n || f->h[f->n - 1].uid < uid) {
+		i = f->n;
+		found = 0;
+	} else {
+		i = find(f, uid, &found);
+	}
 	if (found)
 		return &f->h[i];
 	if (f->n == f->cap) {
@@ -1194,9 +1202,9 @@ static unsigned long rd_hex(const char *s)
 FOLDER *fold_open(ACCOUNT *a, FINFO *fi)
 {
 	FOLDER *f;
-	char path[220], dir[200], *buf, *line, *next;
+	char path[220], dir[200], *buf, *line, *next, *end;
 	short version;
-	long i;
+	long i, blen = 0;
 	int made;
 	folder_path(a, fi, dir, sizeof(dir));
 	for (i = 0; i < NOPEN; i++)
@@ -1223,12 +1231,16 @@ FOLDER *fold_open(ACCOUNT *a, FINFO *fi)
 	fi->opened = 1;
 	f->uidnext = 1;
 	path_join(path, sizeof(path), f->dir, "index.dat");
-	buf = made ? 0 : pf_load(path, 0);
+	buf = made ? 0 : pf_load(path, &blen);
 	if (!buf)
 		return f;
 	version = 0;
-	for (line = buf; line && *line; line = next) {
-		next = strchr(line, '\n');
+	end = buf + blen;
+	/* line ends and tabs found with memchr: an 8 MHz ST takes some 18
+	   cycles a character there, 60 in a C loop (strchr): 500 headers'
+	   index, 65 KB, took 920 ms of the Inbox's opening (Erez, 13 Nov 2026) */
+	for (line = buf; line && line < end && *line; line = next) {
+		next = memchr(line, '\n', end - line);
 		if (next)
 			*next++ = 0;
 		if (!strncmp(line, "MAILIDX ", 8)) {
@@ -1246,7 +1258,8 @@ FOLDER *fold_open(ACCOUNT *a, FINFO *fi)
 			short n = 1;
 			HDR *h;
 			fl[0] = line;
-			while (n < 9 && (fl[n] = strchr(fl[n - 1], '\t'))) {
+			char *le = next ? next - 1 : end;	/* the line's 0 */
+			while (n < 9 && (fl[n] = memchr(fl[n - 1], '\t', le - fl[n - 1])) != 0) {
 				*fl[n] = 0;
 				fl[n]++;
 				n++;

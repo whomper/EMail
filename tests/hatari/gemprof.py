@@ -129,6 +129,15 @@ try:
     p.begin()
     # each from the function that starts the work (after_event), to the next
     # event call: the turn that shows a message, the one that opens the editor
+    if os.environ.get("ONLY_INBOX"):
+        # the Inbox's index read again from disk, as at the start: Outbox,
+        # then back to the Inbox in the folder pane
+        r.click(40, 121)
+        time.sleep(4)
+        r.still()
+        p.after_event = "folders_select"
+        print(p.action("the Inbox opened (500 headers from disk)", lambda: r.click(40, 105), settle=12), flush=True)
+        os.environ["ONLY_NEW"] = os.environ["ONLY_LETTER"] = "1"
     if not os.environ.get("ONLY_NEW"):
         p.after_event = "reader_show_begin"
         print(p.action("the long letter shown (Down)", lambda: r.key("Down")), flush=True)
