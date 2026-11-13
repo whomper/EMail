@@ -692,6 +692,15 @@ void reader_show_end(void)
 	busy(0);
 	show_mark(4);
 	show_trace();
+#ifdef AES_PROFILE
+	{
+		/* the speed rig's check that a row showed what it says: the
+		   message's lines and its subject (tests/hatari/speed.py) */
+		char t[80];
+		snprintf(t, sizeof(t), "SHOWN %ld %.40s", nlines, cur_msg && cur_msg->subject ? cur_msg->subject : "");
+		pf_debug(t);
+	}
+#endif
 	status("");
 	win_redraw(&w_reader, 0);
 	if (opt.translate && !translated)

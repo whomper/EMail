@@ -37,6 +37,7 @@ accessories are not tested on the 4 MB machines, ST and Falcon-4 (Erez,
 4 Nov 2026).
 """
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -154,6 +155,37 @@ font = os.environ.get("FONT")
 r.write("EMAIL\\email.inf".replace("\\", os.sep),
         inf.replace("\r\n", "\n").replace("tz=180\n", "tz=180\nstartoffline=1\n" +
                                             ("font=%s\n" % font if font else "")))
+def shows(what, do, good):
+    """a message shown, timed, and checked to be the one the row names"""
+    mark = os.path.getsize(r.log)
+    r.act(what, speed.PAGE, do)
+    with open(r.log, errors="replace") as f:
+        f.seek(mark)
+        got = re.findall(r"SHOWN (\d+) (.*)", f.read())
+    if not got and "SHOWN " not in r.console():
+        # a build from before 2.18 (a paired run's base) says nothing: not
+        # checked, said once; the candidate's own run is
+        if not getattr(r, "unchecked", False):
+            print("NOTE  this build has no SHOWN line: the rows aren't checked", flush=True)
+            r.unchecked = True
+        return
+    if not got or not good(int(got[-1][0]), got[-1][1]):
+        r.stop()
+        sys.exit("speed: \"%s\" showed %s" % (what, got[-1] if got else "nothing (no SHOWN line)"))
+
+
+def longl(lines, subject):
+    return subject.startswith("A long letter") and lines > 100
+
+
+def hebrew(lines, subject):
+    return lines > 100 and not subject.isascii()
+
+
+def short(lines, subject):
+    return subject.startswith("Order ") and lines < 20
+
+
 try:
     if acc:
         r.put(ACC)
@@ -176,11 +208,15 @@ try:
         r.key("Home")
         time.sleep(3)
         r.still()
-        r.act("the long letter shown (Down)", speed.PAGE, lambda: r.key("Down"))
-        r.act("the long Hebrew letter shown (Down)", speed.PAGE, lambda: r.key("Down"))
-        r.act("a short message shown (Down)", speed.PAGE, lambda: r.key("Down"))
+        # Home showed the newest, the long letter (untimed); each Down shows
+        # the next one. Each row checks, from the build's SHOWN line, that it
+        # showed what it says, and the run fails if not (until 2.18 the
+        # labels were one message behind: the hub, 13 Nov 2026)
+        shows("the long Hebrew letter shown (Down)", lambda: r.key("Down"), hebrew)
+        shows("a short message shown (Down)", lambda: r.key("Down"), short)
+        shows("the next short message shown (Down)", lambda: r.key("Down"), short)
         r.act("a page down the list (Shift+Down)", speed.PAGE, lambda: r.key("shift+Down"))
-        r.act("the long letter again (Home)", speed.PAGE, lambda: r.key("Home"))
+        shows("the long letter shown (Home)", lambda: r.key("Home"), longl)
         r.act("Find opened (Ctrl+F)", speed.PAGE, lambda: r.key("ctrl+f"))
         r.act("Find: e typed, the list follows", speed.PAGE, lambda: r.key("e"))
         r.act("Find: x typed, the list follows", speed.PAGE, lambda: r.key("x"))
