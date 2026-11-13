@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-2.0-or-later
 # Copyright (C) 2026 AERA | Erez Yaary
-"""A PDF attachment: a click offers Open in EPDF, Save... or Cancel (Erez,
+"""A PDF attachment: a click offers Open with EPDF, Save to disk or Cancel (Erez,
 13 Nov 2026).
 
 As invite_test.py (Dovecot, FAKESTNG.PRG over the serial port). The newest
@@ -9,7 +9,7 @@ message in INBOX has a PDF attached (REPORT.PDF).
 
 1. With build/fakeepdf.acc as C:\\EPDF.ACC, a stand-in for a running EPDF
    that writes what VA_START gave it into C:\\EPDF.LOG: a click on the
-   attachment's line asks, Return chooses Open in EPDF; EMail writes
+   attachment's line asks, Return chooses Open with EPDF; EMail writes
    C:\\pdf\\report.pdf, byte for byte, and names it to "EPDF".
 2. Without it, as on plain TOS, with build/fakeepdf.prg as C:\\EPDF\\EPDF.PRG
    (EMAIL.INF's EPDF= names it; it writes its command line into
@@ -129,7 +129,7 @@ try:
     time.sleep(4)
     asked = r.shot("p2-asked")
     check("a click on the PDF asks", changed(before, asked) > 0.02, "%.1f%% of the screen" % (100 * changed(before, asked)))
-    r.key(K["RETURN"])                   # Open in EPDF
+    r.key(K["RETURN"])                   # Open with EPDF (the default)
     time.sleep(6)
     r.shot("p3-opened")
     r.ctrl("q")
@@ -152,7 +152,7 @@ try:
     time.sleep(8)
     r.click(*ATTACH)
     time.sleep(4)
-    r.key(K["RETURN"])                   # Open in EPDF
+    r.key(K["RETURN"])                   # Open with EPDF (the default)
     time.sleep(4)
     r.shot("q1-not-running")
     r.key(K["RETURN"])                   # Start EPDF: EMail quits

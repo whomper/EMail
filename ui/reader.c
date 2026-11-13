@@ -1139,8 +1139,9 @@ static void reader_pdf(short i)
 	for (p = name; *p; p++)
 		if (*p == '|' || *p == '[' || *p == ']')
 			*p = ' ';	/* the alert's own marks */
-	r = alert(1, "[2][%s|is a PDF document.][Open in EPDF|Save...|Cancel]", name);
-	if (r == 1)
+	/* Erez's words; Cancel on the left, as in the family's dialogs (5.10) */
+	r = alert(3, "[2][%s|is a PDF document.][Cancel|Save to disk|Open with EPDF]", name);
+	if (r == 3)
 		reader_to_epdf(i);
 	else if (r == 2)
 		reader_save_attachment(i);
@@ -1313,10 +1314,10 @@ static void rclick(WIN *w, short mx, short my)
 	}
 	if (i >= 0 && i < nlines && lines[i].kind == L_ATTACH) {
 		static const char *const lab[] = { "Save attachment...", "Add to ECal" };
-		static const char *const plab[] = { "Open in EPDF", "Save attachment..." };
+		static const char *const plab[] = { "Open with EPDF", "Save attachment..." };
 		short a = lines[i].attach, inv = mime_is_calendar(&cur_msg->parts[a]);
 		short r;
-		if (mime_is_pdf(&cur_msg->parts[a])) {	/* a PDF: Open in EPDF first, as its click offers */
+		if (mime_is_pdf(&cur_msg->parts[a])) {	/* a PDF: Open with EPDF first, as its click offers */
 			r = popup_m(mx, my, plab, 2);
 			if (r == 0)
 				reader_to_epdf(a);

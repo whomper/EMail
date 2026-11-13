@@ -559,7 +559,7 @@ static void start_browser(const char *url)
    2026) */
 void open_in_epdf(const char *path)
 {
-	static const char *const names[2] = { "epdf.prg", "epdfst.prg" };
+	static const char *const names[1] = { "epdf.prg" };	/* one program for every Atari */
 	char arg[230], prg[200];
 	snprintf(arg, sizeof(arg), strchr(path, ' ') ? "'%s'" : "%s", path);
 	if (av_send("EPDF", arg)) {
@@ -567,9 +567,9 @@ void open_in_epdf(const char *path)
 		return;
 	}
 	if (!multitasking() &&
-	    alert(1, "[2][EPDF isn't running. EMail can|close and start EPDF on|this document.][Start EPDF|Cancel]") != 1)
+	    alert(2, "[2][EPDF isn't running. EMail can|close and start EPDF on|this document.][Cancel|Start EPDF]") != 2)
 		return;
-	if (!find_prg(opt.epdf, sizeof(opt.epdf), names, 2, "Where is EPDF (EPDF.PRG)?", prg, sizeof(prg)))
+	if (!find_prg(opt.epdf, sizeof(opt.epdf), names, 1, "Where is EPDF (EPDF.PRG)?", prg, sizeof(prg)))
 		return;
 	if (!multitasking() && editor_dirty() &&
 	    alert(2, "[2][You are still writing a message.|Quit anyway?][Quit|Cancel]") != 1)

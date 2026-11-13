@@ -309,9 +309,11 @@ EMail's main window has three panes, like a modern mail program:
   many messages are loaded and how many there are.
 - **Message** (bottom right): the selected message. Click an attachment
   line (`»`) to save it with the file selector. A PDF document asks
-  first: **Open in EPDF**, **Save...** or **Cancel**. EMail writes it
-  into its `PDF` folder and hands it to EPDF; when EPDF isn't running,
-  EMail starts it (on plain TOS EMail closes first, as for EWeb). A calendar invitation
+  first: **Open with EPDF**, **Save to disk** or **Cancel**. EMail
+  writes it into the `PDF` folder in EMail's folder and hands it to
+  EPDF; the file stays there (the next one of the same name replaces
+  it). When EPDF isn't running, EMail starts it (on plain TOS EMail
+  closes first, as for EWeb). A calendar invitation
   shows as `» Invitation:` and its title: double-click it to add it to
   ECal (see From other programs). A message sent as both plain text
   and HTML, as most are, is shown from its HTML, as text: its links
@@ -363,7 +365,7 @@ folder with thousands of messages opens as quickly as a small one.
 | a message     | Open, Reply, Reply to all, Forward, Mark as read/unread, Flag, Move to, Download again, Delete |
 | a folder      | Open, Check for new mail, Mark all as read, Download missing messages, New folder, Rename folder, Delete folder |
 | an account    | Check mail, New message, Edit account, Refresh folder list             |
-| an attachment | Save attachment; an invitation: Add to ECal, Save attachment; a PDF: Open in EPDF, Save attachment |
+| an attachment | Save attachment; an invitation: Add to ECal, Save attachment; a PDF: Open with EPDF, Save attachment |
 | a link        | Open link, Copy link                                                   |
 | the editor    | Send now, Put in Outbox, Attach file, Address book, Cut line, Copy line, Paste |
 
