@@ -63,7 +63,7 @@ acc = os.environ.get("ACC") == "1"
 machine = a[1] if len(a) > 1 else ("Falcon:16" if acc else "Falcon-4:16")
 if acc and machine.partition(":")[0] in ("ST", "Falcon-4"):
     sys.exit("speed.py: no accessory runs on ST or Falcon-4 (Erez, 4 Nov 2026): use ST-1, TT or Falcon")
-nvdi = "nvdi" in a[2:]
+nvdi = "nvdi" in a[2:] or os.environ.get("AERA_WITH_NVDI") == "1"   # NVDI by either: the start waits for its fonts
 for f in (PRG, CLI):
     if not os.path.exists(f):
         sys.exit("first: make %s" % os.path.relpath(f, ROOT))
