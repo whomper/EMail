@@ -241,6 +241,11 @@ try:
     r.settle(45, 240)
     r.shot("e1-email")
     check("EMail runs (started by Hatari)", "EMail: v_opnvwk" in console())
+    # on a 1 MB ST with TOS 1.04 and the accessory, EMail starts with its
+    # "Only 256 KB of memory is free" alert, as it should: OK, so that
+    # Ctrl+Q below reaches EMail (Return does nothing in EMail's window)
+    r.key(K["RETURN"])
+    time.sleep(2)
     n = len(checks())
     deliver(("()", "While EMail runs"))
     time.sleep(90)
