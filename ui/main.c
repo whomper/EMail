@@ -1762,7 +1762,7 @@ static void start_mark(const char *what)
    only the test rigs ask for (Erez, 15 Nov 2026; guidelines 6.5). Without
    it nothing is probed, so a real machine never runs the probe's illegal
    instruction (a Vampire V4SA's Atari core ended EMail on it). Looked at
-   before the first debug line, ahead of store_init's own reading */
+   before the first debug line; store_init then reads the same buffer */
 static void natfeats_from_inf(void)
 {
 	char dir[200], path[220], *buf, *p;
@@ -1789,7 +1789,7 @@ static void natfeats_from_inf(void)
 		if (p)
 			p++;
 	}
-	free(buf);
+	store_inf_preload = buf;	/* store_init takes it: one read at the start */
 }
 
 int main(void)
@@ -1817,8 +1817,6 @@ int main(void)
 			conn_bufsize = 4096;
 	}
 	ap_id = appl_init();
-	if (ap_id >= 0)
-		natfeats_from_inf();	/* before the first debug line */
 	start_mark("appl_init");
 	notify_init("EMAIL   ");
 	notify_clicked = notified;
@@ -1838,11 +1836,14 @@ int main(void)
 		for (tries = 0; tries < 2; tries++) {
 			vdi_h = v_opnvwk_(aes_h, work_out);
 			snprintf(note, sizeof(note), "EMail: v_opnvwk -> %d (%ld KB free before)", vdi_h, free_kb);
-			pf_debug(note);
 			if (vdi_h > 0)
 				break;
 			evnt_timer_(200);
 		}
+		/* EMAIL.INF read once, after the workstation (NVDI's memory
+		   first), for NATFEATS= and then for store_init */
+		natfeats_from_inf();
+		pf_debug(note);
 		if (vdi_h <= 0) {
 			char a[200];
 			snprintf(a, sizeof(a), "[3][EMail can't open its screen:|the VDI has no memory for it.|%ld KB were free; the|accessories hold the rest.|Load fewer, or add memory.][ Quit ]",

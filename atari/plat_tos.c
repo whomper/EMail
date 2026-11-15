@@ -274,6 +274,8 @@ void pf_entropy(unsigned char *buf, int n)
 
 void pf_debug(const char *s)
 {
+	if (!nf_on)		/* NatFeats only where the INF asks (NATFEATS=1) */
+		return;
 	nf_debug(s);
 	nf_debug("\n");
 }
