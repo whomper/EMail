@@ -67,13 +67,18 @@ HDRS    := $(wildcard src/*.h atari/*.h atari/include/*.h ui/*.h \
            common/src/*.h common/atari/*.h common/atari/include/*.h common/ui/*.h common/dsp/*.h)
 
 # what goes onto the Atari: binary/ (built, never committed)
-all: binary/email.prg binary/emailchk.acc binary/tls.ovl binary/roots.dat
+all: binary/email.prg binary/emailchk.acc binary/tls.ovl binary/tlsfb.ovl binary/roots.dat
 
 binary/email.prg: $(OBJDIR)/mail.elf common/tools/elf2tos.py | binary
 	PRGFLAGS=7 python3 common/tools/elf2tos.py $< $@
 
 # the family's TLS.OVL as AERA-Atari built it: copied, never built here
 binary/tls.ovl: common/tlsovl/tls.ovl | binary
+	cp $< $@
+
+# its ColdFire build, for a FireBee (tls_ovl.c loads it there by the _CF_
+# cookie; Erez, 15 Nov 2026): copied too
+binary/tlsfb.ovl: common/tlsovl/tlsfb.ovl | binary
 	cp $< $@
 
 # the version: VERSION holds the last release (major.minor, e.g. 1.30),
@@ -316,7 +321,7 @@ binary/email.hyp: docs/GUIDE.md tools/mkhelp.py VERSION docs/front.json docs/hel
 # dist/email-x.y.zip (the icons in icons/), for the release workflow;
 # every name in lowercase (the guidelines' 6.6: MiNT's ext2 drives tell
 # EMAIL.PRG and email.prg apart)
-DIST    := binary/email.prg binary/emailchk.acc binary/tls.ovl binary/cacert.pem binary/roots.dat binary/email.hyp binary/email.ref
+DIST    := binary/email.prg binary/emailchk.acc binary/tls.ovl binary/tlsfb.ovl binary/cacert.pem binary/roots.dat binary/email.hyp binary/email.ref
 ICONS   := icons/EMAIL.RSC icons/EMAILNV.RSC icons/EMAIL.ICN icons/EMAILMK.ICN
 dist: all help
 	rm -rf dist

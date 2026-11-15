@@ -33,13 +33,14 @@ one or all together in `EMAIL-x.y.zip`:
 | `EMAIL.PRG` | the program, for every Atari |
 | `EMAIL.HYP`, `EMAIL.REF` | the user guide, opened by the Help key |
 | `TLS.OVL`, `CACERT.PEM`, `ROOTS.DAT` | a Direct connection on a TT or Falcon: TLS and the root certificates |
+| `TLSFB.OVL` | a Direct connection on a FireBee: the same TLS, built for its ColdFire |
 | `EMAILCHK.ACC` | EMail check, the new-mail accessory (optional) |
 | `EMAIL.RSC`, `EMAILNV.RSC`, `*.ICN` | the desktop icon ([which one](docs/GUIDE.md#the-desktop-icon)) |
 
 1. Copy `EMAIL.PRG`, `EMAIL.HYP` and `EMAIL.REF` to a folder of their own, such as `C:\EMAIL\`.
 2. Set up [AERA-Gateway](https://github.com/whomper/AERA-Gateway) on a Raspberry Pi with your
    provider's servers. Or, on a Falcon or TT, copy `TLS.OVL`, `CACERT.PEM` and `ROOTS.DAT` beside
-   `EMAIL.PRG` and switch on **Options > Direct connection**.
+   `EMAIL.PRG` (on a FireBee, `TLSFB.OVL`) and switch on **Options > Direct connection**.
 3. Start EMail and fill in your account in **Options > Accounts**. Gmail, iCloud, Yahoo and Fastmail need
    an [app password](docs/GUIDE.md#app-passwords-gmail-icloud-yahoo-fastmail).
 4. Press **Help** for the [user guide](docs/GUIDE.md).

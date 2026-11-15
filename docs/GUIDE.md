@@ -49,6 +49,7 @@ its own keeps it all together. Here it is `C:\EMAIL\`:
 ```
 C:\EMAIL\EMAIL.PRG      the program
 C:\EMAIL\TLS.OVL       the encryption for a Direct connection (TT, Falcon)
+C:\EMAIL\TLSFB.OVL     the same on a FireBee, built for its ColdFire
 C:\EMAIL\EMAIL.INF      settings and accounts (each setting has a note above it)
 C:\EMAIL\EMAIL.KEY      the key the passwords in EMAIL.INF are encrypted with
 C:\EMAIL\ADDRESS.TXT   the addresses you wrote to (Ctrl+B without EContact)
@@ -246,7 +247,8 @@ A Direct connection needs:
   through the gateway there and leaves the setting as it is
 - `TLS.OVL` next to `EMAIL.PRG`, from the release: the encryption
   (BearSSL, and the DSP's part), about 140 KB, the same file for every
-  AERA program. EMail loads it when you switch the Direct connection on,
+  AERA program. On a FireBee, `TLSFB.OVL` (the same, built for its
+  ColdFire): EMail takes it there by itself. EMail loads it when you switch the Direct connection on,
   and says at once if it is missing or doesn't suit
 - 4 MB of memory or more (1 MB is not enough for TLS next to your mail)
 - `CACERT.PEM` and `ROOTS.DAT` next to `EMAIL.PRG`, both in the
