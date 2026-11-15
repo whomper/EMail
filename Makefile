@@ -61,8 +61,16 @@ ATARI   := libc tos plat_tos net_tos sting gem tls_ovl crash bigbuf
 UI      := main draw text notify aboutline win folders list find reader editor dialogs popup font fontsel about dsp_ovl theme etheme help av alert mbar aboutbox iconify clip clipedit dd busy people_ask dialog field av_people people_file panebar hebkey xlate translate textsel langs click arrowed
 
 OBJDIR  := build
-OBJS    := $(OBJDIR)/crt0.o $(OBJDIR)/sting_s.o $(OBJDIR)/nf.o $(OBJDIR)/crash_s.o \
-           $(addprefix $(OBJDIR)/,$(addsuffix .o,$(CORE) ovl $(ATARI) $(UI)))
+# EMAIL.PRG's objects with a pad after each file 2.20 grew or shrank
+# (atari/pad_*.S): the code after it at 2.19's addresses mod 256, so the
+# 68030's cache falls as it did (the start was 10 ms slower without; the
+# hub, 15 Nov 2026, as ECal's). EMAILCHK.ACC links the files without them
+PCORE   := $(patsubst conn,conn pad_conn,$(patsubst store,store pad_store,$(CORE)))
+PATARI  := $(patsubst plat_tos,plat_tos pad_plat,$(patsubst tls_ovl,tls_ovl pad_tlsovl,$(ATARI)))
+PUI     := $(patsubst main,main pad_main,$(UI))
+PADS    := $(foreach p,nf conn store ovl plat tlsovl main,-Wl,-u,pad_$(p)) -Wl,-u,pad_store_ro -Wl,-u,pad_tlsovl_ro
+OBJS    := $(OBJDIR)/crt0.o $(OBJDIR)/sting_s.o $(OBJDIR)/nf.o $(OBJDIR)/pad_nf.o $(OBJDIR)/crash_s.o \
+           $(addprefix $(OBJDIR)/,$(addsuffix .o,$(PCORE) ovl pad_ovl $(PATARI) $(PUI)))
 HDRS    := $(wildcard src/*.h atari/*.h atari/include/*.h ui/*.h \
            common/src/*.h common/atari/*.h common/atari/include/*.h common/ui/*.h common/dsp/*.h)
 
@@ -95,7 +103,7 @@ $(OBJDIR)/build.o: $(OBJDIR)/build.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 $(OBJDIR)/mail.elf: $(OBJS) $(OBJDIR)/build.o common/atari/link.ld
-	$(CC) $(LDFLAGS) -Wl,--gc-sections -o $@ $(OBJS) $(OBJDIR)/build.o -lgcc
+	$(CC) $(LDFLAGS) -Wl,--gc-sections $(PADS) -o $@ $(OBJS) $(OBJDIR)/build.o -lgcc
 
 # EMail's icon (the AERA guidelines, 5.5): drawn in common/icons/EMAIL.txt,
 # made into icons/ (the desktop's RSC and ICN files), ui/icon.h and
@@ -126,6 +134,9 @@ $(OBJDIR)/sting_s.o: common/atari/sting.S | $(OBJDIR)
 $(OBJDIR)/crash_s.o: common/atari/crash.S | $(OBJDIR)
 	$(CC) -m68000 -c -o $@ $<
 $(OBJDIR)/nf.o: common/atari/nf.S | $(OBJDIR)
+	$(CC) -m68000 -c -o $@ $<
+# the pads that keep the code after a changed file where it was (2.20)
+$(OBJDIR)/pad_%.o: atari/pad_%.S | $(OBJDIR)
 	$(CC) -m68000 -c -o $@ $<
 
 # EMAILCHK.ACC, "EMail check" (ui/emailchk.c): the accessory that looks
