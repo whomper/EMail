@@ -69,8 +69,13 @@ def undrawn(shot):
     return sum(1 for x in range(8, w) for y in range(40, h) if im.getpixel((x, y)) == CYAN)
 
 
-# 1. the first start: the welcome box comes at once
-w, rc = run("first", "until EMail 30;wait 20;shot")
+# 1. the first start: the welcome box comes at once (no account; only
+# NATFEATS=1, so that EMail's NatFeats lines come, Erez 15 Nov 2026)
+inf1 = os.path.join(work, "inf1", "email.inf")
+os.makedirs(os.path.dirname(inf1), exist_ok=True)
+with open(inf1, "w", newline="") as f:
+    f.write("[options]\r\nnatfeats=1\r\n")
+w, rc = run("first", "until EMail 30;wait 20;shot", copy=[inf1])
 check("the first start runs", rc == 0)
 shot = os.path.join(w, "shots", "grab0001.png")
 check("its screenshot taken", os.path.exists(shot), shot)
