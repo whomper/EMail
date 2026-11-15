@@ -64,7 +64,7 @@ with open(os.path.join(hd, "email.inf"), "w", newline="") as f:
     # on an ST, EMail finds a Direct connection on, as a Falcon left it:
     # it must go through the gateway all the same (a 68000 can't load
     # TLS.OVL), and leave the setting as it was
-    f.write("[options]\r\n" + ("falcon=1\r\n" if ST else "") +
+    f.write("[options]\r\nnatfeats=1\r\n" + ("falcon=1\r\n" if ST else "") +
             "tz=180\r\nlog=1\r\nsignature=Sent from my Falcon\r\n[account]\r\nname=Dana\r\nfullname=Dana Falcon\r\n"
             "email=dana@test.local\r\nin=imap\r\nhost=127.0.0.1\r\nport=%d\r\nuser=dana\r\n"
             "pass=secret\r\nsmtphost=127.0.0.1\r\nsmtpport=%d\r\n"

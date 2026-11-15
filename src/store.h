@@ -104,6 +104,7 @@ typedef struct {
 	char peopledir[200];	/* EContact's folder, where CONTACTS.TXT is */
 	char browser[200];	/* EWeb's program, started on a link when no browser runs */
 	char epdf[200];		/* EPDF's program, started on a PDF attachment when it doesn't run */
+	short natfeats;		/* NATFEATS=1: the test rigs' only (Erez, 15 Nov 2026); kept, never offered */
 	short translate;	/* Options > Translate: each message shown in translate_to (the Gateway's translategate) */
 	char translate_to[8];	/* the language translated into, an ISO 639-1 code ("en") */
 } OPTIONS;

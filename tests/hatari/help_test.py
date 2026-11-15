@@ -44,7 +44,7 @@ def look(machine):
     shutil.copy(os.path.join(ROOT, "binary", "email.hyp"), hd)
     rig.install_prg(hd)
     with open(os.path.join(hd, "email.inf"), "w", newline="") as f:
-        f.write("[options]\r\ntz=180\r\noffline=1\r\n[account]\r\nname=Dana\r\nfullname=Dana\r\n"
+        f.write("[options]\r\nnatfeats=1\r\ntz=180\r\noffline=1\r\n[account]\r\nname=Dana\r\nfullname=Dana\r\n"
                 "email=dana@test.local\r\nin=imap\r\nhost=192.168.1.2\r\nport=143\r\nuser=dana\r\n"
                 "pass=x\r\nsmtphost=192.168.1.2\r\nsmtpport=587\r\n")
     r = rig.Rig(w, machine)

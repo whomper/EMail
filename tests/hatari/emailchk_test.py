@@ -120,13 +120,13 @@ if direct:
 with open(os.path.join(em, "email.inf"), "w", newline="") as f:
     # tz=0 for a Direct connection: the certificate's dates against the
     # emulator's clock, this computer's (UTC)
-    f.write("[options]\r\ntz=%d\r\ncheck=1\r\nlog=1\r\nfalcon=%d\r\n[account]\r\nname=Dana\r\nfullname=Dana Falcon\r\n"
+    f.write("[options]\r\nnatfeats=1\r\ntz=%d\r\ncheck=1\r\nlog=1\r\nfalcon=%d\r\n[account]\r\nname=Dana\r\nfullname=Dana Falcon\r\n"
             "email=dana@test.local\r\nin=%s\r\nhost=127.0.0.1\r\nport=%d\r\nuser=dana\r\n"
             "pass=secret\r\nsmtphost=127.0.0.1\r\nsmtpport=%d\r\n"
             "dhost=127.0.0.1\r\ndport=%d\r\ndsec=1\r\n"
             % (0 if direct else 180, direct, "pop3" if pop else "imap", 10110 if pop else IMAP, SMTP, IMAPS))
 with open(os.path.join(hd, "emailchk.inf"), "w", newline="") as f:
-    f.write("FOLDER=C:\\\r\nSTART=now\r\n")
+    f.write("FOLDER=C:\\\r\nSTART=now\r\nNATFEATS=1\r\n")
 
 fifo_out, fifo_in = os.path.join(work, "st_out"), os.path.join(work, "st_in")
 for p in (fifo_out, fifo_in):

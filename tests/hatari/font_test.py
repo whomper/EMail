@@ -78,7 +78,7 @@ rig.install_prg(hd)
 rig.fakesting(os.path.join(hd, "AUTO"))
 INF = os.path.join(hd, "email.inf")
 with open(INF, "w", newline="") as f:
-    f.write("[options]\r\ntz=180\r\n[account]\r\nname=Dana\r\nfullname=Dana Falcon\r\n"
+    f.write("[options]\r\nnatfeats=1\r\ntz=180\r\n[account]\r\nname=Dana\r\nfullname=Dana Falcon\r\n"
             "email=dana@test.local\r\nin=imap\r\nhost=127.0.0.1\r\nport=%d\r\nuser=dana\r\n"
             "pass=secret\r\nsmtphost=127.0.0.1\r\nsmtpport=%d\r\n" % (IMAP, SMTP))
 
@@ -287,7 +287,7 @@ with open(INF, newline="") as f:
     t = f.read()
 t, n = re.subn(r"(?im)^(\s*OFFLINE\s*=\s*)\d+", r"\g<1>1", t)
 if not n:
-    t = t.replace("[options]\r\n", "[options]\r\noffline=1\r\n", 1)
+    t = t.replace("[options]\r\nnatfeats=1\r\n", "[options]\r\nnatfeats=1\r\noffline=1\r\n", 1)
 with open(INF, "w", newline="") as f:
     f.write(t)
 r = rig.Rig(work, machine, serial=(fifo_out, fifo_in))

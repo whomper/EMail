@@ -103,7 +103,7 @@ os.makedirs(os.path.join(hd, "AUTO"))
 rig.install_prg(hd)
 rig.fakesting(os.path.join(hd, "AUTO"))
 with open(os.path.join(hd, "email.inf"), "w", newline="") as f:
-    f.write("[OPTIONS]\r\nTIMEZONE=Europe/London\r\nHEBREW=0\r\nSIGNATURE=Sent from my Falcon\r\n"
+    f.write("[OPTIONS]\r\nNATFEATS=1\r\nTIMEZONE=Europe/London\r\nHEBREW=0\r\nSIGNATURE=Sent from my Falcon\r\n"
             "PANES=144,0\r\n[ACCOUNT]\r\nNAME=Home\r\n"
             "FULLNAME=Dana Falcon\r\nEMAIL=dana@test.local\r\nIN=imap\r\nHOST=127.0.0.1\r\nPORT=%d\r\n"
             "USER=dana\r\nPASS=secret\r\nSMTPHOST=127.0.0.1\r\nSMTPPORT=%d\r\n" % (IMAP, SMTP))

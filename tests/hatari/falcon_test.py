@@ -95,7 +95,7 @@ elif os.environ.get("NOCACHE") != "1":
                     os.path.join(hd, "roots.dat")], check=True)
 with open(os.path.join(hd, "email.inf"), "w", newline="") as f:
     # tz=0: the emulator's clock is this computer's, which runs on UTC
-    f.write("[options]\r\ntz=0\r\nlog=1\r\nfalcon=1\r\nsignature=Sent from my Falcon\r\n[account]\r\nname=Dana\r\nfullname=Dana Falcon\r\n"
+    f.write("[options]\r\nnatfeats=1\r\ntz=0\r\nlog=1\r\nfalcon=1\r\nsignature=Sent from my Falcon\r\n[account]\r\nname=Dana\r\nfullname=Dana Falcon\r\n"
             "email=dana@test.local\r\nin=imap\r\nhost=127.0.0.1\r\nport=%d\r\nuser=dana\r\n"
             "pass=secret\r\nsmtphost=127.0.0.1\r\nsmtpport=%d\r\n"
             "dhost=127.0.0.1\r\ndport=%d\r\ndsec=1\r\ndsmtphost=127.0.0.1\r\ndsmtpport=%d\r\ndsmtpsec=1\r\n"

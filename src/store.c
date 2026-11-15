@@ -46,6 +46,7 @@ static void defaults(void)
 	opt.peopledir[0] = 0;
 	opt.browser[0] = 0;
 	opt.epdf[0] = 0;
+	opt.natfeats = 0;
 	opt.translate = 0;
 	str_copy(opt.translate_to, "en", sizeof(opt.translate_to));
 	opt.wrap = 72;
@@ -505,6 +506,7 @@ static void set_opt(const char *k, const char *v)
 	else if (!strcmp(k, "peopledir")) str_copy(opt.peopledir, v, sizeof(opt.peopledir));
 	else if (!strcmp(k, "browser")) str_copy(opt.browser, v, sizeof(opt.browser));
 	else if (!strcmp(k, "epdf")) str_copy(opt.epdf, v, sizeof(opt.epdf));
+	else if (!strcmp(k, "natfeats")) opt.natfeats = n != 0;
 	else if (!strcmp(k, "translate")) opt.translate = n != 0;
 	else if (!strcmp(k, "translateto")) {
 		if (v[0] && strlen(v) < sizeof(opt.translate_to))
@@ -748,6 +750,8 @@ int store_save_settings(void)
 		"TRANSLATE", "%d", opt.translate);
 	put_str(&b, "the language messages are translated into, a two-letter code (en English, he Hebrew)",
 		"TRANSLATETO", opt.translate_to);
+	if (opt.natfeats)	/* a test rig's: written back only where it was read */
+		put_fmt(&b, "1 = the emulator's debug output (NatFeats), for the test rigs only", "NATFEATS", "%d", 1);
 	for (i = 0; i < naccts; i++) {
 		ACCOUNT *a = accts[i];
 		sb_adds(&b, "; one [ACCOUNT] part per account, up to 8; Options > Accounts edits them\r\n"

@@ -50,7 +50,7 @@ def run(name, machine, ovl, option_y):
     rig.install_prg(hd, ovl=ovl)
     shutil.copy(os.path.join(rig.ROOT, "binary", "cacert.pem"), hd)
     with open(os.path.join(hd, "email.inf"), "w", newline="") as f:
-        f.write("[options]\r\ntz=180\r\noffline=1\r\nlog=1\r\n[account]\r\nname=Dana\r\nfullname=Dana\r\n"
+        f.write("[options]\r\nnatfeats=1\r\ntz=180\r\noffline=1\r\nlog=1\r\n[account]\r\nname=Dana\r\nfullname=Dana\r\n"
                 "email=dana@test.local\r\nin=imap\r\nhost=192.168.1.2\r\nport=143\r\nuser=dana\r\npass=x\r\n"
                 "smtphost=192.168.1.2\r\nsmtpport=587\r\ndhost=imap.test.local\r\ndport=993\r\n"
                 "dsmtphost=smtp.test.local\r\ndsmtpport=465\r\n")

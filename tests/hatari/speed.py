@@ -118,7 +118,7 @@ def mirror(dest):
     subprocess.run(["chown", "-R", "nobody:", os.path.join(srv, "home")], check=True)
     subprocess.run(["dovecot", "-c", os.path.join(srv, "dovecot.conf")], check=True)
     try:
-        inf = ("[options]\r\ntz=180\r\n[account]\r\nname=Dana\r\nfullname=Dana Falcon\r\n"
+        inf = ("[options]\r\nnatfeats=1\r\ntz=180\r\n[account]\r\nname=Dana\r\nfullname=Dana Falcon\r\n"
                "email=dana@test.local\r\nin=imap\r\nhost=127.0.0.1\r\nport=%d\r\nuser=dana\r\npass=secret\r\n"
                "smtphost=127.0.0.1\r\nsmtpport=10025\r\n" % IMAP)
         with open(os.path.join(host, "email.inf"), "w", newline="") as f:

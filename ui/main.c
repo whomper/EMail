@@ -1758,6 +1758,40 @@ static void start_mark(const char *what)
 #define start_mark(what) ((void)0)
 #endif
 
+/* NATFEATS=1 in EMAIL.INF: the emulator's debug output (NatFeats), which
+   only the test rigs ask for (Erez, 15 Nov 2026; guidelines 6.5). Without
+   it nothing is probed, so a real machine never runs the probe's illegal
+   instruction (a Vampire V4SA's Atari core ended EMail on it). Looked at
+   before the first debug line, ahead of store_init's own reading */
+static void natfeats_from_inf(void)
+{
+	char dir[200], path[220], *buf, *p;
+	work_dir(dir, sizeof(dir));
+	path_join(path, sizeof(path), dir, "email.inf");
+	buf = pf_load(path, 0);
+	for (p = buf; p && *p; ) {
+		char *k = p;
+		while (*k == ' ' || *k == '\t')
+			k++;
+		if (!strncasecmp(k, "NATFEATS", 8)) {
+			k += 8;
+			while (*k == ' ' || *k == '\t')
+				k++;
+			if (*k == '=') {
+				k++;
+				while (*k == ' ' || *k == '\t')
+					k++;
+				if (*k == '1')
+					nf_on = 1;
+			}
+		}
+		p = strchr(p, '\n');
+		if (p)
+			p++;
+	}
+	free(buf);
+}
+
 int main(void)
 {
 	short work_in_dummy, work_out[57], msg[8], d;
@@ -1783,6 +1817,8 @@ int main(void)
 			conn_bufsize = 4096;
 	}
 	ap_id = appl_init();
+	if (ap_id >= 0)
+		natfeats_from_inf();	/* before the first debug line */
 	start_mark("appl_init");
 	notify_init("EMAIL   ");
 	notify_clicked = notified;

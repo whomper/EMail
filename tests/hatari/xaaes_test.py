@@ -81,7 +81,7 @@ if os.path.exists(shot):
 # 2. an account: the check at the start, then its box
 inf = os.path.join(work, "email.inf")
 with open(inf, "w", newline="") as f:
-    f.write("[options]\r\n[account]\r\nname=Dana\r\nemail=dana@example.com\r\nin=pop3\r\n"
+    f.write("[options]\r\nnatfeats=1\r\n[account]\r\nname=Dana\r\nemail=dana@example.com\r\nin=pop3\r\n"
             "host=192.168.1.2\r\nport=110\r\nuser=dana\r\npass=secret\r\n")
 w, rc = run("account", "until EMail 30;wait 20;shot", copy=[inf])
 check("with an account it runs", rc == 0)
@@ -103,7 +103,7 @@ if os.path.exists(bubble) and os.path.exists(trace):
     inf3 = os.path.join(work, "inf3", "email.inf")
     os.makedirs(os.path.dirname(inf3), exist_ok=True)
     with open(inf3, "w", newline="") as f:
-        f.write("[options]\r\nstartoffline=1\r\n[account]\r\nname=Dana\r\nemail=dana@example.com\r\n"
+        f.write("[options]\r\nnatfeats=1\r\nstartoffline=1\r\n[account]\r\nname=Dana\r\nemail=dana@example.com\r\n"
                 "in=pop3\r\nhost=192.168.1.2\r\nport=110\r\nuser=dana\r\npass=secret\r\n")
     keep = prg
     prg = trace

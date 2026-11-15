@@ -89,7 +89,7 @@ rig.fakesting(os.path.join(hd, "AUTO"))
 
 def inf(translate, to="en"):
     with open(os.path.join(hd, "email.inf"), "w", newline="") as f:
-        f.write("[options]\r\ntz=180\r\nlog=1\r\n%s[account]\r\nname=Dana\r\nfullname=Dana Falcon\r\n"
+        f.write("[options]\r\nnatfeats=1\r\ntz=180\r\nlog=1\r\n%s[account]\r\nname=Dana\r\nfullname=Dana Falcon\r\n"
                 "email=dana@test.local\r\nin=imap\r\nhost=127.0.0.1\r\nport=%d\r\nuser=dana\r\n"
                 "pass=secret\r\nsmtphost=127.0.0.1\r\nsmtpport=%d\r\n"
                 % ("translate=1\r\ntranslateto=%s\r\n" % to if translate else "", IMAP, SMTP))

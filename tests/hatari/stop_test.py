@@ -64,7 +64,7 @@ def main():
     rig.install_prg(hd)
     rig.fakesting(os.path.join(hd, "AUTO"))
     with open(os.path.join(hd, "email.inf"), "w", newline="") as f:
-        f.write("[options]\r\ntz=180\r\nlog=1\r\n[account]\r\nname=Dana\r\nfullname=Dana Falcon\r\n"
+        f.write("[options]\r\nnatfeats=1\r\ntz=180\r\nlog=1\r\n[account]\r\nname=Dana\r\nfullname=Dana Falcon\r\n"
                 "email=dana@test.local\r\nin=imap\r\nhost=127.0.0.1\r\nport=%d\r\nuser=dana\r\n"
                 "pass=secret\r\nsmtphost=127.0.0.1\r\nsmtpport=10026\r\n" % IMAP)
     fifo_out, fifo_in = os.path.join(work, "st_out"), os.path.join(work, "st_in")

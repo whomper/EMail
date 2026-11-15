@@ -73,7 +73,7 @@ def check(what, good, detail=""):
 
 def inf(startoffline):
     with open(os.path.join(hd, "email.inf"), "w", newline="") as f:
-        f.write("[options]\r\ntz=180\r\ncheck=1\r\nlog=1\r\n%s[account]\r\nname=Dana\r\nfullname=Dana Falcon\r\n"
+        f.write("[options]\r\nnatfeats=1\r\ntz=180\r\ncheck=1\r\nlog=1\r\n%s[account]\r\nname=Dana\r\nfullname=Dana Falcon\r\n"
                 "email=dana@test.local\r\nin=imap\r\nhost=127.0.0.1\r\nport=%d\r\nuser=dana\r\n"
                 "pass=secret\r\nsmtphost=127.0.0.1\r\nsmtpport=%d\r\n"
                 % ("" if startoffline is None else "startoffline=%d\r\n" % startoffline, IMAP, SMTP))

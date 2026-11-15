@@ -45,7 +45,7 @@ os.makedirs(os.path.join(hd, "AUTO"))
 rig.install_prg(hd)
 rig.fakesting(os.path.join(hd, "AUTO"))
 with open(os.path.join(hd, "email.inf"), "w", newline="") as f:
-    f.write("[options]\r\ntz=180\r\noffline=1\r\n[account]\r\nname=Dana\r\nfullname=Dana\r\n"
+    f.write("[options]\r\nnatfeats=1\r\ntz=180\r\noffline=1\r\n[account]\r\nname=Dana\r\nfullname=Dana\r\n"
             "email=dana@test.local\r\nin=imap\r\nhost=127.0.0.1\r\nport=10143\r\nuser=dana\r\n"
             "pass=x\r\nsmtphost=127.0.0.1\r\nsmtpport=10025\r\n")
 gate = fakegate.Gate(port=8480, cap_mb=600, installed=("he",))

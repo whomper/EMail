@@ -106,7 +106,7 @@ rig.fakesting(os.path.join(hd, "AUTO"))
 os.makedirs(os.path.join(hd, "EWEB"))
 shutil.copy(os.path.join(ROOT, "build", "fakeweb.prg"), os.path.join(hd, "EWEB", "EWEB.PRG"))
 with open(os.path.join(hd, "email.inf"), "w", newline="") as f:
-    f.write("[options]\r\ntz=180\r\nbrowser=C:\\EWEB\\EWEB.PRG\r\n[account]\r\nname=Dana\r\nfullname=Dana Falcon\r\n"
+    f.write("[options]\r\nnatfeats=1\r\ntz=180\r\nbrowser=C:\\EWEB\\EWEB.PRG\r\n[account]\r\nname=Dana\r\nfullname=Dana Falcon\r\n"
             "email=dana@test.local\r\nin=imap\r\nhost=127.0.0.1\r\nport=%d\r\nuser=dana\r\n"
             "pass=secret\r\nsmtphost=127.0.0.1\r\nsmtpport=%d\r\n" % (IMAP, SMTP))
 LOG = os.path.join(hd, "EWEB.LOG")

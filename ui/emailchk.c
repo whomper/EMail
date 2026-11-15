@@ -245,8 +245,14 @@ static void inf_read(void)
 		if (*k == ';' || !(eq = strchr(k, '=')))
 			continue;
 		*eq = 0;
+		k = str_trim(k);
+		/* NATFEATS=1: the emulator's debug output, which only the test
+		   rigs ask for (Erez, 15 Nov 2026; guidelines 6.5); kept by
+		   inf_write as a setting it doesn't know */
+		if (!strcasecmp(k, "NATFEATS") && *str_trim(eq + 1) == '1')
+			nf_on = 1;
 		for (i = 0; i < NKEYS; i++)
-			if (!strcasecmp(str_trim(k), keys[i].key))
+			if (!strcasecmp(k, keys[i].key))
 				str_copy(keys[i].val, str_trim(eq + 1), keys[i].size);
 	}
 }

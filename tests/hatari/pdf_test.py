@@ -84,7 +84,7 @@ os.makedirs(os.path.join(hd, "EPDF"))
 shutil.copy(os.path.join(ROOT, "build", "fakeepdf.prg"), os.path.join(hd, "EPDF", "EPDF.PRG"))
 rig.fakesting(os.path.join(hd, "AUTO"))
 with open(os.path.join(hd, "email.inf"), "w", newline="") as f:
-    f.write("[options]\r\ntz=180\r\nepdf=C:\\EPDF\\EPDF.PRG\r\n[account]\r\nname=Dana\r\nfullname=Dana Falcon\r\n"
+    f.write("[options]\r\nnatfeats=1\r\ntz=180\r\nepdf=C:\\EPDF\\EPDF.PRG\r\n[account]\r\nname=Dana\r\nfullname=Dana Falcon\r\n"
             "email=dana@test.local\r\nin=imap\r\nhost=127.0.0.1\r\nport=%d\r\nuser=dana\r\n"
             "pass=secret\r\nsmtphost=127.0.0.1\r\nsmtpport=%d\r\n" % (IMAP, SMTP))
 SAVED = os.path.join(hd, "pdf", "report.pdf")      # the names EMail gives are lowercase (6.6)
