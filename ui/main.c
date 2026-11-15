@@ -1758,39 +1758,7 @@ static void start_mark(const char *what)
 #define start_mark(what) ((void)0)
 #endif
 
-/* NATFEATS=1 in EMAIL.INF: the emulator's debug output (NatFeats), which
-   only the test rigs ask for (Erez, 15 Nov 2026; guidelines 6.5). Without
-   it nothing is probed, so a real machine never runs the probe's illegal
-   instruction (a Vampire V4SA's Atari core ended EMail on it). Looked at
-   before the first debug line; store_init then reads the same buffer */
-static void natfeats_from_inf(void)
-{
-	char dir[200], path[220], *buf, *p;
-	work_dir(dir, sizeof(dir));
-	path_join(path, sizeof(path), dir, "email.inf");
-	buf = pf_load(path, 0);
-	for (p = buf; p && *p; ) {
-		char *k = p;
-		while (*k == ' ' || *k == '\t')
-			k++;
-		if (!strncasecmp(k, "NATFEATS", 8)) {
-			k += 8;
-			while (*k == ' ' || *k == '\t')
-				k++;
-			if (*k == '=') {
-				k++;
-				while (*k == ' ' || *k == '\t')
-					k++;
-				if (*k == '1')
-					nf_on = 1;
-			}
-		}
-		p = strchr(p, '\n');
-		if (p)
-			p++;
-	}
-	store_inf_preload = buf;	/* store_init takes it: one read at the start */
-}
+static char vwk_note[80];	/* the v_opnvwk line, said after store_init */
 
 int main(void)
 {
@@ -1840,10 +1808,7 @@ int main(void)
 				break;
 			evnt_timer_(200);
 		}
-		/* EMAIL.INF read once, after the workstation (NVDI's memory
-		   first), for NATFEATS= and then for store_init */
-		natfeats_from_inf();
-		pf_debug(note);
+		str_copy(vwk_note, note, sizeof(vwk_note));	/* said once NATFEATS= is known */
 		if (vdi_h <= 0) {
 			char a[200];
 			snprintf(a, sizeof(a), "[3][EMail can't open its screen:|the VDI has no memory for it.|%ld KB were free; the|accessories hold the rest.|Load fewer, or add memory.][ Quit ]",
@@ -1870,6 +1835,14 @@ int main(void)
 	secret_warn = warn_plain;	/* before anything is saved */
 	falcon_usable = get_cookie(0x5F435055L) >= 20;	/* _CPU: TLS.OVL needs a 68020 */
 	store_init(dir);
+	/* NATFEATS=1 in EMAIL.INF: the emulator's debug output (NatFeats),
+	   which only the test rigs ask for (Erez, 15 Nov 2026; guidelines
+	   6.5). Without it nothing is probed, so a real machine never runs
+	   the probe's illegal instruction (a Vampire V4SA's Atari core ended
+	   EMail on it). Taken from store_init's own reading of EMAIL.INF, so
+	   the start does no work for it; the lines before it are not said */
+	nf_on = opt.natfeats;
+	pf_debug(vwk_note);
 	start_mark("store");
 	path_join(tls_ovl_path, sizeof(tls_ovl_path), dir, "tls.ovl");	/* beside CACERT.PEM */
 	crash_install(dir, "EMail", mail_version);

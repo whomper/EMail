@@ -154,9 +154,6 @@ int  zone_offset_now(void);
 int  zone_offset_at(unsigned long utc);	/* at a UTC time in seconds */
 long zone_utc_now(void);		/* minutes since 1970, UTC */
 int  store_init(const char *workdir);	/* loads EMAIL.INF (creates dirs) */
-/* EMAIL.INF as the program read it already (a pf_load buffer): the next
-   store_begin takes it in place of reading the file again, and frees it */
-extern char *store_inf_preload;
 /* store_init in steps, for work in the background (EMAILCHK.ACC: the
    guidelines, 2.2): store_begin reads the file (0: there is none), each
    store_step takes a few of its lines, 1 while there are more */

@@ -24,7 +24,6 @@ ACCOUNT *accts[MAXACCT];
 short naccts;
 
 static char inf_path[220], mail_dir[220];
-char *store_inf_preload;	/* EMAIL.INF as main read it already (NATFEATS=), or 0 */
 
 /* ---------------- settings ---------------- */
 
@@ -547,8 +546,7 @@ int store_begin(const char *workdir)
 
 	startoffline_given = offline_inf = 0;
 	free(rd_buf);
-	rd_buf = rd_line = store_inf_preload ? store_inf_preload : pf_load(inf_path, 0);
-	store_inf_preload = 0;
+	rd_buf = rd_line = pf_load(inf_path, 0);
 	rd_cur = 0;
 	rd_opts = 0;
 	store_inf_accounts = 0;
