@@ -248,17 +248,31 @@ const char *tos_clock(void)
 
 long nf_probe(void);
 long nf_call2(long id, long arg);
+extern long nf_vec;		/* nf.S: where the illegal-instruction vector is */
 static long nf_id = -1;
+static int nf_vbr;
 
+/* NatFeats are found by an instruction that is illegal on real hardware,
+   with our handler on the illegal-instruction vector meanwhile: that
+   vector is at VBR + 0x10 on a 68010 or later, not always at 0x10 (a
+   Vampire V4SA's Atari core moved it: EMail and EHypView were ended for an
+   illegal instruction, EWeb, EPDF and EPlay hung, 15 Nov 2026) */
 static void sup_nf_probe(void)
 {
+	if (nf_vbr) {
+		long vbr;
+		__asm__ volatile(".chip 68010\n\tmovec %%vbr,%0\n\t.chip 68000" : "=r"(vbr));
+		nf_vec = vbr + 0x10;
+	}
 	nf_id = nf_probe();
 }
 
 void nf_debug(const char *s)
 {
-	if (nf_id < 0)
+	if (nf_id < 0) {
+		nf_vbr = get_cookie(0x5F435055L) >= 10;	/* '_CPU' */
 		Supexec(sup_nf_probe);
+	}
 	if (nf_id > 0)
 		nf_call2(nf_id, (long)s);
 }
