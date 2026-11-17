@@ -300,12 +300,10 @@ int store_lost_passwords, store_plain_passwords;
 /* a password from EMAIL.INF: encrypted ({E}...) or, from an older EMail,
    as typed. One this EMAIL.KEY can't open is left empty */
 /* EMAIL.INF is written only when a setting changed (guidelines 6.1; Erez,
-   12 Nov 2026): the sum of the text last read or written, and each
-   password's sealed text as it was read, so an unchanged password is
-   written as it was (a new seal has a new nonce, and the text would differ
-   every time) */
-static unsigned long inf_sum;
-static long inf_len = -1;
+   12 Nov 2026): the new text is compared with the file at the save, so
+   the start does no work for it; each password's sealed text is kept as
+   it was read, so an unchanged password is written as it was (a new seal
+   has a new nonce, and the text would differ every time) */
 #define NSEALED 16
 static struct {
 	unsigned long plain;		/* a sum of the password */
@@ -315,12 +313,26 @@ static struct {
 static short nsealed;
 static void sealed_forget(void);
 
+/* a password's sum: shifts and adds, no 32-bit multiply on a 68000 */
 static unsigned long text_sum(const char *s, long n)
 {
-	unsigned long h = 2166136261UL;
+	unsigned long h = 5381;
 	while (n-- > 0)
-		h = (h ^ (unsigned char)*s++) * 16777619UL;
+		h = ((h << 5) + h) ^ (unsigned char)*s++;
 	return h;
+}
+
+/* the file holds this text already */
+static int inf_same(const char *s, long n)
+{
+	long len;
+	char *f;
+	int same;
+	if (pf_size(inf_path) != n || (f = pf_load(inf_path, &len)) == 0)
+		return 0;
+	same = len == n && !memcmp(f, s, (size_t)n);
+	free(f);
+	return same;
 }
 
 static void unseal(char *field, const char *v, int size)
@@ -575,10 +587,6 @@ int store_begin(const char *workdir)
 	free(rd_buf);
 	sealed_forget();
 	rd_buf = rd_line = pf_load(inf_path, 0);
-	if (rd_buf) {
-		inf_len = (long)strlen(rd_buf);
-		inf_sum = text_sum(rd_buf, inf_len);
-	}
 	rd_cur = 0;
 	rd_opts = 0;
 	store_inf_accounts = 0;
@@ -858,15 +866,11 @@ int store_save_settings(void)
 	}
 	sealed_trim();
 	/* the same text as the file has: nothing to write */
-	if ((long)b.len == inf_len && text_sum(b.s, (long)b.len) == inf_sum) {
+	if (inf_same(b.s, (long)b.len)) {
 		sb_free(&b);
 		return 0;
 	}
 	r = pf_save(inf_path, b.s, b.len);
-	if (r == 0) {
-		inf_len = (long)b.len;
-		inf_sum = text_sum(b.s, (long)b.len);
-	}
 	sb_free(&b);
 	return r;
 }

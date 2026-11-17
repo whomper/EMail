@@ -454,7 +454,22 @@ static void t_zone(void)
 
 /* EMAIL.INF is written only when a setting changed (guidelines 6.1;
    Erez, 12 Nov 2026): a save with nothing changed leaves the file alone,
-   a password included (its seal is kept), one change writes it */
+   a password included (its seal is kept), one change writes it. A write
+   is seen as a new modification time or file */
+static struct stat inf_st;
+static void inf_mark(const char *path)
+{
+	stat(path, &inf_st);
+}
+static int inf_written(const char *path)
+{
+	struct stat st;
+	int w = stat(path, &st) != 0 || st.st_ino != inf_st.st_ino ||
+		st.st_mtim.tv_sec != inf_st.st_mtim.tv_sec || st.st_mtim.tv_nsec != inf_st.st_mtim.tv_nsec;
+	inf_st = st;
+	return w;
+}
+
 static void t_inf_unchanged(void)
 {
 	char dir[64], path[100], *inf;
@@ -473,21 +488,22 @@ static void t_inf_unchanged(void)
 	forget_accounts();
 	store_init(dir);
 	CHECK(!strcmp(accts[0]->pass, "secret"), "password read back");
-	pf_remove(path);
-	CHECK(store_save_settings() == 0 && (inf = pf_load(path, &len)) == 0,
-	      "nothing changed: not written (twice, as at a quit)");
-	CHECK(store_save_settings() == 0 && pf_load(path, &len) == 0, "and again not");
+	inf_mark(path);
+	usleep(20000);
+	CHECK(store_save_settings() == 0 && !inf_written(path), "nothing changed: not written (twice, as at a quit)");
+	CHECK(store_save_settings() == 0 && !inf_written(path), "and again not");
 	opt.check = 7;
-	CHECK(store_save_settings() == 0 && (inf = pf_load(path, &len)) != 0 && strstr(inf, "\r\nCHECK=7\r\n"),
-	      "one setting changed: written");
+	usleep(20000);
+	CHECK(store_save_settings() == 0 && inf_written(path) && (inf = pf_load(path, &len)) != 0 &&
+	      strstr(inf, "\r\nCHECK=7\r\n"), "one setting changed: written");
 	free(inf);
-	pf_remove(path);
-	CHECK(store_save_settings() == 0 && pf_load(path, &len) == 0, "then not again");
+	CHECK(store_save_settings() == 0 && !inf_written(path), "then not again");
 	strcpy(accts[0]->pass, "other");
-	CHECK(store_save_settings() == 0 && (inf = pf_load(path, &len)) != 0, "a new password: written");
-	free(inf);
+	usleep(20000);
+	CHECK(store_save_settings() == 0 && inf_written(path), "a new password: written");
+	CHECK(store_save_settings() == 0 && !inf_written(path), "its new seal kept: not again");
 	pf_remove(path);
-	CHECK(store_save_settings() == 0 && pf_load(path, &len) == 0, "its new seal kept: not again");
+	CHECK(store_save_settings() == 0 && inf_written(path) && pf_size(path) > 0, "a removed file: written again");
 	opt.check = 5;
 	pf_remove(path);
 	rmdir(dir);
