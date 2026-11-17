@@ -43,6 +43,8 @@ OBJECT *d_tree(void)
 static short s_on[8];			/* keep, log, falcon, dsp, colour, people file, start; an account's leave */
 enum { T_KEEP, T_LOG, T_FALCON, T_DSP, T_COLOUR, T_PFILE, T_START, T_LEAVE };
 
+static short page_of[DMAX], npages, cur_page, page_tab[7];
+static short list_line;			/* Settings: the line between the list and the page */
 #define NTICK 8
 static short tick_box[NTICK], tick_lbl[NTICK], tick_var[NTICK], nticks;
 static short d_tick(short x, short y, const char *label, short var);
@@ -52,6 +54,7 @@ void d_begin(short w, short h)
 {
 	static short eyes_made;
 	nticks = 0;	/* a dialog's ticks are its own */
+	npages = list_line = 0;	/* and its pages (Settings) */
 	if (!eyes_made) {
 		make_eyes();
 		eyes_made = 1;
@@ -337,12 +340,122 @@ static void band_badge(void);
    (main.c draws the badge's place once it is gone) */
 int dialog_up;
 
+/* The keyboard's reach (D25, 5.10; Erez, 10 Nov 2026: "kept as built",
+   as the family's Settings engine): Tab and Shift+Tab go through the
+   dialog's text fields and controls (ticks, the buttons that open a list
+   or another dialog) and, in Settings, the list of pages; Space acts on
+   the control the focus is on, Up and Down choose a page in the list; a
+   thin ring shows the focus, once a key has moved it. A click takes the
+   ring away and puts the focus where it is. */
+static short kfocus;			/* 0 the text cursor (or nothing), -1 the page list, else the control */
+#define RING 2				/* the ring is this far outside its object */
+
+static short ring_obj(void)
+{
+	return kfocus > 0 ? kfocus : kfocus < 0 && npages ? page_tab[cur_page] : 0;
+}
+
+static void ring_draw(void)
+{
+	short o = ring_obj(), x, y;
+	GRECT r, c;
+	if (!o)
+		return;
+	objc_offset(tree, o, &x, &y);
+	r.x = (short)(x - RING);
+	r.y = (short)(y - RING);
+	r.w = (short)(tree[o].ob_width + 2 * RING);
+	r.h = (short)(tree[o].ob_height + 2 * RING);
+	c = r;
+	if (!dlg_cut(&c.x, &c.y, &c.w, &c.h))
+		return;
+	graf_mouse(M_OFF, 0);
+	clip_on(&c);
+	frame(&r, 1);
+	clip_off();
+	graf_mouse(M_ON, 0);
+}
+
+static void ring_more(short x, short y, short w, short h)
+{
+	(void)x, (void)y, (void)w, (void)h;
+	ring_draw();
+}
+
+/* the ring gone (the object and 3 pixels round it drawn again), the focus
+   back to the text cursor */
+static void ring_erase(void)
+{
+	short o = ring_obj(), list = kfocus < 0;
+	kfocus = 0;
+	if (!o)
+		return;
+	dlg_draw_range(tree, o, o, (short)(o + 1), 1, 0);
+	if (list && list_line)
+		dlg_draw_one(tree, list_line);
+}
+
+static int is_tick_lbl(short i)
+{
+	short k;
+	for (k = 0; k < nticks; k++)
+		if (tick_lbl[k] == i)
+			return 1;
+	return 0;
+}
+
+static int is_eye(short i)
+{
+	short k;
+	for (k = 0; k < npw; k++)
+		if (eye_obj[k] == i)
+			return 1;
+	return 0;
+}
+
+static int is_page_tab(short i)
+{
+	short k;
+	for (k = 1; k <= npages; k++)
+		if (page_tab[k] == i)
+			return 1;
+	return 0;
+}
+
+/* where Tab goes, in the order the dialog was made: the page list first
+   (Settings), then the page's text fields and controls */
+static short stops(short *out, short max)
+{
+	short i, n = 0;
+	if (npages && n < max)
+		out[n++] = -1;
+	for (i = 1; i < nobj && n < max; i++) {
+		OBJECT *o = &tree[i];
+		if (o->ob_state & DISABLED)
+			continue;
+		if (o->ob_flags & HIDETREE)
+			continue;		/* on a page not shown (the tree is flat) */
+		if (o->ob_flags & EDITABLE)
+			out[n++] = i;
+		else if ((o->ob_flags & TOUCHEXIT) && !is_tick_lbl(i) && !is_page_tab(i) && !is_eye(i))
+			out[n++] = i;
+	}
+	return n;
+}
+
 static short form_loop(short start)
 {
 	short next = start ? start : first_editable(), edit = 0, idx = 0, cont = 1;
 	short m[8];
 	AEVENT e;
 	dialog_up++;
+	if (kfocus > 0 && (tree[kfocus].ob_flags & HIDETREE))
+		kfocus = 0;
+	if (kfocus) {			/* the focus stays on its control (a tick, a list): no cursor */
+		next = 0;
+		ring_draw();
+	}
+	dlg_more(ring_more);
 	while (cont) {
 		if (next && next != edit) {
 			edit = next;
@@ -358,9 +471,47 @@ static short form_loop(short start)
 			ui_modal_message(m);
 		if (e.which & MU_KEYBD) {
 			LFIELD *lf = lf_at(edit);
+			short sc = KEY_SCAN(e.kreturn);
 			if ((e.kreturn & 0xff) == 0x1b)
 				e.kreturn = 0x011b;	/* ^[ is Esc, for objc_edit too */
-			if (KEY_SCAN(e.kreturn) == 0x44) {
+			if (sc == 0x0f) {
+				/* Tab, Shift+Tab: the next or the last stop */
+				short st[DMAX / 2], n = stops(st, DMAX / 2), i, at = -1, to;
+				int back = (e.kstate & (K_LSHIFT | K_RSHIFT)) != 0;
+				for (i = 0; i < n; i++)
+					if (st[i] == (kfocus ? kfocus : edit))
+						at = i;
+				if (n) {
+					to = at < 0 ? (back ? st[n - 1] : st[0])
+					    : st[(at + (back ? n - 1 : 1)) % n];
+					ring_erase();
+					if (to > 0 && (tree[to].ob_flags & EDITABLE)) {
+						next = to;	/* the cursor goes there */
+					} else {
+						if (edit)
+							objc_edit(tree, edit, 0, &idx, ED_END);
+						edit = next = 0;
+						kfocus = to;
+						ring_draw();
+					}
+				}
+			} else if (kfocus > 0 && sc == 0x39) {
+				/* Space: the control acts, as clicked */
+				next = kfocus;
+				cont = 0;
+			} else if (kfocus < 0 && (sc == 0x48 || sc == 0x50)) {
+				/* Up, Down in the page list: that page */
+				short p = (short)(cur_page + (sc == 0x48 ? -1 : 1));
+				if (p >= 1 && p <= npages) {
+					ring_erase();	/* off the old name; on the new one when the page shows */
+					kfocus = -1;
+					next = page_tab[p];
+					cont = 0;
+				}
+			} else if (kfocus && sc != 0x1c && sc != 0x72 && sc != 0x01 && sc != 0x61 && sc != 0x44) {
+				/* a key the control doesn't take (Return, Esc, Undo,
+				   F10 go on as before) */
+			} else if (sc == 0x44) {
 				/* F10: the Hebrew keyboard on or off, here too (as
 				   common's dlg_do; Erez, 6 Nov 2026); the band's badge
 				   shows it */
@@ -381,7 +532,7 @@ static short form_loop(short start)
 			} else {
 				short kr;
 				cont = form_keybd(tree, edit, next, e.kreturn, &next, &kr);
-				if (kr && !lf) {	/* a long field's text isn't objc_edit's */
+				if (kr && !lf && edit) {	/* a long field's text isn't objc_edit's */
 					/* a letter key types its Hebrew letter while that
 					   keyboard is on */
 					if ((kr & 0xff) == (e.kreturn & 0xff))
@@ -392,6 +543,8 @@ static short form_loop(short start)
 		}
 		if (e.which & MU_BUTTON) {
 			short obj = objc_find(tree, 0, 8, e.mx, e.my), i, k = -1;
+			if (kfocus)
+				ring_erase();	/* a click: the focus where it is */
 			for (i = 0; i < npw; i++)
 				if (eye_obj[i] == obj && obj > 0)
 					k = i;
@@ -412,6 +565,7 @@ static short form_loop(short start)
 			if (edit)
 				objc_edit(tree, edit, 0, &idx, ED_END);
 	}
+	dlg_more(0);
 	dialog_up--;
 	return next;
 }
@@ -427,6 +581,7 @@ static short d_do_named(const char *name, short edit)
 	if (band_obj)
 		dlg_band(band_obj);	/* in a window its title says it (3.5) */
 	dlg_open(tree, &x, &y, &w, &h);
+	kfocus = 0;
 	do
 		r = form_loop(edit) & 0x7fff;
 	while (tick_hit(r));	/* a bitmap tick (5.6): changed, and on */
@@ -595,7 +750,6 @@ static char s_zone[40], s_zlabel[42], s_check[4], s_page[5], s_wrap[3];
 static char s_sig[SIG_ROWS][SIG_CAP + 1];	/* the signature, a line a row */
 #define PDIR_W 32
 static char s_pdir[sizeof(opt.peopledir)];	/* EContact's folder */
-static short page_of[DMAX], npages, cur_page, page_tab[7];
 static short pages_obj;		/* the box the pages show in */
 
 static TEDINFO *d_ted(const char *text, short just, short color)
@@ -975,6 +1129,7 @@ static short settings_run(short pages_box)
 		dlg_band(band_obj);	/* in a window its title says it (3.5) */
 	dlg_open(tree, &x, &y, &w, &h);
 	band_badge();
+	kfocus = 0;
 	for (;;) {
 		r = form_loop(s_next_edit ? s_next_edit : first_edit()) & 0x7fff;
 		s_next_edit = 0;
@@ -1199,7 +1354,7 @@ static short settings_sidebar(short *ok)
 	d_band(SX + 42, " Settings");
 	/* the list: plain words on white, the chosen one in a black bar, a
 	   line between it and the settings */
-	d_add(G_BOX, 0, 0, 0x00001171L, SW, 1, (short)(0 | (1 << 8)), 16);
+	list_line = d_add(G_BOX, 0, 0, 0x00001171L, SW, 1, (short)(0 | (1 << 8)), 16);
 	for (k = 0; k < 6; k++) {
 		npages++;
 		page_tab[npages] = d_add(G_BOXTEXT, TOUCHEXIT, 0, (long)d_ted(names[k], 0, 0x1180),
