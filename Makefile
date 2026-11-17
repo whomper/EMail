@@ -69,8 +69,21 @@ PCORE   := $(patsubst conn,conn pad_conn,$(patsubst store,store pad_store,$(CORE
 PATARI  := $(patsubst plat_tos,plat_tos pad_plat,$(patsubst tls_ovl,tls_ovl pad_tlsovl,$(ATARI)))
 PUI     := $(patsubst main,main pad_main,$(UI))
 PADS    := $(foreach p,nf conn store ovl plat tlsovl main,-Wl,-u,pad_$(p)) -Wl,-u,pad_store_ro -Wl,-u,pad_tlsovl_ro
-OBJS    := $(OBJDIR)/crt0.o $(OBJDIR)/sting_s.o $(OBJDIR)/nf.o $(OBJDIR)/pad_nf.o $(OBJDIR)/crash_s.o \
+OBJS0   := $(OBJDIR)/crt0.o $(OBJDIR)/sting_s.o $(OBJDIR)/nf.o $(OBJDIR)/pad_nf.o $(OBJDIR)/crash_s.o \
            $(addprefix $(OBJDIR)/,$(addsuffix .o,$(PCORE) ovl pad_ovl $(PATARI) $(PUI)))
+# 2.21's pads (the sync of 17 Nov 2026 moved 1276 of 1374 functions): after
+# each object, code, read-only data, data and BSS in bytes, so everything
+# outside the files the sync changed is at 2.20's places modulo 256, as
+# common/tools/profpad.py found them against 2.20's build. Each is
+# common/atari/codepad.S, its symbols kept with -u
+KEEP    := util:0:183:0:0 conn:32:0:0:0 pad_conn:0:0:0:108 ovl:124:0:0:0 net_tos:78:0:0:0 \
+           gem:208:0:254:0 crash:198:0:0:0 bigbuf:0:0:250:0 text:144:0:254:238 find:0:0:0:250 \
+           dialogs:254:0:0:184 aboutbox:14:0:252:0 iconify:0:232:0:0 dd:0:0:0:246 field:170:0:0:0
+kp_obj   = $(word 1,$(subst :, ,$(1)))
+kp_size  = $(word $(2),$(subst :, ,$(1)))
+OBJS    := $(foreach o,$(OBJS0),$(o) $(foreach k,$(KEEP),$(if $(filter $(OBJDIR)/$(call kp_obj,$(k)).o,$(o)),$(OBJDIR)/keep_$(call kp_obj,$(k)).o)))
+PADS    += $(foreach k,$(KEEP),$(foreach s,keep_$(call kp_obj,$(k)) $(if $(filter-out 0,$(call kp_size,$(k),3)),keep_$(call kp_obj,$(k))_ro) \
+           $(if $(filter-out 0,$(call kp_size,$(k),4)),keep_$(call kp_obj,$(k))_data) $(if $(filter-out 0,$(call kp_size,$(k),5)),keep_$(call kp_obj,$(k))_bss),-Wl,-u,$(s)))
 HDRS    := $(wildcard src/*.h atari/*.h atari/include/*.h ui/*.h \
            common/src/*.h common/atari/*.h common/atari/include/*.h common/ui/*.h common/dsp/*.h)
 
@@ -135,6 +148,9 @@ $(OBJDIR)/crash_s.o: common/atari/crash.S | $(OBJDIR)
 	$(CC) -m68000 -c -o $@ $<
 $(OBJDIR)/nf.o: common/atari/nf.S | $(OBJDIR)
 	$(CC) -m68000 -c -o $@ $<
+# 2.21's pads (KEEP above)
+$(OBJDIR)/keep_%.o: common/atari/codepad.S Makefile | $(OBJDIR)
+	$(CC) -m68000 -DPAD_NAME=keep_$* $(foreach k,$(KEEP),$(if $(filter $*,$(call kp_obj,$(k))),-DPAD_TEXT=$(call kp_size,$(k),2) -DPAD_RO=$(call kp_size,$(k),3) -DPAD_DATA=$(call kp_size,$(k),4) -DPAD_BSS=$(call kp_size,$(k),5))) -c -o $@ $<
 # the pads that keep the code after a changed file where it was (2.20)
 $(OBJDIR)/pad_%.o: atari/pad_%.S | $(OBJDIR)
 	$(CC) -m68000 -c -o $@ $<
