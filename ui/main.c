@@ -164,10 +164,17 @@ static void check(short cmd, int on)
 		menu_icheck(mb.tree, i, on ? 1 : 0);
 }
 
+/* a job is running and has waited on the network: the commands that
+   would start another are greyed meanwhile (D19). Set at its first wait,
+   not at its start, so a job that never waits (a message on disk) costs
+   no menu change */
+static int job_grey, busy_on;
+
 void menu_update(void)
 {
 	int msg = cur_msg != 0, ed = w_editor.h > 0, ed_top = ed && win_topmost() == &w_editor;
-	int some = msg || list_marked() > 1;	/* one message or a selection */
+	int some = (msg || list_marked() > 1) && !job_grey;	/* one message or a selection */
+	int free_ = !job_grey;
 	enable(C_CUT, ed_top);
 	enable(C_COPY, ed_top || msg || (win_topmost() == &w_folders && cur_finfo));
 	enable(C_PASTE, ed_top);
@@ -179,20 +186,23 @@ void menu_update(void)
 	enable(C_FLAG, some);
 	enable(C_MOVE, some);
 	enable(C_DELETE, some);
-	enable(C_REFETCH, cur_finfo && !cur_finfo->local && (list_current() || list_marked() > 1));
-	enable(C_GETALL, cur_finfo && !cur_finfo->local && !cur_finfo->noselect);
+	enable(C_REFETCH, free_ && cur_finfo && !cur_finfo->local && (list_current() || list_marked() > 1));
+	enable(C_GETALL, free_ && cur_finfo && !cur_finfo->local && !cur_finfo->noselect);
 	enable(C_SELALL, cur_folder != 0);
 	enable(C_FIND, cur_folder != 0);
 	check(C_FIND, find_active());
-	enable(C_SAVEATT, msg && cur_msg->nparts > 0);
+	enable(C_SAVEATT, free_ && msg && cur_msg->nparts > 0);
 	enable(C_NEXTWIN, ed && main_h > 0);
-	enable(C_SEND, ed);
+	enable(C_SEND, free_ && ed);
 	enable(C_SAVEOUT, ed);
 	enable(C_ATTACH, ed);
 	enable(C_ABOOK, ed || naccts);	/* without a message: write to one */
-	enable(C_NEWFOLDER, cur_acct && !cur_acct->pop);
-	enable(C_DELFOLDER, cur_finfo && !cur_finfo->local && !cur_finfo->role);
-	enable(C_RENFOLDER, cur_finfo && !cur_finfo->local && !cur_finfo->role && !cur_finfo->noselect);
+	enable(C_NEWFOLDER, free_ && cur_acct && !cur_acct->pop);
+	enable(C_DELFOLDER, free_ && cur_finfo && !cur_finfo->local && !cur_finfo->role);
+	enable(C_RENFOLDER, free_ && cur_finfo && !cur_finfo->local && !cur_finfo->role && !cur_finfo->noselect);
+	enable(C_CHECK, free_);
+	enable(C_SENDQ, free_);
+	enable(C_REFRESH, free_);
 	check(C_OFFLINE, opt.offline);
 	check(C_FALCON, opt.falcon);
 	check(C_TRANSLATE, opt.translate);
@@ -225,6 +235,21 @@ void status(const char *msg)
 void busy(int on)
 {
 	busy_bee(on);
+	busy_on = on;
+	if (!on && job_grey) {
+		job_grey = 0;
+		menu_update();
+	}
+}
+
+/* pf_idle: the network is waited on */
+static void job_idle(void)
+{
+	if (busy_on && !job_grey) {
+		job_grey = 1;
+		menu_update();
+	}
+	busy_idle();
 }
 
 /* a password that can't be encrypted goes into EMAIL.INF as it is, and the
@@ -1862,7 +1887,7 @@ int main(void)
 	hebrew_kbd = 0;		/* off at the start, F10 only (Erez, 8 Nov 2026; guideline 5.3) */
 	set_logging();
 	net_init();
-	pf_idle = busy_idle;
+	pf_idle = job_idle;
 	/* the log's size from the handle open for the write (6.5: the 256 KB cap) */
 	conn_log_size = pf_handle_size;
 	busy_message = busy_msg;
