@@ -1475,6 +1475,27 @@ void dlg_touch(OBJECT *tree, short *next, short x, short y)
 }
 #endif
 
+/* a press taken by a loop's own look between turns of its drawing (settings.c's page), given to the next wait that
+   asks for the mouse as its own event: TOS 1.04 drops a press made while the program draws, and a quick second
+   click on a page's name was lost (EHypView's gui-test on ST-1, 17 Nov 2026) */
+static struct {
+	int on;
+	short x, y, ks;
+} pend;
+
+void dlg_press_later(short x, short y, short kstate)
+{
+	pend.on = 1;
+	pend.x = x;
+	pend.y = y;
+	pend.ks = kstate;
+}
+
+int dlg_press_waiting(void)
+{
+	return pend.on;
+}
+
 static short dlg_evnt_(short flags, short clicks, short mask, short state,
 		       unsigned long timer, short *msg, AEVENT *e)
 {
@@ -1482,6 +1503,16 @@ static short dlg_evnt_(short flags, short clicks, short mask, short state,
 #ifdef DLG_CLICK
 	dlg_touch_up();
 #endif
+	if (pend.on && (flags & MU_BUTTON)) {
+		memset(e, 0, sizeof(*e));
+		e->which = MU_BUTTON;
+		e->mx = pend.x;
+		e->my = pend.y;
+		e->kstate = pend.ks;
+		e->breturn = 1;
+		pend.on = 0;
+		return MU_BUTTON;
+	}
 	if (!dlg_in_window())
 		return evnt_multi_(flags, clicks, mask, state, timer, msg, e);
 	i = ndw - 1;
@@ -1796,6 +1827,19 @@ int dlg_later_waiting(void)
 	return sl_n > sl_next;
 }
 
+/* until the left button is let go (a second at most): a press acted on while held isn't taken again */
+static void button_up(void)
+{
+	short mx, my, mb, ks, n, m[8];
+	AEVENT e;
+	for (n = 0; n < 50; n++) {
+		graf_mkstate(&mx, &my, &mb, &ks);
+		if (!(mb & 1))
+			return;
+		dlg_evnt(MU_TIMER, 0, 0, 0, 20, m, &e);
+	}
+}
+
 /* what Undo presses, and Esc where no field has the cursor, when the caller gives cancel 0: the tree's "Cancel" exit
    button, else its only exit button (OK in a box that only says something); 0 when neither is there, and then they
    do nothing (EFTP's esc_button, the guidelines 3.5) */
@@ -1874,7 +1918,18 @@ short dlg_do(OBJECT *tree, short start, short cancel)
 				}
 			} else if (dlg_keys && (hk = dlg_keys(tree, e.kreturn, e.kstate, edit, &want)) != 0) {
 				/* the app's own key (settings.c's focus, Space, the arrows); it says where the text cursor goes */
-				if (want > 0) {
+				if (hk == 2 && want > 0) {
+					/* the key acts on an object (Space on a button, a tick): dlg_do ends with it, as a
+					   click on it would, an EXIT button drawn selected for the caller to deselect */
+					if ((tree[want].ob_flags & EXIT) && !(tree[want].ob_state & SELECTED)) {
+						tree[want].ob_state |= SELECTED;
+						redraw(tree, want);
+					}
+					next = want;
+					cont = 0;
+				} else if (hk == 2) {
+					/* no object: the key taken, as 1 */
+				} else if (want > 0) {
 					next = want;
 				} else if (want < 0 && edit > 0) {
 					objc_edit(tree, edit, 0, &idx, ED_END);
@@ -1920,6 +1975,9 @@ short dlg_do(OBJECT *tree, short start, short cancel)
 				if (!cont && lf_eye_click && lf_eye_click(tree, next, &idx, edit)) {
 					cont = 1;	/* a password's eye: the stars or the text, the dialog goes on */
 					next = 0;
+					/* and nothing more until the button is up: asked for again while it was held, the
+					   press came back at once and turned the eye back (EFTP, 17 Nov 2026) */
+					button_up();
 				}
 #ifdef DLG_CLICK
 				if (!cont)

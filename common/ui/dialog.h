@@ -34,8 +34,17 @@ short dlg_do(OBJECT *tree, short start, short cancel);
 
 /* The app's own key, offered to dlg_do before its own (after F10): key as evnt_multi gives it, kstate, edit the object whose
    text field has the cursor (0: none), *field set by the function: > 0 the text field that gets the cursor, < 0 the
-   cursor leaves its field, 0 as it is. It returns 1 when it took the key (dlg_do does nothing else with it), 0 to leave it
-   to dlg_do. NULL by default; settings.c sets it while its dialog is up (Tab, Space, arrows: the keyboard reach, 5.10).
+   cursor leaves its field, 0 as it is. It returns:
+     0  the key isn't the app's: dlg_do handles it as its own;
+     1  the app took the key (the focus moved, a radio turned): dlg_do does nothing else with it, the text cursor
+        going where *field says;
+     2  the key acts on the object *field (> 0; Space on a button, a tick, a choice: the keyboard reach, D25): dlg_do
+        ends and returns it, as a click on it would. An EXIT button is drawn selected first, for the caller to
+        deselect, as after a click; any other state (a tick's cross, a radio's dot) is the app's to set, here or once
+        dlg_do has returned it. A text field's cursor ends as on an exit. There is no press to wait for, so a
+        DLG_CLICK build's dlg_touch_up returns at once, and the double click's bit (0x8000) is never set.
+        *field 0 or less with 2: as 1.
+   NULL by default; settings.c sets it while its dialog is up (Tab, Space, arrows: the keyboard reach, 5.10).
    A function that serves one tree checks `tree` and takes nothing of another dialog's (a button's own dialog) */
 extern int (*dlg_keys)(OBJECT *tree, short key, short kstate, short edit, short *field);
 
@@ -49,6 +58,12 @@ extern int (*dlg_keys)(OBJECT *tree, short key, short kstate, short edit, short 
 void dlg_later(OBJECT *tree, short obj);
 void dlg_later_drop(void);
 int dlg_later_waiting(void);		/* 1 while objects wait */
+
+/* A press a loop took itself while it drew in turns (settings.c's page: evnt_multi with MU_BUTTON and a timer of 0
+   between turns), handed on: the next dlg_evnt that asks for the mouse (dlg_do's) gets it as its own event, at once.
+   TOS 1.04 drops a press made while a program draws; a press taken between turns isn't lost. */
+void dlg_press_later(short x, short y, short kstate);
+int dlg_press_waiting(void);		/* 1 while one waits */
 
 /* The band's badge (the Hebrew keyboard's, the guidelines 5.3), drawn by the app over the dialog's title band from
    dlg_band, on TOS where the band shows: when dlg_do starts and after F10 (the band drawn again first). NULL: none */
