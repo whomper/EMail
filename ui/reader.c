@@ -953,7 +953,7 @@ static void draw(WIN *w, GRECT *clip)
 	if (!cur_msg && selection > 1) {
 		static const char *how[] = {
 			"Message menu, right-click or keys for all of them:",
-			"^U unread  ^G flag  ^M move  Del delete",
+			"^J unread  ^G flag  ^M move  Del delete",
 			"A click without Shift or Control selects one again."
 		};
 		char t[60];
