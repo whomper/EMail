@@ -7,7 +7,8 @@ Dovecot, FAKESTNG.PRG over the serial port, the test build
 The mouse rests on the list's From and Subject of a message whose name
 and subject don't fit (the tooltip shows them whole), on a name that
 fits (none), and down the folder pane, where one folder's name is longer
-than the pane (its tooltip, none for the others). Screenshots of each.
+than the pane (its tooltip, none for the others). Screenshots of each, and
+of the reader's hint once all are selected (t5).
 
     tip_test.py WORKDIR [MACHINE]   (make build/trace/email.prg first)
 """
@@ -121,6 +122,13 @@ try:
     check("a folder's name cut short: its tooltip", LONG in found)
     check("... and none for the folders that fit", all(t == LONG for t in found))
     print("tooltips:", tips())
+    # several selected: the reader's hint names the keys for them (^J unread,
+    # not ^U, which is Close: 2.23). Screenshot t5 shows it
+    r.click(400, 140)
+    time.sleep(2)
+    r.ctrl("a")                            # Select all
+    r.settle(3, 20)
+    r.shot("t5-selection-hint")
 finally:
     r.stop()
     bridge.terminate()
