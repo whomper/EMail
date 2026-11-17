@@ -103,7 +103,7 @@ $(OBJDIR)/build.o: $(OBJDIR)/build.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 $(OBJDIR)/mail.elf: $(OBJS) $(OBJDIR)/build.o common/atari/link.ld
-	$(CC) $(LDFLAGS) -Wl,--gc-sections $(PADS) -o $@ $(OBJS) $(OBJDIR)/build.o -lgcc
+	$(CC) $(LDFLAGS) -Wl,--gc-sections $(PADS) -Wl,-Map,$@.map -o $@ $(OBJS) $(OBJDIR)/build.o -lgcc
 
 # EMail's icon (the AERA guidelines, 5.5): drawn in common/icons/EMAIL.txt,
 # made into icons/ (the desktop's RSC and ICN files), ui/icon.h and
@@ -168,8 +168,19 @@ $(OBJDIR)/trace/email.prg: FORCE
 # EMail and EMail check saying how long they kept the AES waiting
 # (-DAES_PROFILE=20: each stretch of 20 ms or more as "AESGAP <ms> ms",
 # the start as "AESSTART"), for tests/hatari/speed.py (never released)
+# EMAIL.PRG's timed build is linked at the shipped build's places modulo
+# 256 (common/tools/profpad.py; the hub, 17 Nov 2026): the shipped
+# objects, with only the ones AES_PROFILE changes (gem, reader) taken
+# from build/speed, so the rig times the layout that ships
+PROFOBJ := gem reader
+TIMED   := $(foreach o,$(OBJS),$(if $(filter $(addprefix $(OBJDIR)/,$(addsuffix .o,$(PROFOBJ))),$(o)),$(OBJDIR)/speed/$(notdir $(o)),$(o)))
 $(OBJDIR)/speed/email.prg: FORCE
-	$(MAKE) OBJDIR=$(OBJDIR)/speed TRACECF=-DAES_PROFILE=20 $(OBJDIR)/speed/mail.elf
+	$(MAKE) $(OBJDIR)/mail.elf
+	$(MAKE) OBJDIR=$(OBJDIR)/speed TRACECF=-DAES_PROFILE=20 $(addprefix $(OBJDIR)/speed/,$(addsuffix .o,$(PROFOBJ)))
+	python3 common/tools/profpad.py --ship $(OBJDIR)/mail.elf --out $(OBJDIR)/speed/mail.elf \
+		--cpu=-m68000 --dir $(OBJDIR)/speed/pads \
+		$(foreach o,$(PROFOBJ),--exclude $(OBJDIR)/$(o).o --exclude $(OBJDIR)/speed/$(o).o) \
+		-- $(CC) $(LDFLAGS) -Wl,--gc-sections $(PADS) $(TIMED) $(OBJDIR)/build.o -lgcc
 	PRGFLAGS=7 python3 common/tools/elf2tos.py $(OBJDIR)/speed/mail.elf $@
 $(OBJDIR)/speed/emailchk.acc: FORCE
 	$(MAKE) OBJDIR=$(OBJDIR)/speed/chk APPCF= TRACECF="-ffunction-sections -fdata-sections -DAES_PROFILE=20" \
