@@ -16,6 +16,8 @@
 #include "conn.h"
 #include "secret.h"
 #include "busy.h"
+#include "tooltip.h"
+#include "bidi.h"
 #include "tls.h"
 #include "people_file.h"
 #include "../src/plat.h"
@@ -1256,31 +1258,23 @@ static unsigned long last_input;	/* pf_ms() of the last key, click or message */
  * shown when the mouse rests on a button of the editor's bar, a name in
  * a message's header, or a name or subject the list or the folder pane
  * cuts short; gone when it moves, a key is pressed or a button clicked */
-static short tip_on, tip_tried, hover_x = -1, hover_y = -1;
-static unsigned long hover_at;
-static GRECT tip_r;
+static short hover_x = -1, hover_y = -1;
 
-static void tip_hide(void)
+/* the tooltips (D18): the family's tooltip.c, 0.7 s; EMail gives the text
+   of what is under the pointer: the editor's bar, the message's headers,
+   Find's row, a list row or folder cut short */
+static int tip_is_rtl(const char *s, short n)
 {
-	if (!tip_on)
-		return;
-	tip_on = 0;
-	/* whatever is under it, in any window, is drawn again */
-	form_dial(FMD_FINISH, tip_r.x, tip_r.y, tip_r.w, tip_r.h);
+	return bidi_is_rtl(s, n);
 }
 
-static void tip_show(void)
+static int email_tip(short x, short y, char *text, int size)
 {
-	char text[120];
-	short n;
-	GRECT r, scr;
-	tip_tried = 1;
-	if (!editor_tip(hover_x, hover_y, text, sizeof(text)) &&
-	    !(wind_find(hover_x, hover_y) == main_h &&
-	      (reader_tip(hover_x, hover_y, text, sizeof(text)) || find_tip(hover_x, hover_y, text, sizeof(text)) ||
-	       list_tip(hover_x, hover_y, text, sizeof(text)) ||
-	       folders_tip(hover_x, hover_y, text, sizeof(text)))))
-		return;
+	if (!editor_tip(x, y, text, size) &&
+	    !(wind_find(x, y) == main_h &&
+	      (reader_tip(x, y, text, size) || find_tip(x, y, text, size) ||
+	       list_tip(x, y, text, size) || folders_tip(x, y, text, size))))
+		return 0;
 #ifdef DRAW_TRACE
 	{
 		char t[140];
@@ -1288,38 +1282,7 @@ static void tip_show(void)
 		pf_debug(t);
 	}
 #endif
-	n = (short)strlen(text);
-	if (n > (desk_w - 2 * MARGIN - 2) / cw)	/* as much as the screen's width holds */
-		n = (short)((desk_w - 2 * MARGIN - 2) / cw);
-	r.w = n * cw + 2 * MARGIN;
-	r.h = ch + 6;
-	r.x = hover_x + cw;
-	r.y = hover_y + ch + 2;
-	/* on the screen: to the left or above the mouse at the edges */
-	if (r.x + r.w > desk_x + desk_w)
-		r.x = hover_x - r.w - cw / 2;
-	if (r.x < desk_x)
-		r.x = desk_x;
-	r.x &= ~7;		/* its text on a byte */
-	if (r.y + r.h > desk_y + desk_h)
-		r.y = hover_y - r.h - 2;
-	if (r.y < desk_y)
-		r.y = desk_y;
-	tip_r = r;
-	tip_r.w++;
-	tip_r.h++;
-	scr.x = scr.y = 0;
-	scr.w = scr_w;
-	scr.h = scr_h;
-	wind_update(BEG_UPDATE);
-	graf_mouse(M_OFF, 0);
-	clip_on(&scr);
-	fill(&r, 0);
-	frame(&r, 1);
-	text_at(r.x + MARGIN, r.y + 3, text, n, n, 0);	/* a Hebrew subject right to left */
-	graf_mouse(M_ON, 0);
-	wind_update(END_UPDATE);
-	tip_on = 1;
+	return 1;
 }
 
 static void wait_release(void)
@@ -1810,6 +1773,8 @@ int main(void)
 			conn_bufsize = 4096;
 	}
 	ap_id = appl_init();
+	tip_init(0);		/* the AES draws again what a tip covered */
+	tip_rtl = tip_is_rtl;	/* a Hebrew subject right to left, as before */
 	key_state_init();	/* a Shift typed during the long start keeps its state (3.2) */
 	start_mark("appl_init");
 	notify_init("EMAIL   ");
@@ -1977,7 +1942,7 @@ int main(void)
 
 	while (!quit) {
 		/* 0x101/3/0: wake on any button press, left or right */
-		short which, hovering = !tip_tried && hover_x >= 0;
+		short which;
 		conn_stop = 0;		/* a stop is for one operation */
 		/* a key typed while busy comes first, as if typed now */
 		if (names_wait) {		/* names that came during a dialog */
@@ -1997,7 +1962,7 @@ int main(void)
 		} else {
 			which = busy_key(&ev) ? MU_KEYBD : evnt_multi_(MU_MESAG | MU_KEYBD | MU_BUTTON | MU_TIMER | MU_M1,
 									 0x101, 3, 0,
-									 list_show_waiting() || win_sliders_waiting() || list_later_waiting() || xlate_running() ? 0 : find_waiting() ? 20 : hovering ? 100 : 1000,
+									 list_show_waiting() || win_sliders_waiting() || list_later_waiting() || xlate_running() ? 0 : find_waiting() ? 20 : tip_wait(1000),
 									 msg, &ev);
 		}
 		/* a message a key moved to is shown once no key is waiting, and
@@ -2028,13 +1993,7 @@ int main(void)
 			hover_x = ev.mx;
 			hover_y = ev.my;
 		}
-		if (which & (MU_M1 | MU_KEYBD | MU_BUTTON | MU_MESAG)) {
-			hover_at = pf_ms();
-			tip_tried = (which & (MU_KEYBD | MU_BUTTON)) != 0;
-			tip_hide();
-		} else if (hovering && pf_ms() - hover_at >= 700UL) {
-			tip_show();	/* after the mouse rested 0.7 s */
-		}
+		tip_tick(which, hover_x, hover_y, email_tip);	/* after the pointer rested 0.7 s */
 		if ((which & MU_MESAG) && notify_message(msg))
 			which &= ~MU_MESAG;	/* BGEM.NG's: its answer, a button clicked */
 		if (which & MU_MESAG) {
