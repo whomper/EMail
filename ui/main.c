@@ -1677,7 +1677,7 @@ static void place_windows(void)
 	w_editor.place.y = opt.ed_y;
 	w_editor.place.w = opt.ed_w;
 	w_editor.place.h = opt.ed_h;
-	if (opt.ed_w < 30 * cw || opt.ed_h < 8 * ch || opt.ed_x < 0 || opt.ed_y < desk_y ||
+	if (opt.ed_w < ED_MIN_W || opt.ed_h < ED_MIN_H || opt.ed_x < 0 || opt.ed_y < desk_y ||
 	    opt.ed_x + opt.ed_w > desk_x + desk_w + 4 || opt.ed_y + opt.ed_h > desk_y + desk_h + 4) {
 		w_editor.place.x = desk_x + desk_w / 10;
 		w_editor.place.y = desk_y + ch;

@@ -108,6 +108,15 @@ void main_close(void);
 void main_status(const char *s);
 
 /* drawing (draw.c) */
+/* the windows' smallest sizes, the same when they are opened and sized
+   (D38): the main window holds the folder pane, the list and a letter;
+   the editor its bar, its narrow labels (Send, Outbox, Attach, Address:
+   33 columns) and the slider */
+#define MAIN_MIN_W (40 * cw)
+#define MAIN_MIN_H (12 * ch)
+#define ED_MIN_W   (36 * cw)
+#define ED_MIN_H   (8 * ch)
+
 #define TX_BOLD     1
 #define TX_INVERSE  2
 #define TX_RIGHT    4	/* align right-to-left text to the right edge */

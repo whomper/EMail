@@ -628,7 +628,7 @@ void main_open(void)
 		return;
 	}
 	/* the saved place, if it still fits this screen */
-	if (wd < 30 * cw || ht < 10 * ch || x < 0 || y < desk_y ||
+	if (wd < MAIN_MIN_W || ht < MAIN_MIN_H || x < 0 || y < desk_y ||
 	    x + wd > desk_x + desk_w + 4 || y + ht > desk_y + desk_h + 4) {
 		x = desk_x;
 		y = desk_y;
@@ -1262,10 +1262,10 @@ static void main_message(short *msg)
 			wind_set(main_h, WF_CURRXYWH, msg[4], msg[5], msg[6], msg[7]);
 			break;
 		}
-		if (msg[6] < 40 * cw)
-			msg[6] = 40 * cw;
-		if (msg[7] < 12 * ch)
-			msg[7] = 12 * ch;
+		if (msg[6] < MAIN_MIN_W)
+			msg[6] = MAIN_MIN_W;
+		if (msg[7] < MAIN_MIN_H)
+			msg[7] = MAIN_MIN_H;
 		msg_x8(MAINKIND, msg);
 		wind_set(main_h, WF_CURRXYWH, msg[4], msg[5], msg[6], msg[7]);
 		get_main_work();
@@ -1363,10 +1363,10 @@ void win_message(short *msg)
 			wind_set(w->h, WF_CURRXYWH, msg[4], msg[5], msg[6], msg[7]);
 			break;
 		}
-		if (msg[6] < 12 * cw)
-			msg[6] = 12 * cw;
-		if (msg[7] < 6 * ch)
-			msg[7] = 6 * ch;
+		if (msg[6] < ED_MIN_W)
+			msg[6] = ED_MIN_W;
+		if (msg[7] < ED_MIN_H)
+			msg[7] = ED_MIN_H;
 		msg_x8(EDKIND, msg);
 		wind_set(w->h, WF_CURRXYWH, msg[4], msg[5], msg[6], msg[7]);
 		wind_get(w->h, WF_WORKXYWH, &w->work.x, &w->work.y, &w->work.w, &w->work.h);
