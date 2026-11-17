@@ -452,6 +452,47 @@ static void t_zone(void)
 	unsetenv("TZ");
 }
 
+/* EMAIL.INF is written only when a setting changed (guidelines 6.1;
+   Erez, 12 Nov 2026): a save with nothing changed leaves the file alone,
+   a password included (its seal is kept), one change writes it */
+static void t_inf_unchanged(void)
+{
+	char dir[64], path[100], *inf;
+	long len;
+	snprintf(dir, sizeof(dir), "/tmp/mail-unit-inf2.%d", (int)getpid());
+	mkdir(dir, 0755);
+	snprintf(path, sizeof(path), "%s/email.inf", dir);
+	{
+		static const char old[] = "[options]\r\ncheck=5\r\n[account]\r\nname=Home\r\n"
+			"email=a@me.com\r\nuser=a\r\npass=secret\r\n";
+		pf_save(path, old, (long)strlen(old));
+	}
+	forget_accounts();
+	store_init(dir);
+	CHECK(store_save_settings() == 0, "the old INF written in the new form");
+	forget_accounts();
+	store_init(dir);
+	CHECK(!strcmp(accts[0]->pass, "secret"), "password read back");
+	pf_remove(path);
+	CHECK(store_save_settings() == 0 && (inf = pf_load(path, &len)) == 0,
+	      "nothing changed: not written (twice, as at a quit)");
+	CHECK(store_save_settings() == 0 && pf_load(path, &len) == 0, "and again not");
+	opt.check = 7;
+	CHECK(store_save_settings() == 0 && (inf = pf_load(path, &len)) != 0 && strstr(inf, "\r\nCHECK=7\r\n"),
+	      "one setting changed: written");
+	free(inf);
+	pf_remove(path);
+	CHECK(store_save_settings() == 0 && pf_load(path, &len) == 0, "then not again");
+	strcpy(accts[0]->pass, "other");
+	CHECK(store_save_settings() == 0 && (inf = pf_load(path, &len)) != 0, "a new password: written");
+	free(inf);
+	pf_remove(path);
+	CHECK(store_save_settings() == 0 && pf_load(path, &len) == 0, "its new seal kept: not again");
+	opt.check = 5;
+	pf_remove(path);
+	rmdir(dir);
+}
+
 /* EMAIL.INF: names in capitals, a note, the setting and an empty line;
    read back the same, a password with " ;" and the two-line signature too */
 static void t_inf(void)
@@ -660,6 +701,7 @@ int main(void)
 	t_num();
 	t_zone();
 	t_inf();
+	t_inf_unchanged();
 	t_index();
 	t_charset();
 	t_mime();

@@ -299,6 +299,30 @@ int store_lost_passwords, store_plain_passwords;
 
 /* a password from EMAIL.INF: encrypted ({E}...) or, from an older EMail,
    as typed. One this EMAIL.KEY can't open is left empty */
+/* EMAIL.INF is written only when a setting changed (guidelines 6.1; Erez,
+   12 Nov 2026): the sum of the text last read or written, and each
+   password's sealed text as it was read, so an unchanged password is
+   written as it was (a new seal has a new nonce, and the text would differ
+   every time) */
+static unsigned long inf_sum;
+static long inf_len = -1;
+#define NSEALED 16
+static struct {
+	unsigned long plain;		/* a sum of the password */
+	char *sealed;			/* as EMAIL.INF had it */
+	short used;			/* taken by this save (two fields may hold one password) */
+} sealed[NSEALED];
+static short nsealed;
+static void sealed_forget(void);
+
+static unsigned long text_sum(const char *s, long n)
+{
+	unsigned long h = 2166136261UL;
+	while (n-- > 0)
+		h = (h ^ (unsigned char)*s++) * 16777619UL;
+	return h;
+}
+
 static void unseal(char *field, const char *v, int size)
 {
 	if (!secret_decode(v, field, size)) {
@@ -306,6 +330,9 @@ static void unseal(char *field, const char *v, int size)
 		store_lost_passwords = 1;
 	} else if (*v && strncmp(v, SECRET_TAG, strlen(SECRET_TAG))) {
 		store_plain_passwords = 1;	/* written by an older EMail */
+	} else if (*field && nsealed < NSEALED && (sealed[nsealed].sealed = malloc(strlen(v) + 1)) != 0) {
+		strcpy(sealed[nsealed].sealed, v);
+		sealed[nsealed++].plain = text_sum(field, (long)strlen(field));
 	}
 }
 
@@ -546,7 +573,12 @@ int store_begin(const char *workdir)
 
 	startoffline_given = offline_inf = 0;
 	free(rd_buf);
+	sealed_forget();
 	rd_buf = rd_line = pf_load(inf_path, 0);
+	if (rd_buf) {
+		inf_len = (long)strlen(rd_buf);
+		inf_sum = text_sum(rd_buf, inf_len);
+	}
 	rd_cur = 0;
 	rd_opts = 0;
 	store_inf_accounts = 0;
@@ -692,9 +724,45 @@ static void put_fmt(SBUF *b, const char *note, const char *key, const char *fmt,
 /* a password, encrypted with EMAIL.KEY */
 static void put_secret(SBUF *b, const char *note, const char *key, const char *val)
 {
-	char sealed[300];
-	secret_encode(val, sealed, sizeof(sealed));
-	put_str(b, note, key, sealed);
+	char out[300];
+	unsigned long h = text_sum(val, (long)strlen(val));
+	short i;
+	for (i = 0; i < nsealed; i++)
+		if (*val && !sealed[i].used && sealed[i].plain == h) {
+			char plain[256];
+			/* the one read for this password: written as it was */
+			if (secret_decode(sealed[i].sealed, plain, sizeof(plain)) && !strcmp(plain, val)) {
+				sealed[i].used = 1;
+				put_str(b, note, key, sealed[i].sealed);
+				return;
+			}
+		}
+	if (secret_encode(val, out, sizeof(out)) && *val && nsealed < NSEALED &&
+	    (sealed[nsealed].sealed = malloc(strlen(out) + 1)) != 0) {
+		/* kept, so the next save writes it as it is now */
+		strcpy(sealed[nsealed].sealed, out);
+		sealed[nsealed].plain = h;
+		sealed[nsealed++].used = 1;
+	}
+	put_str(b, note, key, out);
+}
+
+/* the seals no field took in this save go (a password changed or gone) */
+static void sealed_trim(void)
+{
+	short i, n = 0;
+	for (i = 0; i < nsealed; i++)
+		if (sealed[i].used)
+			sealed[n++] = sealed[i];
+		else
+			free(sealed[i].sealed);
+	nsealed = n;
+}
+
+static void sealed_forget(void)
+{
+	while (nsealed > 0)
+		free(sealed[--nsealed].sealed);
 }
 
 int store_save_settings(void)
@@ -703,6 +771,8 @@ int store_save_settings(void)
 	short i;
 	int r;
 	tls_tz_minutes = zone_offset_now();
+	for (i = 0; i < nsealed; i++)
+		sealed[i].used = 0;
 	sb_init(&b);
 	sb_adds(&b, "; EMail settings, written by EMAIL.PRG. Lines starting with ; are notes.\r\n"
 		    "; Most of these are set in Options > Settings; the Help key opens the guide.\r\n"
@@ -788,7 +858,17 @@ int store_save_settings(void)
 		put_str(&b, "Direct connection: SMTP login; empty = same as incoming, - = none", "DSMTPUSER", a->dsmtpuser);
 		put_secret(&b, "Direct connection: SMTP password, if the SMTP login differs (encrypted)", "DSMTPPASS", a->dsmtppass);
 	}
+	sealed_trim();
+	/* the same text as the file has: nothing to write */
+	if ((long)b.len == inf_len && text_sum(b.s, (long)b.len) == inf_sum) {
+		sb_free(&b);
+		return 0;
+	}
 	r = pf_save(inf_path, b.s, b.len);
+	if (r == 0) {
+		inf_len = (long)b.len;
+		inf_sum = text_sum(b.s, (long)b.len);
+	}
 	sb_free(&b);
 	return r;
 }
