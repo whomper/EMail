@@ -37,15 +37,27 @@ These come from AERA-Atari's repo template and are the same in every app's CLAUD
   commit built programs, help files or certificates (`binary/`, `dist/`). Never reuse a number.
 - **Only formal releases leave the build machine.** Erez gets vX.Y releases made by the Release workflow from `main`, nothing else: no test builds, no CI artifacts, no builds from a branch. Work lands on `main`; to try a fix on real hardware, release it. If a release doesn't work, fix
   forward: a new release with the next number, before any other work; never a rollback (Erez, 7 Nov 2026).
-- **Releases go out without asking Erez** (his decision, 23 Oct 2026; guidelines 1.2). Release when
-  work on `main` is ready:
-  - this repo's checks pass;
-  - the rigs this file asks for pass (on EmuTOS where the session has nothing else).
+- **Releases go out without asking Erez** (his decision, 23 Oct 2026; guidelines 1.2), once the candidate has
+  passed **the regression gate** (Erez, 17 Nov 2026: "Since we are now at an evolved phase, we need to be extra
+  careful with regression issues as there are users of our software. This means testing across all
+  configurations" and "make sure we don't loose performance"; guidelines 1.2, AERA-Atari a22574e). In order:
+  1. this repo's own checks;
+  2. EMail's rigs on every row of the gate table at the top of AERA-Atari's `standards/TEST-MATRIX.md` it runs
+     on, on Erez's TOS images and NVDI (`~/.aera`; EmuTOS is no evidence for a release): Erez's configuration,
+     Falcon-4:16 without NVDI, Falcon true colour, TT, MiNT+XaAES (plain, ct60, ext2), a 68060, the FireBee
+     stand-in, ST mono and colour and ST-1, STE, EMail check on first and second boot, each network path
+     (plain, the Gateway, Direct) and one boot with NatFeats off (`natoff_test.py`). Each row named in the
+     report with `describe()`; a row it can't run, named with why;
+  3. the paired speed run against the last release on Erez's configuration, `Falcon-4:16` and `ST:mono`, the
+     timed build at the shipped layout (`common/tools/profpad.py`, `make build/speed/email.prg`): no row slower
+     beyond a tick on any; a slower row is fixed first, and only Erez accepts one;
+  4. the candidate commit and the results to the hub, which runs the family check and answers go or the
+     faults it found;
+  5. only then the release: give Erez the link in one line, with anything he has to do, and send the hub
+     the link.
 
-  Then give Erez the link in one line, with anything he has to do, and send the hub the link. The
-  hub's checks (Erez's TOS and NVDI, the configurations of AERA-Atari's standards/TEST-MATRIX.md) follow
-  the release; a fault they find is fixed forward by a new release that comes before any other work.
-  Decisions that are his still go to him first.
+  A fault a user reports becomes a case in the rigs, in the same release that fixes it. Decisions that are
+  his still go to him first.
 - **Who decides what** (Erez, 31 Oct 2026; the guidelines' "Who decides what"). Erez's part, put
   to him before the work as a decision with a short context:
   - new programs and ideas, their core capabilities, and how they work with the other programs;

@@ -51,6 +51,9 @@ def check(what, good, detail=""):
 def run(name, steps, copy=(), cnf=()):
     w = os.path.join(work, name)
     cmd = [sys.executable, RUN, w, ETOS, prg, "--display", ":97", "--steps", steps]
+    # the regression gate's rows (TEST-MATRIX.md, 17 Nov 2026): XA_ARGS adds run.py's own,
+    # "--machine tt --nvdi", "--machine ct60 --nvdi", "--nvdi --ext2 DIR"
+    cmd += os.environ.get("XA_ARGS", "").split()
     if copy:
         cmd += ["--copy", *copy]       # one --copy: run.py takes its list (nargs="*")
     for c in cnf:
