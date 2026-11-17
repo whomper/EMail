@@ -151,7 +151,7 @@ $(OBJDIR)/nf.o: common/atari/nf.S | $(OBJDIR)
 	$(CC) -m68000 -c -o $@ $<
 # 2.21's pads (KEEP above)
 $(OBJDIR)/keep_%.o: common/atari/codepad.S Makefile | $(OBJDIR)
-	$(CC) -m68000 -DPAD_NAME=keep_$* $(foreach k,$(KEEP),$(if $(filter $*,$(call kp_obj,$(k))),-DPAD_TEXT=$(call kp_size,$(k),2) -DPAD_RO=$(call kp_size,$(k),3) -DPAD_DATA=$(call kp_size,$(k),4) -DPAD_BSS=$(call kp_size,$(k),5))) -c -o $@ $<
+	$(CC) -m68000 -Wa,-W -DPAD_NAME=keep_$* $(foreach k,$(KEEP),$(if $(filter $*,$(call kp_obj,$(k))),-DPAD_TEXT=$(call kp_size,$(k),2) -DPAD_RO=$(call kp_size,$(k),3) -DPAD_DATA=$(call kp_size,$(k),4) -DPAD_BSS=$(call kp_size,$(k),5))) -c -o $@ $<
 # the pads that keep the code after a changed file where it was (2.20)
 $(OBJDIR)/pad_%.o: atari/pad_%.S | $(OBJDIR)
 	$(CC) -m68000 -c -o $@ $<
