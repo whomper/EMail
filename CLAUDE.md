@@ -146,18 +146,25 @@ These come from AERA-Atari's repo template and are the same in every app's CLAUD
 - **The interface backlog** (Erez's UI decisions of 9 Nov 2026, AERA-Atari `standards/ui`) is
   [docs/UI-BACKLOG.md](docs/UI-BACKLOG.md): taken only with a release EMail makes anyway, as it says.
 
-## Maintenance mode (Erez, 1 Nov 2026)
+## Maintenance mode (Erez, 1 Nov 2026; changed 17 Nov 2026)
 
-EMail is in maintenance mode while EWeb, EPDF and EPlay go to 1.0 (AERA-Atari, ATARI-APP-GUIDELINES.md, section 8). Until Erez ends it:
-- No new features, speed rounds, clean-ups, or catching up with new or changed guidelines.
-- No sync of the shared code (`common/`, `xl/`, `gateway/`). Shared code moving is no reason to rebuild or release.
-- A release only for:
+EMail is in maintenance mode while EWeb, EPDF and EPlay go to 1.0 (AERA-Atari, ATARI-APP-GUIDELINES.md,
+section 8; AERA-Atari 8ddb463). Until Erez ends it:
+- No new features and no speed rounds of its own.
+- **Every family rule holds for EMail as for the focus apps** (Erez, 17 Nov 2026: "there needs to be a
+  constant behavior across all applications. In the future, all applications must adhere to family
+  rules and be notified. We will review whether they need to issue a release." and "Applications on
+  maintenance does not mean they contain faults"). The hub notifies EMail of each new or changed rule
+  and each shared fix; EMail adopts it, with the shared code it needs (`tools/sync-common.sh`), and
+  its row in section 8's table is ticked. EMail's ✗, ~ and ? there are EMail's work.
+- Whether a rule or a shared fix needs a release of its own is reviewed with Erez through the hub; a
+  fault fix always gets one.
+- Otherwise a release only for:
   - a security or data-loss fault;
-  - a crash or breakage Erez reports;
+  - a crash or breakage;
   - something outside that stops it working (a certificate, a server);
   - something EWeb, EPDF or EPlay need from it.
 
-  Such a release takes only that fix (one change from AERA-Atari, not a sync), and its notes say why.
-- Work on `main` that isn't released stays unreleased.
+  Its notes say why.
 - Nothing runs in the background; the session waits for Erez or the hub.
-- Only Erez's explicit word ends this mode, for instance that every app is to take the latest shared code and release. The hub passes it on quoting him.
+- Only Erez's explicit word ends this mode. The hub passes it on quoting him.
