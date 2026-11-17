@@ -76,10 +76,12 @@ OBJS0   := $(OBJDIR)/crt0.o $(OBJDIR)/sting_s.o $(OBJDIR)/nf.o $(OBJDIR)/pad_nf.
 # outside the files the syncs changed is at 2.20's places modulo 256, as
 # common/tools/profpad.py found them against 2.20's build. Each is
 # common/atari/codepad.S, its symbols kept with -u
-KEEP    := nf:194:0:0:0 pad_nf:0:0:252:0 util:0:183:0:0 conn:192:0:0:0 pad_conn:0:0:0:88 \
-           smtp:0:0:252:0 ovl:124:0:0:0 tos:60:0:4:0 net_tos:78:0:0:0 gem:94:0:254:0 crash:198:0:0:0 \
-           bigbuf:0:0:250:0 text:196:0:0:242 find:0:0:0:250 dialogs:254:0:0:184 av:190:0:0:252 \
-           aboutbox:14:0:252:0 iconify:0:232:0:0 dd:0:0:0:246 field:170:0:0:0
+KEEP    := nf:194:0:0:0 pad_nf:0:0:252:0 util:0:183:0:0 conn:192:0:0:0 pad_conn:0:0:0:88 smtp:22:0:252:0 \
+           ovl:124:0:0:0 tos:60:0:4:0 net_tos:78:0:0:0 gem:78:0:254:0 crash:198:0:0:0 bigbuf:132:0:250:8 \
+           text:196:0:0:242 find:204:0:0:250 dialogs:56:0:0:180 av:190:0:0:252 aboutbox:14:0:252:0 \
+           iconify:0:232:0:28 dd:0:0:0:218 field:170:0:0:0 pad_main:132:0:0:0 draw:82:0:0:0 tooltip:22:0:0:0 \
+           aboutline:42:0:246:166 win:22:0:0:0 list:86:0:0:0 editor:244:0:0:0 people_ask:126:0:0:252 \
+           dialog:160:0:0:232 sting_s:0:0:132:0 libc:0:0:252:0 compose:0:0:0:92 notify:0:0:0:66
 kp_obj   = $(word 1,$(subst :, ,$(1)))
 kp_size  = $(word $(2),$(subst :, ,$(1)))
 OBJS    := $(foreach o,$(OBJS0),$(o) $(foreach k,$(KEEP),$(if $(filter $(OBJDIR)/$(call kp_obj,$(k)).o,$(o)),$(OBJDIR)/keep_$(call kp_obj,$(k)).o)))
