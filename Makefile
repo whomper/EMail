@@ -71,14 +71,15 @@ PUI     := $(patsubst main,main pad_main,$(UI))
 PADS    := $(foreach p,nf conn store ovl plat tlsovl main,-Wl,-u,pad_$(p)) -Wl,-u,pad_store_ro -Wl,-u,pad_tlsovl_ro
 OBJS0   := $(OBJDIR)/crt0.o $(OBJDIR)/sting_s.o $(OBJDIR)/nf.o $(OBJDIR)/pad_nf.o $(OBJDIR)/crash_s.o \
            $(addprefix $(OBJDIR)/,$(addsuffix .o,$(PCORE) ovl pad_ovl $(PATARI) $(PUI)))
-# 2.21's pads (the sync of 17 Nov 2026 moved 1276 of 1374 functions): after
+# 2.21's pads (the syncs of 17 Nov 2026 moved nearly every function): after
 # each object, code, read-only data, data and BSS in bytes, so everything
-# outside the files the sync changed is at 2.20's places modulo 256, as
+# outside the files the syncs changed is at 2.20's places modulo 256, as
 # common/tools/profpad.py found them against 2.20's build. Each is
 # common/atari/codepad.S, its symbols kept with -u
-KEEP    := util:0:183:0:0 conn:32:0:0:0 pad_conn:0:0:0:108 ovl:124:0:0:0 net_tos:78:0:0:0 \
-           gem:208:0:254:0 crash:198:0:0:0 bigbuf:0:0:250:0 text:144:0:254:238 find:0:0:0:250 \
-           dialogs:254:0:0:184 aboutbox:14:0:252:0 iconify:0:232:0:0 dd:0:0:0:246 field:170:0:0:0
+KEEP    := nf:194:0:0:0 pad_nf:0:0:252:0 util:0:183:0:0 conn:192:0:0:0 pad_conn:0:0:0:88 \
+           smtp:0:0:252:0 ovl:124:0:0:0 tos:60:0:4:0 net_tos:78:0:0:0 gem:94:0:254:0 crash:198:0:0:0 \
+           bigbuf:0:0:250:0 text:144:0:254:238 find:0:0:0:250 dialogs:254:0:0:184 av:190:0:0:252 \
+           aboutbox:14:0:252:0 iconify:0:232:0:0 dd:0:0:0:246 field:170:0:0:0
 kp_obj   = $(word 1,$(subst :, ,$(1)))
 kp_size  = $(word $(2),$(subst :, ,$(1)))
 OBJS    := $(foreach o,$(OBJS0),$(o) $(foreach k,$(KEEP),$(if $(filter $(OBJDIR)/$(call kp_obj,$(k)).o,$(o)),$(OBJDIR)/keep_$(call kp_obj,$(k)).o)))
