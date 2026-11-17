@@ -795,6 +795,8 @@ int main(void)
 	notify_ask();
 	net_init();
 	pf_idle = busy_idle;
+	/* the log's size from the handle open for the write (6.5: the 256 KB cap) */
+	conn_log_size = pf_handle_size;
 	dlg_title = "EMail check";	/* its alerts' and boxes' windows (MiNT, MagiC) */
 	tls_file_info = pf_info;
 	tls_read_at = read_at;

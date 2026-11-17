@@ -1785,6 +1785,7 @@ int main(void)
 			conn_bufsize = 4096;
 	}
 	ap_id = appl_init();
+	key_state_init();	/* a Shift typed during the long start keeps its state (3.2) */
 	start_mark("appl_init");
 	notify_init("EMAIL   ");
 	notify_clicked = notified;
@@ -1862,6 +1863,8 @@ int main(void)
 	set_logging();
 	net_init();
 	pf_idle = busy_idle;
+	/* the log's size from the handle open for the write (6.5: the 256 KB cap) */
+	conn_log_size = pf_handle_size;
 	busy_message = busy_msg;
 	dlg_title = "EMail";		/* a dialog's window title, where it has one */
 	dlg_redraw_hook = dialog_redraw;
