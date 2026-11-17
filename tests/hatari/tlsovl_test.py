@@ -80,6 +80,15 @@ def run(name, machine, ovl, option_y):
 # the menu bar's items are 16 pixels apart either way)
 FALCON = (8, 136)             # Options: Direct connection, its eighth row (Translate has its section, D5)
 
+if os.environ.get("TLSOVL_FIREBEE"):
+    # the regression gate's row 7: the FireBee stand-in (a 68060 with FireTOS's cookies) wants TLSFB.OVL, which
+    # it can't run (ColdFire code); with only TLS.OVL beside EMail it says TLSFB.OVL is missing, no crash
+    d, inf, log, crash = run("firebee", "FireBee:16", True, FALCON)
+    check("FireBee stand-in, TLS.OVL only: an alert (TLSFB.OVL missing)", d > 0.01, "%.1f%% of the screen" % (100 * d))
+    check("... the Direct connection stays off, no CRASH.LOG", "FALCON=0" in inf and not crash)
+    print("tlsovl test:", "all passed" if not fails else "%d failed" % len(fails))
+    sys.exit(1 if fails else 0)
+
 d, inf, log, crash = run("missing", "Falcon:16", False, FALCON)
 check("Falcon without TLS.OVL: an alert", d > 0.01, "%.1f%% of the screen" % (100 * d))
 check("... the Direct connection stays off", "FALCON=0" in inf)
