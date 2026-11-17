@@ -587,6 +587,49 @@ static int in(GRECT *r, short x, short y)
 	return r->w > 0 && x >= r->x && y >= r->y && x < r->x + r->w && y < r->y + r->h;
 }
 
+/* a button of the row pressed in or out (drawn inverted inside its frame) */
+static void button_invert(GRECT *r)
+{
+	short p[4];
+	wind_update(BEG_UPDATE);
+	graf_mouse(M_OFF, 0);
+	clip_on(r);
+	p[0] = r->x + 1;
+	p[1] = r->y + 1;
+	p[2] = r->x + r->w - 2;
+	p[3] = r->y + r->h - 2;
+	vswr_mode(vdi_h, 3);
+	vsf_interior(vdi_h, 1);
+	vsf_color(vdi_h, 1);
+	vr_recfl(vdi_h, p);
+	vswr_mode(vdi_h, 1);
+	attr_forget();
+	graf_mouse(M_ON, 0);
+	wind_update(END_UPDATE);
+}
+
+/* a press on a button of the row: it sinks while held with the pointer on
+   it, and acts only when let go there (D32, D33; 5.8, as the editor's bar) */
+static int button_held(GRECT *r, short mx, short my)
+{
+	short x = mx, y = my, b = 1, k;
+	int over = 1;
+	button_invert(r);
+	while (b & 1) {
+		int now;
+		evnt_timer_(10);
+		graf_mkstate(&x, &y, &b, &k);
+		now = in(r, x, y);
+		if (now != over) {
+			button_invert(r);
+			over = now;
+		}
+	}
+	if (over)
+		button_invert(r);
+	return over;
+}
+
 /* a click on Find's row */
 void find_click(short mx, short my)
 {
@@ -595,9 +638,11 @@ void find_click(short mx, short my)
 	layout();
 	win_focus(&w_list);
 	if (in(&closer, mx, my)) {
-		find_close(1);
+		if (button_held(&closer, mx, my))
+			find_close(1);
 	} else if (in(&button, mx, my)) {
-		search_server();
+		if (button_held(&button, mx, my))
+			search_server();
 	} else if (in(&field, mx, my)) {
 		short k = (short)((mx - field.x - 4 + cw / 2) / cw);
 		if (k < 0)

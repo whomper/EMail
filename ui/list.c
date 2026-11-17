@@ -1020,7 +1020,15 @@ static void click(WIN *w, short mx, short my, short clicks, short kstate)
 		return;
 	i = w->top + (my - w->work.y - w->head_h) / ch;
 	if (i == nview && more) {
-		load_more();
+		/* "Load more": done on the release over it (5.8) */
+		GRECT r;
+		short dx, dy;
+		r.x = w->work.x;
+		r.y = w->work.y + w->head_h + (short)((i - w->top) * ch);
+		r.w = w->work.w;
+		r.h = ch;
+		if (press_track(&r, mx, my, 0, ui_press_message, &dx, &dy) == PRESS_IN)
+			load_more();
 		return;
 	}
 	if (kstate & (K_LSHIFT | K_RSHIFT | K_CTRL)) {
