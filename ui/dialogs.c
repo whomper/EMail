@@ -1343,7 +1343,6 @@ static short pick_w(const char *title, const char **items, short n, short lw)
 					bidi_visual(s, len, bidi_is_rtl(s, len), shown[k] + 1);
 				else
 					memcpy(shown[k] + 1, s, len);
-				heb_font_map(shown[k] + 1, len, opt.hebfont);
 				if (it == cur)
 					tree[row[k]].ob_state = SELECTED;
 			}
@@ -1631,7 +1630,6 @@ void words_box(const char *title, const char *text, long n)
 			} else {
 				memcpy(rows[nr], vis, k);
 			}
-			heb_font_map(rows[nr], (short)k, opt.hebfont);
 		}
 		nr++;
 	}

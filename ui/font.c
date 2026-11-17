@@ -9,10 +9,9 @@
  * is here: the font set and its cells, where its Hebrew comes from, and
  * what OK does.
  *
- * The dialog also says where the system and bitmap fonts keep their
- * Hebrew letters: the Atari character set (TOS, EmuTOS) or the
- * ISO-8859-8 or DOS places, as Israeli system fonts and many GDOS fonts
- * have them. A vector font (Speedo, TrueType, Type 1) is asked through
+ * The system and bitmap fonts have their Hebrew letters at the Atari
+ * character set's places (TOS, EmuTOS; "Hebrew in fonts" went from every
+ * app, Erez, 12 Nov 2026). A vector font (Speedo, TrueType, Type 1) is asked through
  * NVDI for its Hebrew letters by Unicode; when it has none, they are
  * drawn in the system font in the same cells.
  */

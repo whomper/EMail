@@ -37,12 +37,12 @@ when it is there.
 Find (D4, MD10): decided by Erez on 10 Nov 2026, `Find` where it is; nothing to do (the label lost its dots in 2.15).
 Nothing to do: Accounts... is in Options already (D13); `Open|Later` fits (W25).
 
-For 2.18 or later (Erez, 12 Nov 2026): "Hebrew in fonts" goes from every app. Drop the Settings item, the
+Done (17 Nov 2026, with Erez's decision that every app keeps every family rule): "Hebrew in fonts" goes from every app (Erez, 12 Nov 2026). Drop the Settings item, the
 `HEBFONT=` key (an old one read and ignored), `heb_font_map` and the ISO 8859-8 / PC 862 code, its tests and the
 guide's text; one line in the notes (an ISO or 862 Hebrew bitmap font now shows accented Latin letters). Not into
 the Font dialog.
 
-For 2.18 or later (Erez, 12 Nov 2026; guidelines 6.1, AERA-Atari a4b8a1a): EMAIL.INF written only when a setting
-changed. `store_save_settings` writes the whole file at every quit (twice); it keeps the text last read or written
+Done (17 Nov 2026): EMAIL.INF written only when a setting changed (Erez, 12 Nov 2026; guidelines 6.1, AERA-Atari
+a4b8a1a). `store_save_settings` writes the whole file at every quit (twice); it keeps the text last read or written
 and skips an identical one. Test: quit twice with nothing changed, the file untouched; change one thing, written
 once. EMAILCHK.ACC already writes only on change.

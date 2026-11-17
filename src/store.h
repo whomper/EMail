@@ -73,11 +73,6 @@ typedef struct {
 	short fdirty;		/* the folder list changed since it was saved */
 } ACCOUNT;
 
-/* where a screen font keeps the Hebrew letters */
-#define HEB_ATARI 0		/* the Atari character set, 0xC2-0xDC (TOS, EmuTOS) */
-#define HEB_ISO   1		/* ISO-8859-8 / windows-1255 places, 0xE0-0xFA */
-#define HEB_DOS   2		/* DOS code page 862, 0x80-0x9A */
-
 typedef struct {
 	short tz;		/* minutes east of UTC */
 	short check;		/* minutes between automatic checks, 0 = off */
@@ -93,7 +88,6 @@ typedef struct {
 	short ed_x, ed_y, ed_w, ed_h;		/* the editor window */
 	short font_id, font_pt;	/* text font: VDI font id (1 = system) and size */
 	char font_name[34];	/* its name, as FONT= keeps it (D43); "" for the system font */
-	short hebfont;		/* where the font has its Hebrew letters: HEB_* */
 	short falcon;		/* Direct connection: TLS on the Atari (and its DSP), no gateway */
 	short dsp;		/* Direct connection may use the DSP (else the 68030 does it all) */
 	char tzname[40];	/* the time zone, an IANA name ("Asia/Jerusalem") */

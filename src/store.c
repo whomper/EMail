@@ -540,7 +540,7 @@ static void set_opt(const char *k, const char *v)
 			str_copy(opt.translate_to, v, sizeof(opt.translate_to));
 	}
 	else if (!strcmp(k, "colour") || !strcmp(k, "color")) opt.colour = n != 0;
-	else if (!strcmp(k, "hebfont")) opt.hebfont = n >= 0 && n <= 2 ? n : 0;
+	/* HEBFONT= (the font's Hebrew places, gone: Erez, 12 Nov 2026) is read and dropped */
 }
 
 /* EMAIL.INF being read: what store_begin loaded, the line store_step is
@@ -801,8 +801,6 @@ int store_save_settings(void)
 		"EDITOR", "%d,%d,%d,%d", opt.ed_x, opt.ed_y, opt.ed_w, opt.ed_h);
 	put_fmt(&b, "text font: its name (System: the system font), size in points (the system font: 0, 8 small, 16 large)",
 		"FONT", "%s,%d", opt.font_name[0] ? opt.font_name : "System", opt.font_pt);
-	put_fmt(&b, "the font's Hebrew letters: 0 = Atari places, 1 = ISO-8859-8, 2 = DOS 862 (Options > Font)",
-		"HEBFONT", "%d", opt.hebfont);
 	put_fmt(&b, "1 = Direct connection: TLS on the Atari (TLS.OVL, a 68020 or better), straight to the providers; 0 = through the Gateway",
 		"FALCON", "%d", tls_available && falcon_usable ? opt.falcon : falcon_inf);
 	put_fmt(&b, "Direct connection: 1 = the DSP checks the servers' signatures, 0 = the 68030 does",

@@ -163,29 +163,6 @@ short line_rtl(const char *s, long n)
 	return bidi_has_rtl(s, (short)n) && bidi_is_rtl(s, (short)n);
 }
 
-/* Text is kept in the Atari character set, Hebrew at 0xC2-0xDC. Some
- * fonts (Israeli system fonts, many GDOS fonts) have the letters where
- * ISO-8859-8 or DOS 862 put them; Options > Font says which, and the
- * letters are moved there just before drawing. */
-static const unsigned char heb_order[27] = {
-	/* alef..nun (0xC2-0xCF) */ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 14, 16,
-	/* samekh..tav (0xD0-0xD7) */ 17, 18, 20, 22, 23, 24, 25, 26,
-	/* final nun, kaf, mem, pe, tsadi (0xD8-0xDC) */ 15, 10, 13, 19, 21
-};
-
-void heb_font_map(char *s, long n, short where)
-{
-	long i;
-	unsigned char base = where == HEB_ISO ? 0xE0 : 0x80;
-	if (where != HEB_ISO && where != HEB_DOS)
-		return;
-	for (i = 0; i < n; i++) {
-		unsigned char c = (unsigned char)s[i];
-		if (c >= 0xC2 && c <= 0xDC)
-			s[i] = (char)(base + heb_order[c - 0xC2]);
-	}
-}
-
 static int has_heb(const char *s, long n)
 {
 	long i;
@@ -246,7 +223,6 @@ static void runs_at(short x, short y, const char *s, short n)
 			vst_height(vdi_h, keep_ch >= 16 ? 13 : 6, &dw, &dh);
 			vst_alignment(vdi_h, 0, 5);
 			memcpy(c, s + i, j - i);
-			heb_font_map(c, j - i, opt.hebfont);
 			for (k = 0; k < j - i; k++)
 				v_gtext_n(vdi_h, x + (i + k) * keep_cw + (keep_cw - dw) / 2,
 					  y + (keep_ch - dh) / 2, c + k, 1);
@@ -262,7 +238,6 @@ static void runs_at(short x, short y, const char *s, short n)
    places, the flags' effects and more (fx: 8 underlines) */
 static void visual_at(short x, short y, const char *out, short n, short flags, short fx)
 {
-	char m[BIDI_MAX];
 	short i, effects = ((flags & TX_BOLD) ? 1 : (flags & TX_LIGHT) ? 2 : 0) | fx;
 	short col = (flags & TX_INVERSE) ? 0 : text_pen;
 	int on_white;
@@ -275,11 +250,6 @@ static void visual_at(short x, short y, const char *out, short n, short flags, s
 			runs_at(x + 1, y, out, n);
 		text_effects(0);	/* off again: others draw text plainly (fontsel's sample) */
 		return;
-	}
-	if (opt.hebfont != HEB_ATARI && has_heb(out, n)) {
-		memcpy(m, out, n);
-		out = m;
-		heb_font_map(m, n, opt.hebfont);
 	}
 	on_white = !(flags & TX_INVERSE) && white_set && x >= white.x && y >= white.y &&
 	    x + n * cw < white.x + white.w && y + ch <= white.y + white.h;

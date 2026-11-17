@@ -137,7 +137,6 @@ void line_col(short x1, short y1, short x2, short y2, short color);
 long wrap_text(const char *s, long n, short width, long *breaks, long max);
 short line_rtl(const char *s, long n);
 /* move Hebrew letters to where the font has them (HEB_*), in place */
-void heb_font_map(char *s, long n, short where);
 
 /* views */
 void folders_build(void);
@@ -286,7 +285,7 @@ extern short font_cells;	/* how a GDOS font's runs are drawn, bold too: */
 #define FC_JUSTIFY 2		/* in one call, made to fill their cells (a monospaced font of a
 				   fractional width: a vector font's) */
 /* how the text font gets its Hebrew letters */
-#define HM_MAP     0		/* where opt.hebfont says (system and bitmap fonts) */
+#define HM_MAP     0		/* the font's own places (system and bitmap fonts) */
 #define HM_UNICODE 1		/* a vector font's own, found by Unicode (NVDI) */
 #define HM_SYSTEM  2		/* a vector font without them: the system font's */
 extern short heb_mode;

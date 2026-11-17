@@ -388,14 +388,8 @@ vector fonts) and keeps the answers in EMAIL.FNT, so the selector opens
 quickly afterwards and only new fonts are measured. Delete EMAIL.FNT to
 measure them all again. Menus and dialogs keep the system font.
 
-**Hebrew letters.** Fonts keep the Hebrew letters in different places:
-the standard Atari font (TOS, EmuTOS) at the Atari character set's,
-Israeli system fonts and many GDOS fonts where ISO-8859-8 or DOS 862 put
-them. If Hebrew shows as other symbols, open Options > Font: the three
-buttons under "Hebrew in bitmap fonts: pick the sample that reads
-right" each show the word shalom as that kind of
-font would; pick the one that reads correctly, and the sample below
-shows the result. Those buttons are for the system and bitmap fonts.
+**Hebrew letters.** The system font and bitmap fonts show Hebrew from
+the Atari character set's places, as TOS and EmuTOS have them.
 A vector font (Speedo, TrueType, Type 1) is asked through NVDI 5 for
 its Hebrew letters by Unicode, as FreeMono and Liberation Mono have
 them; the line "Type:" says "Hebrew from the font". A vector font

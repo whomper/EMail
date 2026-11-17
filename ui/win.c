@@ -551,7 +551,6 @@ static void visual(char *dst, const char *src, int size)
 	} else {
 		str_copy(dst, src, size);
 	}
-	heb_font_map(dst, (long)strlen(dst), opt.hebfont);
 }
 
 static void redraw_header(WIN *w)
