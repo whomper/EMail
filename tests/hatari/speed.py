@@ -233,6 +233,26 @@ try:
         time.sleep(2)
         r.still()
         r.act("a letter typed at a line's end", speed.KEY, lambda: r.key("h"))
+        # the main window topped over the message window (Ctrl+W, the next
+        # window): what the message window covered drawn; then resized with
+        # its sizer, smaller and back, the panes laid out again and drawn
+        # whole (the guidelines' Speed: a draw past 300 ms in pieces of at
+        # most 100 ms; Erez, 19 Nov 2026)
+        sw, sh = Image.open(r.shot("pre-size")).size
+        r.act("the main window topped (Ctrl+W): uncovered", speed.WINDOW, lambda: r.key("ctrl+w"))
+
+        def size(x0, y0, x, y):
+            g = dict(l.split("=") for l in r.xdo("getwindowgeometry", "--shell", r.win()).split())
+            r.xdo("mousemove", str(int(g["X"]) + x0), str(int(g["Y"]) + y0))
+            time.sleep(0.4)
+            r.xdo("mousedown", "1")
+            time.sleep(0.3)
+            r.xdo("mousemove", str(int(g["X"]) + x), str(int(g["Y"]) + y))
+            time.sleep(0.6)
+            r.xdo("mouseup", "1")
+        r.act("the window made smaller (sizer)", speed.WINDOW, lambda: size(sw - 8, sh - 8, sw - 120, sh - 80))
+        r.act("the window made larger (sizer): drawn whole", speed.WINDOW,
+              lambda: size(sw - 124, sh - 84, sw - 4, sh - 4))
     code = r.report()
 finally:
     r.stop()
