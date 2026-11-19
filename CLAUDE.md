@@ -170,8 +170,8 @@ section 8; AERA-Atari 8ddb463). Until Erez ends it:
   Maintenance comes back when it is done. D51 stays "Open | Later" (his choice, the same day).
   His answers to EMail's measurements (19 Nov 2026): the whole main window on an ST, 380-480 ms,
   "Draw whole on the ST" (pieces of 100 ms cost 80-115 % more there; now the family's rule);
-  Settings on an ST, "Accept 330 on the ST" (its building in a turn of its own, the AES's draw one
-  piece); the message pane's slider after a scroll, "Slider a moment later" (a turn later, as
+  Settings on an ST, "Accept 330 on the ST" (the AES's draw one piece; a turn of its own for the
+  building made it 10-20 ms later on every machine and was dropped, the hub told); the message pane's slider after a scroll, "Slider a moment later" (a turn later, as
   before).
 - No new features and no speed rounds of its own.
 - **Every family rule holds for EMail as for the focus apps** (Erez, 17 Nov 2026: "there needs to be a

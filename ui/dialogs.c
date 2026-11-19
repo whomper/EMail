@@ -1394,10 +1394,10 @@ int dlg_settings(void)
 	short ok, box, r;
 	settings_load();
 	box = settings_sidebar(&ok);
-	/* the dialog built (work: 195 ms an 8 MHz ST) in a turn of its own,
-	   opened and drawn in the next (the guidelines' Speed: drawing in
-	   one stretch, the work before it apart; Erez, 19 Nov 2026) */
-	evnt_timer_(0);
+	/* built and drawn in one stretch: a turn between them (2.25's
+	   candidate) made Settings 10-20 ms later on every machine, and a
+	   modal dialog answers nothing in it (the AES's draw, 330 ms an ST,
+	   accepted by Erez, 19 Nov 2026) */
 	s_ok_obj = ok;
 	r = settings_run(box);
 	if (r != ok)
