@@ -166,8 +166,13 @@ section 8; AERA-Atari 8ddb463). Until Erez ends it:
   section 8's speed row, "a redraw of 300 ms or less is drawn in one piece, a longer one in pieces
   of at most 100 ms" (the guidelines' Speed, Erez 4 Nov 2026). Every redraw is checked and brought
   within it; the message, shown in turns today, too. The release goes through the regression gate
-  with the pairs against 2.23 and the hub's family check. Maintenance comes back when it is done.
-  D51 stays "Open | Later" (his choice, the same day).
+  with the pairs against 2.24 (2.24 was the FireBee fix alone) and the hub's family check.
+  Maintenance comes back when it is done. D51 stays "Open | Later" (his choice, the same day).
+  His answers to EMail's measurements (19 Nov 2026): the whole main window on an ST, 380-480 ms,
+  "Draw whole on the ST" (pieces of 100 ms cost 80-115 % more there; now the family's rule);
+  Settings on an ST, "Accept 330 on the ST" (its building in a turn of its own, the AES's draw one
+  piece); the message pane's slider after a scroll, "Slider a moment later" (a turn later, as
+  before).
 - No new features and no speed rounds of its own.
 - **Every family rule holds for EMail as for the focus apps** (Erez, 17 Nov 2026: "there needs to be a
   constant behavior across all applications. In the future, all applications must adhere to family
