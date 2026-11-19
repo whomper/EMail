@@ -1394,6 +1394,10 @@ int dlg_settings(void)
 	short ok, box, r;
 	settings_load();
 	box = settings_sidebar(&ok);
+	/* the dialog built (work: 195 ms an 8 MHz ST) in a turn of its own,
+	   opened and drawn in the next (the guidelines' Speed: drawing in
+	   one stretch, the work before it apart; Erez, 19 Nov 2026) */
+	evnt_timer_(0);
 	s_ok_obj = ok;
 	r = settings_run(box);
 	if (r != ok)
