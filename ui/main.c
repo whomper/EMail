@@ -1962,7 +1962,7 @@ int main(void)
 		} else {
 			which = busy_key(&ev) ? MU_KEYBD : evnt_multi_(MU_MESAG | MU_KEYBD | MU_BUTTON | MU_TIMER | MU_M1,
 									 0x101, 3, 0,
-									 list_show_waiting() || win_sliders_waiting() || list_later_waiting() || xlate_running() ? 0 : find_waiting() ? 20 : tip_wait(1000),
+									 win_redraw_waiting() || list_show_waiting() || win_sliders_waiting() || xlate_running() ? 0 : find_waiting() ? 20 : tip_wait(1000),
 									 msg, &ev);
 		}
 		/* a message a key moved to is shown once no key is waiting, and
@@ -1974,15 +1974,18 @@ int main(void)
 			 (which & (MU_MESAG | MU_BUTTON) || (KEY_SCAN(ev.kreturn) != 0x48 &&
 							   KEY_SCAN(ev.kreturn) != 0x50 && KEY_SCAN(ev.kreturn) != 0x47)))
 			list_show_later(1);
-		/* what waits for a quiet turn, one a turn: a bar, the list's
-		   title (Find) */
+		/* what waits for a quiet turn, one a turn: Find's look, the
+		   reader's bar after a scroll */
+		/* a resize's drawing, a turn after its layout, before a key or
+		   click acts on it (a message may be the AES's WM_REDRAW for
+		   it, drawn with it: win.c) */
+		if (!(which & MU_MESAG) && win_redraw_waiting())
+			win_redraw_now();
 		if (!(which & (MU_KEYBD | MU_MESAG | MU_BUTTON))) {
 			if (find_waiting() && find_now())
 				;	/* Find's look, a step; the list after it */
 			else if (win_sliders_waiting())
 				win_sliders_now();
-			else if (list_later_waiting())
-				list_later_now();
 			else if (xlate_running())
 				xlate_step();	/* Options > Translate: the next piece */
 			else if (xlate_langs_running())

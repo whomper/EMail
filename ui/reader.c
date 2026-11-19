@@ -197,7 +197,9 @@ static short quote_depth(const char *s, long n)
 }
 
 /* lay the message out for the current window width */
-static void layout(void)
+/* the message's lines for the pane's width, nothing drawn (work, a turn
+   of its own when a message is shown: the guidelines' Speed) */
+static void layout_lines(void)
 {
 	short width = TEXT_COLS(w_reader.work.w);
 	long hl = head ? strlen(head) : 0, max, *br, nb, i;
@@ -260,6 +262,11 @@ static void layout(void)
 	ts_clear(&sel);
 	view_now();
 	w_reader.total = nlines;
+}
+
+static void layout(void)
+{
+	layout_lines();
 	win_sliders(&w_reader);
 }
 
@@ -661,11 +668,12 @@ show:
 	return 1;
 }
 
-void reader_show_end(void)
+/* its lines laid out, nothing drawn (a turn of its own: work) */
+void reader_show_layout(void)
 {
-	if (!half)
+	if (half != 1)
 		return;
-	half = 0;
+	half = 2;
 	{
 		/* the pane's header: kept, and drawn with the pane below, not
 		   twice before it (40 ms an ST) */
@@ -688,10 +696,20 @@ void reader_show_end(void)
 	w_reader.top = 0;
 	show_mark(8);
 	busy(1);
-	layout();
+	layout_lines();
 	busy(0);
 	show_mark(4);
 	show_trace();
+}
+
+/* drawn, in one stretch with what the caller draws after it (its row,
+   the list's titles, the folders' counts): a redraw of 300 ms or less
+   is drawn in one piece (the guidelines' Speed; Erez, 19 Nov 2026) */
+void reader_show_draw(void)
+{
+	if (half != 2)
+		return;
+	half = 0;
 #ifdef AES_PROFILE
 	{
 		/* the speed rig's check that a row showed what it says: the
@@ -702,9 +720,16 @@ void reader_show_end(void)
 	}
 #endif
 	status("");
+	win_sliders(&w_reader);
 	win_redraw(&w_reader, 0);
 	if (opt.translate && !translated)
 		xlate_shown();		/* Options > Translate: the whole message to the Gateway */
+}
+
+void reader_show_end(void)
+{
+	reader_show_layout();
+	reader_show_draw();
 }
 
 /* the head, the text and the lines made again from cur_msg, and drawn */

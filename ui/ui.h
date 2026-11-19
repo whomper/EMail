@@ -84,6 +84,8 @@ void win_redraw_lines(WIN *w, long first, long n);
 void win_sliders(WIN *w);
 void win_sliders_later(WIN *w);
 int win_shift(WIN *w, GRECT *a, short dy);
+int win_redraw_waiting(void);		/* the main window to draw at the next turn (a resize) */
+void win_redraw_now(void);
 int win_sliders_waiting(void);	/* the main window's slider to set at the next turn */
 void win_sliders_now(void);
 void win_scroll_to(WIN *w, long top);
@@ -171,8 +173,6 @@ void list_after_remove(void);
 long list_count(void);
 void list_relayout(void);
 void list_find_refresh(long top, long force);
-int list_later_waiting(void);
-void list_later_now(void);			/* the list's rows (the "load more" one too) */
 /* Find (find.c): a field across the top of the list */
 int find_active(void);
 int find_filtering(void);		/* the list shows what was found */
@@ -194,9 +194,11 @@ int find_waiting(void);
 int find_now(void);
 
 void reader_show(HDR *h);		/* load and show a message */
-int reader_show_begin(HDR *h);		/* reader_show in two steps: read and parse it, */
-void reader_show_end(void);		/* lay it out and draw it */
-int reader_half(void);			/* begun, not ended */
+int reader_show_begin(HDR *h);		/* reader_show in steps: read and parse it, */
+void reader_show_layout(void);		/* lay it out (work, nothing drawn), */
+void reader_show_draw(void);		/* draw it */
+void reader_show_end(void);		/* the last two */
+int reader_half(void);			/* 1 begun, 2 laid out, 0 shown */
 void reader_clear(void);
 void reader_translation(const char *subject, const char *text, long n);	/* shown translated */
 void reader_original(void);		/* shown as it came again */

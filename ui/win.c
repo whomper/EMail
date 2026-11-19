@@ -441,6 +441,51 @@ static void main_redraw(GRECT *area)
 	wind_update(END_UPDATE);
 }
 
+/* A resize (or the window made full) lays the panes out in its own turn
+   and draws in the next: the AES's WM_REDRAW for the same window, queued
+   by the resize, is drawn with it, once (until 2.23 an ST drew the
+   window twice when it grew, 885 and 460 ms: the guidelines' Speed,
+   Erez 19 Nov 2026) */
+static GRECT due_r;
+static int due_set;
+
+static void redraw_due(GRECT *a)
+{
+	if (!due_set) {
+		due_r = *a;
+		due_set = 1;
+		return;
+	}
+	{
+		short x2 = due_r.x + due_r.w, y2 = due_r.y + due_r.h;
+		if (a->x + a->w > x2)
+			x2 = a->x + a->w;
+		if (a->y + a->h > y2)
+			y2 = a->y + a->h;
+		if (a->x < due_r.x)
+			due_r.x = a->x;
+		if (a->y < due_r.y)
+			due_r.y = a->y;
+		due_r.w = x2 - due_r.x;
+		due_r.h = y2 - due_r.y;
+	}
+}
+
+int win_redraw_waiting(void)
+{
+	return due_set;
+}
+
+void win_redraw_now(void)
+{
+	GRECT a;
+	if (!due_set)
+		return;
+	due_set = 0;
+	a = due_r;
+	main_redraw(&a);
+}
+
 void win_redraw(WIN *w, GRECT *area)
 {
 	GRECT r, a;
@@ -1178,7 +1223,10 @@ static void main_message(short *msg)
 		}
 		if (main_iconified)
 			icon_window(main_h, &r);
-		else
+		else if (due_set) {
+			redraw_due(&r);	/* with the resize's own: once */
+			win_redraw_now();
+		} else
 			main_redraw(&r);
 		break;
 	case WM_ICONIFY:
@@ -1253,7 +1301,7 @@ static void main_message(short *msg)
 		get_main_work();
 		save_main_place();
 		layout();
-		main_redraw(0);
+		redraw_due(&mwork);	/* drawn in the next turn */
 		break;
 	}
 	case WM_SIZED:
@@ -1272,7 +1320,7 @@ static void main_message(short *msg)
 		save_main_place();
 		layout();
 		if (msg[0] == WM_SIZED)
-			main_redraw(0);
+			redraw_due(&mwork);	/* drawn in the next turn */
 		break;
 	}
 }

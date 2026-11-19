@@ -377,7 +377,7 @@ void list_select_uid(unsigned long uid)
  * What each row on the screen shows, before the list changes and
  * after: a row drawn again only where they differ (Erez, 31 Oct 2026:
  * Find on an ST drew the whole list at each look). The title and the
- * bar follow in the next turns, one a turn. */
+ * bar are drawn with them, in the same stretch. */
 typedef struct {
 	unsigned long uid;	/* 0: an empty row; ~0: the "load more" row */
 	unsigned short flags;
@@ -404,20 +404,6 @@ static long seen_rows(SEEN *s, long rows)
 	return rows;
 }
 
-static int titles_due;
-
-int list_later_waiting(void)
-{
-	return titles_due;
-}
-
-void list_later_now(void)
-{
-	if (titles_due) {
-		titles_due = 0;
-		list_titles();
-	}
-}
 
 /* the list made again for Find, its first row at top; the rows from
    screen row force on drawn whatever they showed (what win_shift
@@ -471,8 +457,11 @@ void list_find_refresh(long top, long force)
 	free(now);
 	shown_sig = shows();
 	shown_valid = 1;
-	titles_due = 1;
-	win_sliders_later(&w_list);
+	/* the title and the bar with the rows, in the same stretch (a
+	   redraw of 300 ms or less in one piece: the guidelines' Speed,
+	   Erez 19 Nov 2026; until 2.23 each came a turn later) */
+	list_titles();
+	win_sliders(&w_list);
 }
 
 /* the list made again and drawn whole (Find's row came or went) */
@@ -727,8 +716,10 @@ static void show_sel(void)
 }
 
 /* Up, Down and Home move the selection at once and show the message in
-   the next turns, a step a turn: read and parse it; lay it out and draw
-   it with its row; the list's titles and the folders' counts. Keys
+   the next turns, a step a turn: read and parse it; lay it out; draw it
+   with its row, the list's titles and the folders' counts, in one
+   stretch (a redraw of 300 ms or less in one piece: the guidelines'
+   Speed, Erez 19 Nov 2026; the two steps before it are work). Keys
    typed or repeated meanwhile move on without each message on the way
    being shown (an ST takes 300 ms and more a message, a key 50) */
 static int later;
@@ -776,7 +767,7 @@ static void select_row(long i, int open)
 		win_redraw_lines(&w_list, sel, 1);
 		show_uid = sel_uid;
 		if (cur_msg && !reader_missing && cur_uid == sel_uid)
-			show_step = reader_half() ? 2 : show_step ? 3 : 0;
+			show_step = reader_half() == 1 ? 2 : reader_half() == 2 ? 3 : 0;
 		else
 			show_step = 1;
 		return;
@@ -810,13 +801,14 @@ void list_show_later(int all)
 			return;
 	}
 	if (show_step == 2) {
-		reader_show_end();
-		win_redraw_lines(&w_list, sel, 1);
+		reader_show_layout();
 		show_step = 3;
 		if (!all)
 			return;
 	}
 	show_step = 0;
+	reader_show_draw();
+	win_redraw_lines(&w_list, sel, 1);
 	list_titles();
 	folders_build();
 }

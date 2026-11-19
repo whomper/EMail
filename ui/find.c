@@ -478,7 +478,7 @@ static void relayout(short dy)
 	}
 	if (dy > 0) {
 		win_redraw(&w_list, &row);
-		win_sliders_later(&w_list);
+		win_sliders(&w_list);	/* with it: one stretch */
 	} else {
 		/* the rows from the one the strip at the foot starts in */
 		short from = (short)((a.h + dy - w_list.head_h) / ch);
