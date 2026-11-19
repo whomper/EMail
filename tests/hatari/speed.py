@@ -233,6 +233,11 @@ try:
         time.sleep(2)
         r.still()
         r.act("a letter typed at a line's end", speed.KEY, lambda: r.key("h"))
+        # the About box (Desk menu, its first row): opened, its 256-colour
+        # icon made ahead at the first quiet turn (about_prepare); closed
+        # with Return, what it covered drawn
+        r.act("the About box opened", speed.DIALOG, lambda: r.menu(40, row + row // 2 + 3))
+        r.act("the About box closed (Return)", speed.WINDOW, lambda: r.key("Return"))
         # the main window topped over the message window (Ctrl+W, the next
         # window): what the message window covered drawn; then resized with
         # its sizer, smaller and back, the panes laid out again and drawn

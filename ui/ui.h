@@ -246,6 +246,7 @@ int  dlg_ask(const char *title, const char *label, char *buf, short cap);	/* buf
 FINFO *dlg_pick_folder(ACCOUNT *a, const char *title);
 ACCOUNT *dlg_pick_account(const char *title);
 void dlg_about(void);
+void about_ready(void);		/* the About box made ahead, at the first quiet turn */
 
 /* the dialog builder (dialogs.c): sizes in characters */
 void   d_begin(short w, short h);

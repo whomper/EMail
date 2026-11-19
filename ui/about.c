@@ -54,6 +54,17 @@ void dlg_about(void)
 	about_show(&a);
 }
 
+/* the About box's 256-colour icon made ahead, at the first quiet turn
+   after the start (common's about_prepare): its first opening then needs
+   no making (the hub, 19 Nov 2026: within its 150 ms on Erez's
+   configuration) */
+void about_ready(void)
+{
+	ABOUT a = { "EMail", mail_version, "", { 0, 0, 0 }, { 0, 0, 0 },
+		    icon_bits, icon16_px, icon16_rgb, icon256_px, icon256_rgb };
+	about_prepare(&a);
+}
+
 /* An iconified window (common/ui/iconify.c): the icon, and under the
    main window's how many messages in the inboxes are unread. From a
    redraw message, area; from EMail itself (0), only when that changed */

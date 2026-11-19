@@ -2048,6 +2048,13 @@ int main(void)
 		}
 		if (which & (MU_KEYBD | MU_BUTTON | MU_MESAG))
 			last_input = pf_ms();
+		{
+			static short about_made;
+			if (!about_made && which == MU_TIMER) {
+				about_made = 1;
+				about_ready();	/* the About box's icon, once, while idle */
+			}
+		}
 		/* read and flag changes go to the server once the user pauses */
 		if ((which & MU_TIMER) && pf_ms() - last_input > 3000 && mail_flags_pending(cur_folder)) {
 			mail_push_flags(cur_folder);
