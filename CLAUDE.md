@@ -162,6 +162,12 @@ These come from AERA-Atari's repo template and are the same in every app's CLAUD
 
 EMail is in maintenance mode while EWeb, EPDF and EPlay go to 1.0 (AERA-Atari, ATARI-APP-GUIDELINES.md,
 section 8; AERA-Atari 8ddb463). Until Erez ends it:
+- **Lifted for one item** (Erez, 19 Nov 2026, choosing "Work on 1, keep Open"; passed on by the hub):
+  section 8's speed row, "a redraw of 300 ms or less is drawn in one piece, a longer one in pieces
+  of at most 100 ms" (the guidelines' Speed, Erez 4 Nov 2026). Every redraw is checked and brought
+  within it; the message, shown in turns today, too. The release goes through the regression gate
+  with the pairs against 2.23 and the hub's family check. Maintenance comes back when it is done.
+  D51 stays "Open | Later" (his choice, the same day).
 - No new features and no speed rounds of its own.
 - **Every family rule holds for EMail as for the focus apps** (Erez, 17 Nov 2026: "there needs to be a
   constant behavior across all applications. In the future, all applications must adhere to family
