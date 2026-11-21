@@ -82,7 +82,7 @@ KEEP := nf:194:0:0:0 pad_nf:0:0:252:0 util:0:183:0:0 conn:192:0:0:0 pad_conn:122
 	aboutbox:174:0:252:0 iconify:0:232:0:44 dd:0:0:0:202 field:170:0:0:0 pad_main:132:0:0:0 \
 	draw:202:0:254:0 tooltip:22:0:0:0 aboutline:80:0:246:154 win:242:0:0:0 list:44:0:0:0 \
 	editor:244:0:0:248 people_ask:200:0:0:240 dialog:134:0:0:232 compose:232:0:0:94 notify:0:0:0:66 \
-	mbar:0:0:252:0 main:160:0:0:0 reader:136:0:0:0 about:208:0:0:0 folders:0:0:248:4 sting_s:0:0:200:0 \
+	mbar:0:0:252:0 main:160:0:0:0 reader:136:0:0:0 about:208:0:0:0 folders:0:0:248:4 sting_s:0:0:124:0 \
 	charset:170:0:0:0 mime:172:0:0:0 imap:174:0:0:0 pop3:152:0:0:0 store:172:0:0:0 mail:48:0:0:0 \
 	arrowed:202:0:0:0
 kp_obj   = $(word 1,$(subst :, ,$(1)))

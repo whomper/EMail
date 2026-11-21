@@ -13,7 +13,8 @@
  * margins, the same on every printer, so the pages are counted before
  * the printer dialog asks which of them to print; the system font is
  * sized to the grid on the printer. A message not on the Atari is
- * downloaded first; Esc or Undo stops between pages.
+ * downloaded first; Esc or Undo stops between pages. The words are the
+ * family's, EPDF's (Erez, 21 Nov 2026).
  */
 #include <string.h>
 #include <stdio.h>
@@ -302,7 +303,7 @@ void cmd_print(void)
 	if (!cur_folder)
 		return;
 	if (!vq_gdos()) {
-		alert(1, "[1][Printing needs NVDI|(or another GDOS)|with a printer driver.][ OK ]");
+		alert(1, "[1][Printing needs NVDI (or another GDOS)|with a printer driver set up.][ OK ]");
 		return;
 	}
 	if ((u = list_targets(&n)) == 0)
@@ -332,7 +333,9 @@ void cmd_print(void)
 	busy(0);
 	status("");
 	if (!ok) {
-		if (!stopped)
+		if (stopped)
+			status("Printing stopped.");
+		else
 			alert(1, "[1][%s][ OK ]", mail_err[0] ? mail_err : "Not enough memory to print|this message.");
 		goto done;
 	}
@@ -351,7 +354,7 @@ void cmd_print(void)
 	if (!print_open(&pj)) {
 		busy(0);
 		print_end(&pj);
-		alert(1, "[1][The printer can't be opened.|Check its driver in NVDI|(or in ASSIGN.SYS).][ OK ]");
+		alert(1, "[1][The printer can't be opened.|Check NVDI's printer driver|and that the printer is on.][ OK ]");
 		goto done;
 	}
 	grid(&pj);
@@ -381,7 +384,8 @@ void cmd_print(void)
 	}
 	print_end(&pj);		/* what was drawn goes out, a stop too */
 	busy(0);
-	status("");
+	/* the family's words, as EPDF's (Erez, 21 Nov 2026) */
+	status(ok ? "Printed." : stopped ? "Printing stopped." : "");
 	if (!ok && !stopped)
 		alert(1, "[1][%s][ OK ]", mail_err[0] ? mail_err : "Not enough memory to print|this message.");
 done:
