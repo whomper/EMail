@@ -138,7 +138,7 @@ try:
     else:
         r.move(12 * 8, 8)                            # " File " (after "  " and " EMail ")
         time.sleep(1.5)
-        r.click(12 * 8, 19 + 7 * 16 + 8)             # its eighth line, of 16 pixels: Quit
+        r.click(12 * 8, 19 + 8 * 16 + 8)             # its ninth line, of 16 pixels: Quit (under Print... since 2.27)
     time.sleep(12)
     log = open(rig.ci_path(hd, "email.log"), errors="replace").read()
     steps = [l.split(" -- quit: ", 1)[1].strip() for l in log.splitlines() if " -- quit: " in l]
