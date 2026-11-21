@@ -235,7 +235,7 @@ try:
     time.sleep(2)
     shot("r4-menu")
     profile(1)
-    hand_click(FX + 30, FY + 191)        # the menu's last row, Delete
+    hand_click(FX + 30, FY + 223)        # the menu's last row, Delete (under Print... since 2.27)
     r.settle(8, 90)
     profile(0, "delete from the menu")
     shot("r5-deleted")
