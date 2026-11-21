@@ -113,7 +113,21 @@ try:
     l = log()
     check("its parts asked for (BODYSTRUCTURE)", "BODYSTRUCTURE" in l)
     check("its header and text asked for, not all of it", "BODY.PEEK[HEADER]" in l and "BODY.PEEK[])" not in l)
-    check("no memory error", "not enough memory" not in l.lower() and "Not enough memory" not in l)
+    # 2.25 put up "Dana: not enough memory for this message" here (an
+    # alert, not in EMAIL.LOG): what shows the fault gone is the message
+    # EMail made, with its note, in its cache on C:
+    def cached(text):
+        for dp, _, fs in os.walk(hd):
+            for f in fs:
+                if f.lower().endswith((".dat", ".eml")):
+                    try:
+                        if text in open(os.path.join(dp, f), "rb").read():
+                            return True
+                    except OSError:
+                        pass
+        return False
+    check("no memory error: the message is in the cache, its text and the note",
+          cached(b"The drawings for the Falcon case.") and cached(b"its attachments are on the server"))
     open(os.path.join(work, "email-read.log"), "w").write(l)
     # the PDF's line: under the note, the text and the rule; its click
     # asks Cancel | Save to disk | Open with EPDF; Save to disk, then
