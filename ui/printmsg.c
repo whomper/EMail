@@ -302,7 +302,7 @@ void cmd_print(void)
 	if (!cur_folder)
 		return;
 	if (!vq_gdos()) {
-		alert(1, "[1][Printing needs NVDI (or another|GDOS) with a printer driver.][ OK ]");
+		alert(1, "[1][Printing needs NVDI|(or another GDOS)|with a printer driver.][ OK ]");
 		return;
 	}
 	if ((u = list_targets(&n)) == 0)
@@ -351,7 +351,7 @@ void cmd_print(void)
 	if (!print_open(&pj)) {
 		busy(0);
 		print_end(&pj);
-		alert(1, "[1][The printer couldn't be opened.|Check its driver in NVDI|(or the GDOS's ASSIGN.SYS).][ OK ]");
+		alert(1, "[1][The printer can't be opened.|Check its driver in NVDI|(or in ASSIGN.SYS).][ OK ]");
 		goto done;
 	}
 	grid(&pj);

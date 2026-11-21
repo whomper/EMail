@@ -8,15 +8,20 @@ Hebrew one: two pages) and a short note with an attachment (one page).
 EMail (Falcon-4:256 with Erez's NVDI by default) shows the long one; ^P
 prints it; then ^A selects both and ^P prints each, from a new page, in
 one job. Erez's NVDI with ASSIGN.SYS's printer (21) pointed at NVDI's
-picture driver (IMG.SYS) in this run's C: only, and no WDIALOG, so the
-job goes to the default printer without the dialog: each page an IMG
-file on C:, checked for its size and its ink. On a machine without a
-GDOS, ^P gives the alert and prints nothing (PRINT_NOGDOS=1: the shot).
+metafile driver (META.SYS) in this run's C: only, and no WDIALOG, so the
+job goes to the default printer without the dialog: C:\\GEMFILE.GEM holds
+each page and each text drawn, read back here (the pages, the header
+with its labels apart, the Hebrew line to the right, "Page n of m", the
+attachment line). On a machine without a GDOS, ^P gives the alert and
+prints nothing (PRINT_NOGDOS=1). PRINT_WDIALOG=1 adds Erez's WDIALOG.PRG
+after NVDI: ^P then shows its printer dialog, and Return prints.
 
     print_test.py WORKDIR [MACHINE]     (needs Xvfb, xdotool, dovecot)
 """
+import atexit
 import os
 import shutil
+import struct
 import subprocess
 import sys
 import time
@@ -30,6 +35,7 @@ IMAP, SMTP = 10143, 10025
 
 work, machine, more = rig.cli("Falcon-4:256")
 nogdos = bool(os.environ.get("PRINT_NOGDOS"))
+wdialog = bool(os.environ.get("PRINT_WDIALOG"))     # Erez's WDIALOG.PRG too: its dialog, Return
 if not nogdos:
     os.environ["AERA_WITH_NVDI"] = "1"
 os.makedirs(work, exist_ok=True)
@@ -79,7 +85,8 @@ with open(os.path.join(hd, "email.inf"), "w", newline="") as f:
             "email=dana@test.local\r\nin=imap\r\nhost=127.0.0.1\r\nport=%d\r\nuser=dana\r\n"
             "pass=secret\r\nsmtphost=127.0.0.1\r\nsmtpport=%d\r\n" % (IMAP, SMTP))
 
-# the printer (21) is NVDI's picture driver, in this run's ASSIGN.SYS only
+# the printer (21) is NVDI's metafile driver, in this run's ASSIGN.SYS only:
+# it writes C:\\GEMFILE.GEM, each text and each page in it
 # (Erez's own is copied in by machines.py and taken out again at the end)
 _nvdi = rig.machines.Machine.nvdi
 
@@ -88,8 +95,13 @@ def nvdi_img(self):
     ok = _nvdi(self)
     a = os.path.join(self.hd, "ASSIGN.SYS")
     if ok and os.path.exists(a):
-        t = open(a, "rb").read().replace(b"21  PCL.SYS", b"21  IMG.SYS")
+        t = open(a, "rb").read().replace(b"21  PCL.SYS", b"21  META.SYS")
         open(a, "wb").write(t)
+    wd = os.path.join(os.environ.get("AERA_NVDI", os.path.expanduser("~/.aera/nvdi/x")), "auto", "wdialog.prg")
+    if ok and wdialog and os.path.exists(wd):
+        to = os.path.join(self.hd, "AUTO", "WDIALOG.PRG")
+        shutil.copy(wd, to)                     # after NVDI.PRG; Erez's copy, never left in a kept hd
+        atexit.register(lambda: os.path.exists(to) and os.remove(to))
     return ok
 
 
@@ -110,47 +122,49 @@ def check(what, good):
     print("  %s   %s" % ("ok" if good else "FAIL", what), flush=True)
 
 
-def images():
-    return sorted(os.path.join(dp, f) for dp, _, fs in os.walk(hd) for f in fs
-                  if f.lower().endswith(".img") and "gemsys" not in dp.lower())
+def gemfile():
+    return rig.ci_path(hd, "GEMFILE.GEM")
 
 
-def wait_pages(had, secs=300):
-    """the files the driver writes, until they stop coming"""
-    last, still, t0 = -1, 0, time.time()
+def wait_job(was, secs=300):
+    """GEMFILE.GEM written again (its time) and no longer growing"""
+    f, last, still, t0 = gemfile(), -1, 0, time.time()
     while time.time() - t0 < secs:
         time.sleep(5)
-        n = len(images())
-        still = still + 1 if n == last and n > had else 0
+        if not os.path.exists(f) or os.path.getmtime(f) == was:
+            continue
+        n = os.path.getsize(f)
+        still = still + 1 if n == last else 0
         last = n
-        if still >= 3:
-            break
-    return images()
+        if still >= 2:
+            return True
+    return False
 
 
-def img_ink(path):
-    """a GEM IMG file's width, height and how many of its bytes have ink"""
+def metafile(path):
+    """a GEM metafile's pages (each v_clrwk starts one) and its texts: (page, x, y, bytes) for each
+    v_gtext; the words are PC GEM's, little-endian"""
     d = open(path, "rb").read()
-    hl, pat, w, h = (int.from_bytes(d[o:o + 2], "big") for o in (2, 6, 12, 14))
-    bpl, i, rows, ink = (w + 7) // 8, hl * 2, 0, 0
-    while rows < h and i < len(d):
-        line, rep = bytearray(), 1
-        while len(line) < bpl and i < len(d):
-            c = d[i]
-            if c == 0 and d[i + 1] == 0:
-                rep, i = d[i + 3], i + 4
-            elif c == 0:
-                line += d[i + 2:i + 2 + pat] * d[i + 1]
-                i += 2 + pat
-            elif c == 0x80:
-                line += d[i + 2:i + 2 + d[i + 1]]
-                i += 2 + d[i + 1]
-            else:
-                line += (b"\xff" if c & 0x80 else b"\x00") * (c & 0x7f)
-                i += 1
-        ink += rep * sum(1 for b in line[:bpl] if b)
-        rows += rep
-    return w, h, ink
+    w = lambda i: struct.unpack_from("<h", d, i)[0]
+    i, page, texts = w(2) * 2, 1, []
+    while i + 8 <= len(d):
+        op, np_, ni, _ = struct.unpack_from("<hhhh", d, i)
+        i += 8
+        pts = struct.unpack_from("<%dh" % (2 * np_), d, i)
+        i += 4 * np_
+        ints = struct.unpack_from("<%dh" % ni, d, i)
+        i += 2 * ni
+        if op == -1:
+            break
+        if op == 3:
+            page += 1
+        elif op == 8:
+            texts.append((page, pts[0], pts[1], bytes(c & 0xff for c in ints)))
+    return page, texts
+
+
+def has(texts, page, words):
+    return any(p == page and words in t for p, _, _, t in texts)
 
 
 try:
@@ -165,28 +179,50 @@ try:
         r.shot("p3-alert")               # "Printing needs NVDI (or another GDOS)..."
         r.key(K["RETURN"])
         time.sleep(2)
-        check("no GDOS: nothing printed", not images())
+        check("no GDOS: nothing printed", not os.path.exists(gemfile()))
     else:
         r.ctrl("p")
-        one = wait_pages(0)
+        if wdialog:
+            time.sleep(6)
+            r.shot("p3-dialog")              # WDIALOG's: the printer, the pages, the copies
+            r.key(K["RETURN"])
+        ok1 = wait_job(None)
         r.shot("p3-printed")
-        print("  one message:", [os.path.relpath(p, hd) for p in one])
-        check("the long letter: two pages (%d)" % len(one), len(one) == 2)
+        check("the long letter printed (GEMFILE.GEM)", ok1)
+        if ok1:
+            shutil.copy(gemfile(), os.path.join(work, "one.gem"))
+            pages, t = metafile(gemfile())
+            print("  one message: %d pages, %d texts" % (pages, len(t)))
+            check("two pages", pages == 2)
+            check("its header, the labels apart: From:, Cc:, Subject: Long letter",
+                  has(t, 1, b"From:") and has(t, 1, b"Cc:") and has(t, 1, b"Subject:") and has(t, 1, b" Long letter"))
+            heb = [x for p, x, _, s in t if p == 1 and any(0xC2 <= c <= 0xDC for c in s)]
+            left = min(x for p, x, _, _ in t if p == 1)
+            check("the Hebrew line, to the right", bool(heb) and heb[0] > left)
+            check("its text on both pages, the last line on the second",
+                  has(t, 1, b"Line 1 of the long") and has(t, 2, b"Line 100 of the long"))
+            check("Page 1 of 2, Page 2 of 2", has(t, 1, b"Page 1 of 2") and has(t, 2, b"Page 2 of 2"))
+        was = os.path.getmtime(gemfile()) if ok1 else None
         r.ctrl("a")
         time.sleep(3)
         r.ctrl("p")
-        both = wait_pages(len(one))
+        if wdialog:
+            time.sleep(6)
+            r.shot("p4-dialog")
+            r.key(K["RETURN"])
+        ok2 = wait_job(was)
         r.shot("p4-printed-both")
-        print("  both:", [os.path.relpath(p, hd) for p in both])
-        check("both selected: three pages more, each message from a new page (%d)" % (len(both) - len(one)),
-              len(both) - len(one) == 3)
-        for p in both:
-            w, h, ink = img_ink(p)
-            print("  %s %dx%d, %d bytes of ink" % (os.path.relpath(p, hd), w, h, ink))
-            check("%s has a page on it" % os.path.basename(p), w > 500 and h > 700 and ink > 1000)
-        shutil.copytree(os.path.dirname(both[0]) if both else hd, os.path.join(work, "pages"),
-                        ignore=lambda d, fs: [f for f in fs if not f.lower().endswith(".img")],
-                        dirs_exist_ok=True)
+        check("both selected printed", ok2)
+        if ok2:
+            shutil.copy(gemfile(), os.path.join(work, "both.gem"))
+            pages, t = metafile(gemfile())
+            print("  both: %d pages, %d texts" % (pages, len(t)))
+            check("three pages, each message from a new one", pages == 3)
+            check("the long letter first, then the note on a page of its own",
+                  has(t, 1, b" Long letter") and has(t, 3, b" Short note") and not has(t, 2, b"Short note"))
+            check("the note's attachment by name and size",
+                  has(t, 3, b"plan.txt") and has(t, 3, b"(text/plain, 8 bytes)"))
+            check("its page counted on its own: Page 1 of 1", has(t, 3, b"Page 1 of 1"))
     check("no CRASH.LOG", not any(n.lower() == "crash.log" for _, _, fs in os.walk(hd) for n in fs))
 finally:
     r.stop()

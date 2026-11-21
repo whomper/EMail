@@ -703,7 +703,7 @@ says so and sends you to **Settings > Languages**.
 | Tab          | next pane                  | Ctrl+Q       | quit                    |
 | Ctrl+,       | settings                   | Undo         | cancel a dialog         |
 | Esc          | empty a field; stop        | Shift+Ctrl+S | show or hide the folders |
-| Insert       | the menu of what's chosen  |              |                         |
+| Insert       | the menu of what's chosen  | Ctrl+P       | print                   |
 | Shift+click  | add/remove one message     | Right button | what you can do there   |
 | Control+click| select a range             |              |                         |
 
@@ -819,6 +819,17 @@ the limit comes as far as the limit. On POP3 only the start of the
 message comes, with the same note, and all of it stays on the server,
 even when the account deletes what it fetched; the messages after it
 come as usual.
+
+**Printing** (File > Print..., Ctrl+P, or Print... in a message's menu):
+the message shown, or every message selected, each from a new page in
+one job. A page has From, To, Cc, Date and Subject, the attachments by
+name and size (not the attachments themselves), then the text, with
+"Page 1 of 2" at its foot. EMail prints through the GDOS: NVDI with a
+printer driver for your printer. With WDIALOG (in AUTO, or MagiC) its
+dialog asks for the printer, the pages and the copies first; without it
+the printer NVDI has as its default prints all of it. A message not on
+the Atari is downloaded first. Esc stops between pages. Without a GDOS
+EMail says printing needs one.
 
 **Offline** (Options > Work offline): EMail doesn't connect and doesn't
 check on its timer, and you can read everything already on disk. New
