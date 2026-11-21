@@ -114,28 +114,22 @@ try:
     check("its parts asked for (BODYSTRUCTURE)", "BODYSTRUCTURE" in l)
     check("its header and text asked for, not all of it", "BODY.PEEK[HEADER]" in l and "BODY.PEEK[])" not in l)
     # 2.25 put up "Dana: not enough memory for this message" here (an
-    # alert, not in EMAIL.LOG): what shows the fault gone is the message
-    # EMail made, with its note, in its cache on C:
-    def cached(text):
-        for dp, _, fs in os.walk(hd):
-            for f in fs:
-                if f.lower().endswith((".dat", ".eml")):
-                    try:
-                        if text in open(os.path.join(dp, f), "rb").read():
-                            return True
-                    except OSError:
-                        pass
-        return False
-    check("no memory error: the message is in the cache, its text and the note",
-          cached(b"The drawings for the Falcon case.") and cached(b"its attachments are on the server"))
+    # alert, not in EMAIL.LOG) and the message never opened: what shows the
+    # fault gone is its PDF's line to click, below, and the PDF saved from
+    # it (EMail writes its cache later, so the cache can't show it here)
     open(os.path.join(work, "email-read.log"), "w").write(l)
     # the PDF's line: under the note, the text and the rule; its click
     # asks Cancel | Save to disk | Open with EPDF; Save to disk, then
     # Return in the file selector (C:\EMAIL\, CASE.PDF)
-    r.click(280, 283)
+    # the rows sit lower on a 480-line screen (Erez's configuration), and
+    # the alert is centred on the screen
+    from PIL import Image
+    tall = Image.open(os.path.join(shots, "b2-read.png")).height
+    down = 42 if tall >= 480 else 0
+    r.click(280, 283 + down)
     time.sleep(3)
     r.shot("b3-pdf-alert")
-    r.click(315, 233)                    # Save to disk
+    r.click(315, 233 + (tall - 400) // 2)   # Save to disk
     time.sleep(4)
     r.shot("b4-fsel")
     r.key(K["RETURN"])                   # C:\EMAIL\CASE.PDF
