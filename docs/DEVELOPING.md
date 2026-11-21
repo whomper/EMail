@@ -103,6 +103,8 @@ make build/fakeweb.acc build/fakeweb.prg && tests/hatari/link_test.py /tmp/mail-
 make help build/fakehelp.acc && tests/hatari/help_test.py /tmp/mail-help   # the Help key asks (a stand-in for) EHypView
 tests/hatari/langs_test.py /tmp/mail-langs         # Settings > Languages... and Translate into, against common's stand-in translategate
 tests/hatari/emailchk_test.py /tmp/mail-chk        # EMAILCHK.ACC: new mail told at the desktop, none while EMail runs
+tests/hatari/big_test.py /tmp/mail-big            # a large message on a 1 MB ST: without its attachment, then saved from the server
+tests/hatari/print_test.py /tmp/mail-print        # ^P under NVDI to its metafile driver, read back (PRINT_WDIALOG=1, PRINT_NOGDOS=1)
                                                    # (Falcon; also ST-1 or TT, never ST or Falcon-4: no accessory
                                                    # is tested on the 4 MB machines, Erez, 4 Nov 2026)
 AERA_WITH_NVDI=1 tests/hatari/font_test.py /tmp/mail-font   # a GDOS font under NVDI (Falcon, Falcon-4)
