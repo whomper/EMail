@@ -1833,7 +1833,8 @@ void dlg_keys_box(void)
 		"Tab next pane          F10 Hebrew keyboard",
 		"In the editor: \x01^D send  ^S into the Outbox",
 		"               ^T attach  ^B addresses",
-		"^,  settings           Help this guide",
+		"^P  print              ^,  settings",
+		"Help this guide",
 		"^U  close the window   ^W  next window",
 		"^Q  quit               Undo cancels a dialog"
 	};

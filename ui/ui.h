@@ -266,9 +266,10 @@ enum {
 	C_REPLY, C_REPLYALL, C_FORWARD, C_UNREAD, C_MARKREAD, C_FLAG, C_MOVE, C_DELETE,
 	C_SEND, C_SAVEOUT, C_ATTACH, C_ABOOK,
 	C_FOLDERS, C_FOLDERPANE, C_REFRESH, C_NEWFOLDER, C_RENFOLDER, C_DELFOLDER,
-	C_ACCOUNTS, C_SETTINGS, C_FONT, C_OFFLINE, C_FALCON, C_TRANSLATE, C_LOG
+	C_ACCOUNTS, C_SETTINGS, C_FONT, C_OFFLINE, C_FALCON, C_TRANSLATE, C_LOG, C_PRINT
 };
 void ui_command(short cmd);
+void cmd_print(void);			/* File > Print... (printmsg.c) */
 void cmd_new_folder(ACCOUNT *a);
 void cmd_rename_folder(ACCOUNT *a, FINFO *fi);
 void cmd_delete_folder(ACCOUNT *a, FINFO *fi);

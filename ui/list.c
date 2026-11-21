@@ -1068,19 +1068,20 @@ void message_menu(short mx, short my, int with_open)
 {
 	HDR *h = list_current();
 	int imap = cur_finfo && !cur_finfo->local, shown;
-	const char *lab[12];
-	short cmd[12], n = 0, r;
+	const char *lab[14];
+	short cmd[14], n = 0, r;
 	fresh();
 	if (nmarks > 1) {
 		/* for all the selected messages */
 		static const char *blab[] = { "Mark as read", "Mark as unread   ^J", "Flag             ^G",
-					      "-", "Move to...       ^M", "Download again", "-", "Delete          Del" };
-		static const short bcmd[] = { C_MARKREAD, C_UNREAD, C_FLAG, 0, C_MOVE, C_REFETCH, 0, C_DELETE };
-		const char *l[8];
+					      "-", "Move to...       ^M", "Download again", "-", "Print...         ^P",
+					      "-", "Delete          Del" };
+		static const short bcmd[] = { C_MARKREAD, C_UNREAD, C_FLAG, 0, C_MOVE, C_REFETCH, 0, C_PRINT, 0, C_DELETE };
+		const char *l[10];
 		memcpy(l, blab, sizeof(l));
 		if (!imap)
 			l[5] = "~Download again";
-		r = popup_m(mx, my, l, 8);
+		r = popup_m(mx, my, l, 10);
 		if (r >= 0 && bcmd[r]) {
 			if (!popup_put_back)	/* not the menu's ghost while it works */
 				win_redraw_area(&popup_area);
@@ -1115,6 +1116,10 @@ void message_menu(short mx, short my, int with_open)
 	cmd[n++] = C_MOVE;
 	lab[n] = imap ? "Download again" : "~Download again";
 	cmd[n++] = C_REFETCH;
+	lab[n] = "-";
+	cmd[n++] = 0;
+	lab[n] = "Print...         ^P";
+	cmd[n++] = C_PRINT;
 	lab[n] = "-";
 	cmd[n++] = 0;
 	lab[n] = "Delete          Del";

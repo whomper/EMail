@@ -69,6 +69,7 @@ static const MBAR_ITEM m_file[] = {
 	{ "Send Outbox", 0, C_SENDQ },
 	{ "-", 0, 0 },
 	{ "Save attachment...", 0, C_SAVEATT },
+	{ "Print...", "^P", C_PRINT },	/* the family's ^P (Erez, 21 Nov 2026) */
 	{ "-", 0, 0 },
 	{ "Close window", "^U", C_CLOSE },
 	{ "Next window", "^W", C_NEXTWIN },
@@ -194,6 +195,7 @@ void menu_update(void)
 	enable(C_FIND, cur_folder != 0);
 	check(C_FIND, find_active());
 	enable(C_SAVEATT, free_ && msg && cur_msg->nparts > 0);
+	enable(C_PRINT, some);
 	enable(C_NEXTWIN, ed && main_h > 0);
 	enable(C_SEND, free_ && ed);
 	enable(C_SAVEOUT, ed);
@@ -1420,6 +1422,7 @@ static void command(short cmd)
 		break;
 	}
 	case C_SAVEATT: cmd_save_attachment(); break;
+	case C_PRINT: cmd_print(); break;
 	case C_QUIT: do_quit(); break;
 	case C_CLOSE:
 		/* the editor; the main window closing ends EMail */
@@ -1629,6 +1632,7 @@ static int shortcut(short kstate, short key)
 		case 0x14: cmd = C_ATTACH; break;	/* T */
 		case 0x30: cmd = C_ABOOK; break;	/* B */
 		case 0x33: cmd = C_SETTINGS; break;	/* , */
+		case 0x19: cmd = C_PRINT; break;	/* P */
 		}
 		if (cmd == C_SEND || cmd == C_SAVEOUT || cmd == C_ATTACH) {
 			if (w_editor.h <= 0)
@@ -1637,7 +1641,7 @@ static int shortcut(short kstate, short key)
 			return 1;		/* else a new message, as the menu's */
 		} else if ((cmd == C_REPLY || cmd == C_REPLYALL || cmd == C_FORWARD) && !cur_msg) {
 			return 1;
-		} else if ((cmd == C_UNREAD || cmd == C_FLAG || cmd == C_MOVE) && !cur_msg && list_marked() < 2) {
+		} else if ((cmd == C_UNREAD || cmd == C_FLAG || cmd == C_MOVE || cmd == C_PRINT) && !cur_msg && list_marked() < 2) {
 			return 1;
 		} else if (cmd == C_SELALL && (top == &w_editor || !cur_folder)) {
 			return 0;		/* the editor may want ^A */
