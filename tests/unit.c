@@ -712,12 +712,54 @@ static void t_index(void)
 	rmdir(dir);
 }
 
+/* an attachment left on the server, decoded as it comes (Erez, 21 Nov
+   2026): base64 and quoted-printable cut into pieces anywhere, a quantum
+   or an "=4" across two of them, decode as the whole does (base64: the
+   bytes sent; quoted-printable, a text encoding, as qp_decode reads it) */
+static void t_dec_pieces(void)
+{
+	static char data[20000], out[24000], buf[MIME_DEC_PIECE + 8];
+	static MIMEDEC d;
+	char *enc, *want;
+	long n, i, o, k, step, wl;
+	int e, ok;
+	for (i = 0; i < (long)sizeof(data); i++)
+		data[i] = (char)((i * 7 + i / 13) & 0xff);
+	for (e = 0; e < 2; e++) {
+		enc = e ? qp_encode(data, sizeof(data), &n) : base64_encode(data, sizeof(data), 76, &n);
+		want = e ? qp_decode(enc, n, 0, &wl) : data;
+		if (!e)
+			wl = sizeof(data);
+		ok = 1;
+		for (step = 1; step < 4000 && ok; step = step * 3 + 1) {
+			mime_dec_init(&d, e ? "quoted-printable" : "base64");
+			for (i = o = 0; i < n; i += k) {
+				long got;
+				k = n - i < step ? n - i : step;
+				if (k > MIME_DEC_PIECE)
+					k = MIME_DEC_PIECE;
+				got = mime_dec_feed(&d, enc + i, k, buf);
+				if (o + got <= (long)sizeof(out))
+					memcpy(out + o, buf, got);
+				o += got;
+			}
+			ok = o == wl && !memcmp(out, want, wl);
+		}
+		CHECK(ok, e ? "quoted-printable decoded a piece at a time, cut anywhere, as whole"
+			    : "base64 decoded a piece at a time, cut anywhere: the bytes sent");
+		if (e)
+			free(want);
+		free(enc);
+	}
+}
+
 int main(void)
 {
 	t_num();
 	t_zone();
 	t_inf();
 	t_inf_unchanged();
+	t_dec_pieces();
 	t_index();
 	t_charset();
 	t_mime();

@@ -262,6 +262,42 @@ int pop3_retr(POP3 *p, long num, SBUF *out)
 	return multiline(p, add_line, out);
 }
 
+/* TOP: the header and the body's first lines, kept up to cap bytes (the
+   rest read and dropped): a message larger than Settings' limit (Erez,
+   21 Nov 2026) */
+typedef struct {
+	SBUF *out;
+	long cap;
+	int cut;
+} CAPPED;
+
+static void add_capped(void *ud, const char *s, long n)
+{
+	CAPPED *c = ud;
+	if (c->out->len + n + 2 > c->cap) {
+		c->cut = 1;
+		return;
+	}
+	sb_add(c->out, s, n);
+	sb_add(c->out, "\r\n", 2);
+}
+
+int pop3_top(POP3 *p, long num, long lines, long cap, SBUF *out, int *cut)
+{
+	CAPPED c;
+	int r;
+	conn_cmd(p->c, 0, "TOP %ld %ld", num, lines);
+	r = reply(p);
+	if (r <= 0)
+		return r;
+	c.out = out;
+	c.cap = cap;
+	c.cut = 0;
+	r = multiline(p, add_capped, &c);
+	*cut = c.cut;
+	return r;
+}
+
 int pop3_dele(POP3 *p, long num)
 {
 	conn_cmd(p->c, 0, "DELE %ld", num);

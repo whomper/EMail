@@ -775,5 +775,58 @@ expect "POP3 server that answers PASS a minute on: its answer, not a timeout (Ya
   "login failed: \[SYS/TEMP\] Server error" "$(cat "$D/strict-slow/out.txt")"
 kill $SPID 2>/dev/null
 
+# a message larger than Settings' limit (BIGMSG, 500 KB by default) comes
+# without its attachments (a tester's 2.25: one large message gave a
+# memory error and, on POP3, stopped the rest; Erez, 21 Nov 2026): a small
+# one, a 2 MB one with a PDF and an HTML text, and another small one
+python3 - "$D/home/dana/Maildir/new" "$D/big.pdf" <<'PY'
+import base64, os, sys
+d, pdf = sys.argv[1:]
+data = os.urandom(2 * 1024 * 1024)
+open(pdf, "wb").write(data)
+b64 = base64.encodebytes(data).decode().replace("\n", "\r\n")
+small = "From: Avi <avi@test.local>\r\nTo: dana@test.local\r\nSubject: Small %s\r\nDate: Thu, 20 Nov 2026 10:0%d:00 +0200\r\n\r\nShort note %s.\r\n"
+open(os.path.join(d, "90-small-a.eml"), "w", newline="").write(small % ("one", 1, "one"))
+big = ("From: Ruth <ruth@test.local>\r\nTo: dana@test.local\r\nSubject: Big drawings\r\n"
+       "Date: Thu, 20 Nov 2026 10:02:00 +0200\r\nMIME-Version: 1.0\r\n"
+       "Content-Type: multipart/mixed; boundary=\"outer\"\r\n\r\n"
+       "--outer\r\nContent-Type: multipart/alternative; boundary=\"alt\"\r\n\r\n"
+       "--alt\r\nContent-Type: text/plain; charset=\"utf-8\"\r\n\r\nThe drawings for the Falcon case, plain.\r\n"
+       "--alt\r\nContent-Type: text/html; charset=\"utf-8\"\r\n\r\n<p>The drawings for the <b>Falcon</b> case.</p>\r\n"
+       "--alt--\r\n"
+       "--outer\r\nContent-Type: application/pdf; name=\"case.pdf\"\r\n"
+       "Content-Disposition: attachment; filename=\"case.pdf\"\r\nContent-Transfer-Encoding: base64\r\n\r\n"
+       + b64 + "\r\n--outer--\r\n")
+open(os.path.join(d, "91-big.eml"), "w", newline="").write(big)
+open(os.path.join(d, "92-small-b.eml"), "w", newline="").write(small % ("two", 3, "two"))
+PY
+chown -R nobody: "$D/home"
+run sync 1 INBOX >/dev/null
+out=$(run list 1 INBOX)
+UB=$(uid_of "$out" "Big drawings")
+out=$(run show 1 INBOX "$UB")
+expect "large message (IMAP): its text came" "The drawings for the Falcon case" "$out"
+expect "... the note says its attachments are on the server" "its attachments are on the server" "$out"
+expect "... the PDF listed, on the server" "case.pdf (application/pdf, .* bytes, on the server)" "$out"
+if ls -l "$D"/work/*/cache* 2>/dev/null | awk '{s+=$5} END {exit !(s > 1500000)}'; then
+  FAIL=$((FAIL+1)); echo "FAIL large message: the attachment came into the cache"
+else PASS=$((PASS+1)); echo "ok   ... and not into the cache"; fi
+out=$(run savepart 1 INBOX "$UB" 0 "$D/saved.pdf")
+expect "... saving it downloads it from the server" "saved: 1 (from the server)" "$out"
+if cmp -s "$D/big.pdf" "$D/saved.pdf"; then PASS=$((PASS+1)); echo "ok   ... the file is the PDF that was sent, byte for byte"
+else FAIL=$((FAIL+1)); echo "FAIL the saved PDF differs from the one sent ($(stat -c %s "$D/saved.pdf" 2>/dev/null) bytes)"; fi
+out=$(run check 2)
+expect "large message (POP3): the check ends well" "new: [1-9]" "$out"
+out=$(run list 2 Inbox)
+PB=$(uid_of "$out" "Big drawings")
+expect "... the small one before it came" "Small one" "$out"
+expect "... the large one came" "Big drawings" "$out"
+expect "... the small one after it came: the large one didn't stop the rest" "Small two" "$out"
+out=$(run show 2 Inbox "$PB")
+expect "... the large one: its start and the note" "only its start was downloaded" "$out"
+expect "... its text came" "The drawings for the Falcon case" "$out"
+out=$(run check 2)
+expect "... and it isn't downloaded again" "new: 0" "$out"
+
 echo "$PASS passed, $FAIL failed"
 [ $FAIL -eq 0 ]

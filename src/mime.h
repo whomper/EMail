@@ -21,6 +21,8 @@ typedef struct {
 	short enc;		/* ENC_* */
 	long size;		/* approximate decoded size */
 	char *summary;		/* a calendar invitation's SUMMARY (Atari charset), or NULL */
+	char *left;		/* left on the server (a large message: Erez, 21 Nov 2026):
+				   its IMAP section ("2"), or NULL */
 } MIMEPART;
 
 typedef struct {
@@ -39,6 +41,23 @@ MSG  *mime_parse(const char *raw, long len);
 void  mime_free(MSG *m);
 /* the text mime_parse shows, in UTF-8 (for the Gateway's translation; malloc'd) */
 char *mime_text_utf8(const char *raw, long len, long *outlen);
+/* An attachment's transfer encoding decoded a piece at a time, as it
+   comes (an attachment left on the server, written to a file as it is
+   downloaded): mime_dec_feed decodes in[0..n) into out (room for n + 4
+   bytes) and returns how many; what ends a piece half way (a base64
+   quantum, a quoted-printable "=4") is kept for the next */
+#define MIME_DEC_PIECE 4096
+typedef struct {
+	short enc;		/* ENC_* */
+	short bits, done;	/* base64: bits held; '=' seen */
+	unsigned long acc;
+	short nc;		/* quoted-printable: bytes kept from the last piece */
+	char work[MIME_DEC_PIECE + 4];
+} MIMEDEC;
+void mime_dec_init(MIMEDEC *d, const char *encoding);	/* "base64", "quoted-printable", else as it is */
+long mime_dec_feed(MIMEDEC *d, const char *in, long n, char *out);
+/* the part's encoding as a name, for mime_dec_init */
+const char *mime_enc_name(short enc);
 /* decoded bytes of an attachment, malloc'ed */
 char *mime_part_data(const char *raw, const MIMEPART *p, long *outlen);
 /* 1: a calendar invitation (text/calendar, application/ics, or *.ics), for ECal */

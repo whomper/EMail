@@ -36,6 +36,7 @@ static void defaults(void)
 	tz_given = 0;
 	opt.check = 0;
 	opt.page = 100;
+	opt.bigkb = 500;
 	opt.keepcache = 1;
 	opt.startoffline = 0;
 	opt.log = 0;
@@ -510,6 +511,7 @@ static void set_opt(const char *k, const char *v)
 	else if (!strcmp(k, "startoffline")) { opt.startoffline = n != 0; startoffline_given = 1; }
 	else if (!strcmp(k, "signature")) unescape(opt.signature, v, sizeof(opt.signature));
 	else if (!strcmp(k, "page")) opt.page = n < 20 ? 20 : n > 1000 ? 1000 : n;
+	else if (!strcmp(k, "bigmsg")) opt.bigkb = n < 50 ? 50 : n > 9999 ? 9999 : n;
 	else if (!strcmp(k, "keepcache")) opt.keepcache = n;
 	else if (!strcmp(k, "log")) opt.log = n;
 	else if (!strcmp(k, "offline")) offline_inf = n != 0;
@@ -791,6 +793,8 @@ int store_save_settings(void)
 		"CHECK", "%d", opt.check);
 	put_fmt(&b, "messages loaded at a time in a folder, \"Load more\" gets the next ones (20-1000)",
 		"PAGE", "%d", opt.page);
+	put_fmt(&b, "a message larger than this many KB comes without its attachments, which stay on the server (50-9999)",
+		"BIGMSG", "%d", opt.bigkb);
 	put_fmt(&b, "1 = keep messages you have read on disk after quitting, 0 = only their headers",
 		"KEEPCACHE", "%d", opt.keepcache);
 	put_fmt(&b, "1 = write the conversation with the servers to EMAIL.LOG (passwords hidden)",

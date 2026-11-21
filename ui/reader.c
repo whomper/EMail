@@ -1037,7 +1037,7 @@ static void draw(WIN *w, GRECT *clip)
 				snprintf(sz, sizeof(sz), "%s bytes", num(p->size));
 			else
 				snprintf(sz, sizeof(sz), "%s KB", num((p->size + 512) / 1024));
-			snprintf(t, sizeof(t), "  (%s, %s)", p->type, sz);
+			snprintf(t, sizeof(t), p->left ? "  (%s, %s, on the server)" : "  (%s, %s)", p->type, sz);
 			text_at(x0, y, "\xAF", 1, cols, TX_BOLD);
 			text_at(x0 + (2 + pre) * cw, y, nm, nl, nl, TX_BOLD);
 			text_at(x0 + (2 + pre + nl) * cw, y, t, strlen(t), cols - 2 - pre - nl, 0);
@@ -1105,12 +1105,39 @@ static void short_name(const char *name, char *out)
 	out[n] = 0;
 }
 
+/* attachment i into the file path: from the message when it is here,
+   from the server, a piece at a time, when it was left there (a large
+   message: Erez, 21 Nov 2026); 1 if written */
+static int part_to_file(short i, const char *path)
+{
+	MIMEPART *p = &cur_msg->parts[i];
+	char *data;
+	long len;
+	int ok;
+	if (p->left) {
+		mail_err[0] = 0;
+		busy(1);
+		ok = cur_folder && mail_part_to_file(cur_folder, cur_uid, p->left, p->enc, p->size, path);
+		busy(0);
+		if (!ok && mail_err[0])
+			alert(1, "[1][%s][ OK ]", mail_err);
+		return ok;
+	}
+	busy(1);
+	data = mime_part_data(cur_raw, p, &len);
+	ok = data && pf_save(path, data, len) >= 0;
+	free(data);
+	busy(0);
+	if (!ok)
+		alert(1, "[1][Can't write|%s][ OK ]", path);
+	return ok;
+}
+
 void reader_save_attachment(short i)
 {
 	static char path[160], name[16];
-	char full[200], *data;
+	char full[200];
 	short button;
-	long len;
 	if (!cur_msg || i < 0 || i >= cur_msg->nparts)
 		return;
 	if (!path[0]) {
@@ -1129,11 +1156,8 @@ void reader_save_attachment(short i)
 	strncat(full, name, sizeof(full) - strlen(full) - 1);
 	busy(1);
 	statusf("Saving %s...", name);
-	data = mime_part_data(cur_raw, &cur_msg->parts[i], &len);
-	if (!data || pf_save(full, data, len) < 0)
-		alert(1, "[1][Can't write|%s][ OK ]", full);
-	free(data);
 	busy(0);
+	part_to_file(i, full);
 	status("");
 }
 
@@ -1142,25 +1166,15 @@ void reader_save_attachment(short i)
    of the same name overwrites it */
 static void reader_to_epdf(short i)
 {
-	char dir[200], path[220], name[16], *data;
-	long len;
-	int ok;
+	char dir[200], path[220], name[16];
 	short_name(cur_msg->parts[i].name, name);
 	if (!strchr(name, '.'))
 		strcat(name, ".pdf");
 	path_join(dir, sizeof(dir), opt.workdir, "pdf");
 	pf_mkdir(dir);
 	path_join(path, sizeof(path), dir, name);
-	busy(1);
-	data = mime_part_data(cur_raw, &cur_msg->parts[i], &len);
-	ok = data && pf_save(path, data, len) >= 0;
-	free(data);
-	busy(0);
-	if (!ok) {
-		alert(1, "[1][Can't write|%s][ OK ]", path);
-		return;
-	}
-	open_in_epdf(path);
+	if (part_to_file(i, path))
+		open_in_epdf(path);
 }
 
 /* a click on a PDF attachment: open it in EPDF, save it, or nothing
@@ -1205,10 +1219,8 @@ static int ecal_answered(short id)
    opens its New Event dialog filled from it; the next one overwrites it */
 void reader_to_ecal(short i)
 {
-	char path[220], cmd[230], *data;
-	long len;
+	char path[220], cmd[230];
 	short id;
-	int ok;
 	if (!cur_msg || i < 0 || i >= cur_msg->nparts)
 		return;
 	if ((id = appl_find("ECAL    ")) < 0) {
@@ -1216,15 +1228,8 @@ void reader_to_ecal(short i)
 		return;
 	}
 	path_join(path, sizeof(path), opt.workdir, "invite.ics");
-	busy(1);
-	data = mime_part_data(cur_raw, &cur_msg->parts[i], &len);
-	ok = data && pf_save(path, data, len) >= 0;
-	free(data);
-	busy(0);
-	if (!ok) {
-		alert(1, "[1][Can't write|%s][ OK ]", path);
+	if (!part_to_file(i, path))
 		return;
-	}
 	snprintf(cmd, sizeof(cmd), strchr(path, ' ') ? "'%s'" : "%s", path);
 	av_send("ECAL", cmd);
 	status(ecal_answered(id) ? "The invitation is in ECal: confirm it there"

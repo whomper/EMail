@@ -808,6 +808,18 @@ Trash) and remember what they fetched, so nothing comes twice. With
 "leave mail on the server" off, EMail deletes it from the server once it
 is safely on disk.
 
+**Large messages**: a message larger than "Messages larger than ... KB:
+without attachments" in Settings > Mail (500 KB at first, BIGMSG= in
+`EMAIL.INF`) comes without its attachments, so it never fills the
+Atari's memory. On IMAP its text comes, a note above it says the
+attachments are on the server, and each attachment's line says "on the
+server": save it (or open a PDF with EPDF) and it comes then, straight
+into the file a piece at a time, however large it is. A text longer than
+the limit comes as far as the limit. On POP3 only the start of the
+message comes, with the same note, and all of it stays on the server,
+even when the account deletes what it fetched; the messages after it
+come as usual.
+
 **Offline** (Options > Work offline): EMail doesn't connect and doesn't
 check on its timer, and you can read everything already on disk. New
 messages wait in the Outbox. Switched off again, EMail checks at once and

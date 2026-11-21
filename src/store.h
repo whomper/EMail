@@ -78,6 +78,8 @@ typedef struct {
 	short check;		/* minutes between automatic checks, 0 = off */
 	short startoffline;	/* start working offline (Options > Work offline goes online) */
 	short page;		/* messages loaded at a time (more on request) */
+	short bigkb;		/* a message larger than this (KB) is downloaded without its
+				   attachments, which stay on the server (Erez, 21 Nov 2026) */
 	short keepcache;	/* keep message bodies on disk when quitting */
 	short log;		/* write EMAIL.LOG */
 	short offline;

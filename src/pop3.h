@@ -23,6 +23,9 @@ int   pop3_stat(POP3 *p, long *count, long *size);
 /* cb(number, unique id, size) for each message on the server */
 int   pop3_list(POP3 *p, void (*cb)(void *ud, long num, const char *uid, long size), void *ud);
 int   pop3_retr(POP3 *p, long num, SBUF *out);	/* whole message, CRLF lines */
+/* the header and the first lines of the body, at most cap bytes kept;
+   *cut when some were dropped */
+int   pop3_top(POP3 *p, long num, long lines, long cap, SBUF *out, int *cut);
 int   pop3_dele(POP3 *p, long num);
 
 #endif

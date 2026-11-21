@@ -65,6 +65,12 @@ int  mail_send(ACCOUNT *a, const char *raw, long len, int *sent);
 int  mail_folder_create(ACCOUNT *a, const char *name);
 /* a new name (Atari text) under the same parent; newserver gets its name
    on the server */
+/* Settings' limit in bytes: a larger message comes without its
+   attachments (Erez, 21 Nov 2026) */
+long mail_big_limit(void);
+/* an attachment left on the server (MIMEPART.left: its section, encoding
+   and size there) downloaded into path, decoded a piece at a time */
+int  mail_part_to_file(FOLDER *f, unsigned long uid, const char *sec, short enc, long size, const char *path);
 int  mail_folder_rename(ACCOUNT *a, FINFO *fi, const char *name, char *newserver, int size);	/* Atari charset */
 int  mail_folder_delete(ACCOUNT *a, FINFO *fi);
 

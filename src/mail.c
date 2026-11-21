@@ -763,7 +763,50 @@ typedef struct {
 	char *known;		/* UIDL.DAT contents */
 	SBUF keep;		/* new UIDL.DAT */
 	long got, fail, total, done;
+	long skipped;		/* too large even for their start: left, the rest went on */
 } POPCTX;
+
+#define LEFT_BND "=_EMail_left_="
+static void add_header(SBUF *b, const char *h, long n);
+static int body_field(const char *s, long n);
+
+/* a large POP3 message's start (TOP) made into one EMail keeps: its
+   header without its body's type, a multipart/mixed of a note and the
+   start as it came, under its own Content-Type (an unended multipart:
+   mime.c takes its last part as far as it goes) */
+static void pop_partial(SBUF *m, long size)
+{
+	long hl = mime_header_len(m->s, m->len), i = 0;
+	SBUF b;
+	int keep = 0;
+	sb_init(&b);
+	add_header(&b, m->s, hl);
+	sb_adds(&b, "Content-Type: multipart/mixed; boundary=\"" LEFT_BND "\"\r\n\r\n--" LEFT_BND
+		"\r\nContent-Type: text/plain; charset=\"us-ascii\"\r\n\r\n");
+	sb_printf(&b, "[This message is %ld KB, more than the %d KB set in Settings: only its start was downloaded. All of it stays on the server.]\r\n",
+		  (size + 1023) / 1024, opt.bigkb);
+	sb_adds(&b, "--" LEFT_BND "\r\n");
+	/* the part: the message's own Content-Type and encoding lines */
+	while (i < hl) {
+		long e = i;
+		while (e < hl && m->s[e] != '\n')
+			e++;
+		if (e < hl)
+			e++;
+		if (m->s[i] == '\r' || m->s[i] == '\n')
+			break;
+		if (m->s[i] != ' ' && m->s[i] != '\t')
+			keep = body_field(m->s + i, e - i);
+		if (keep)
+			sb_add(&b, m->s + i, e - i);
+		i = e;
+	}
+	sb_adds(&b, "\r\n");
+	if (hl < m->len)
+		sb_add(&b, m->s + hl, m->len - hl);
+	sb_free(m);
+	*m = b;
+}
 
 static void pop_cb(void *ud, long num, const char *uid, long size)
 {
@@ -771,7 +814,7 @@ static void pop_cb(void *ud, long num, const char *uid, long size)
 	char key[100];
 	SBUF msg;
 	HDR *h;
-	int r;
+	int r, big;
 	snprintf(key, sizeof(key), "\n%s\n", uid);
 	if (c->known && strstr(c->known, key)) {
 		/* already downloaded */
@@ -783,12 +826,25 @@ static void pop_cb(void *ud, long num, const char *uid, long size)
 		return;
 	prog_start(0, size, 0, "%s: downloading message %ld", c->a->name, c->got + 1);
 	sb_init(&msg);
-	if (size > 4096)
-		sb_reserve(&msg, size + 1024);	/* the size LIST gave: no doubling */
-	r = pop3_retr(c->p, num, &msg);
+	/* larger than Settings' limit, or than the memory there is: its
+	   header and the start of its text, the message left on the server
+	   (Erez, 21 Nov 2026; until 2.25 the memory error ended the check) */
+	big = size > mail_big_limit() || (size > 4096 && !sb_reserve(&msg, size + 1024));
+	if (big) {
+		int cut = 0;
+		sb_free(&msg);
+		r = pop3_top(c->p, num, mail_big_limit() / 40, mail_big_limit(), &msg, &cut);
+		if (r > 0)
+			pop_partial(&msg, size);
+	} else {
+		r = pop3_retr(c->p, num, &msg);
+	}
 	prog_end();
-	if (r <= 0) {
-		c->fail = 1;
+	if (r <= 0 || !msg.s) {
+		if (r > 0)	/* no memory even for its start: skipped, the rest go on */
+			c->skipped++;
+		else
+			c->fail = 1;
 		sb_free(&msg);
 		return;
 	}
@@ -796,11 +852,11 @@ static void pop_cb(void *ud, long num, const char *uid, long size)
 	if (h) {
 		msg_save(c->f, c->f->uidnext, msg.s, msg.len);
 		hdr_from_raw(h, msg.s, msg.len);
-		h->size = msg.len;
+		h->size = big ? size : msg.len;
 		h->flags |= MF_CACHED;
 		c->f->uidnext++;
 		c->got++;
-		if (c->a->leave) {
+		if (c->a->leave || big) {	/* a large one stays on the server, all of it */
 			sb_adds(&c->keep, uid);
 			sb_adds(&c->keep, "\n");
 		} else {
@@ -969,6 +1025,205 @@ int mail_check(ACCOUNT *a, long *newmsgs)
 
 /* ---------------- reading and changing ---------------- */
 
+/* ---------------- a large message (Erez, 21 Nov 2026) ----------------
+ * A message larger than Settings' limit (opt.bigkb) comes without its
+ * attachments: its header and text, and for each attachment a part that
+ * says where it is ("X-EMail-Left: 2 base64 1048576"), downloaded to a
+ * file only when it is saved (mail_part_to_file), a piece at a time. Its
+ * text, if larger than the limit itself, comes as far as the limit. The
+ * message EMail keeps is one it made: the header without its own
+ * Content-Type, a multipart/mixed of a note, the text and the parts. */
+long mail_big_limit(void)
+{
+	return (long)(opt.bigkb > 0 ? opt.bigkb : 500) * 1024L;
+}
+
+/* a header line to leave out of the made message: its own body's type */
+static int body_field(const char *s, long n)
+{
+	return (n >= 13 && !strncasecmp(s, "Content-Type:", 13)) ||
+	       (n >= 26 && !strncasecmp(s, "Content-Transfer-Encoding:", 26));
+}
+
+static void add_header(SBUF *b, const char *h, long n)
+{
+	long i = 0;
+	int skip = 0;
+	while (i < n) {
+		long e = i;
+		while (e < n && h[e] != '\n')
+			e++;
+		if (e < n)
+			e++;
+		if (h[i] == '\r' || h[i] == '\n')
+			break;		/* the empty line: the header's end */
+		if (h[i] != ' ' && h[i] != '\t')
+			skip = body_field(h + i, e - i);
+		if (!skip)
+			sb_add(b, h + i, e - i);
+		i = e;
+	}
+}
+
+/* a name in quotes: its own quotes and backslashes out */
+static void add_name(SBUF *b, const char *name)
+{
+	for (; *name; name++)
+		sb_add(b, *name == '"' || *name == '\\' ? "_" : name, 1);
+}
+
+static int partial(ACCOUNT *a, HDR *h, char **data, long *dlen)
+{
+	IMAPPART parts[IMAP_MAXPARTS];
+	const char *secs[IMAP_MAXPARTS];
+	char *out[IMAP_MAXPARTS + 1];
+	long len[IMAP_MAXPARTS + 1], limit = mail_big_limit(), cap;
+	short kept[IMAP_MAXPARTS];
+	int n = 0, nk = 0, i, k, r, cut = 0, left = 0;
+	SBUF b;
+	r = imap_bodystructure(a->im, h->uid, parts, IMAP_MAXPARTS, &n);
+	if (r <= 0)
+		return r;
+	if (!n) {
+		str_copy(mail_err, "The message is no longer on the server.", sizeof(mail_err));
+		return 0;
+	}
+	/* the text (and an invitation) comes; anything else stays */
+	for (i = 0; i < n; i++) {
+		int text = !parts[i].attach && (!strcmp(parts[i].type, "text/plain") || !strcmp(parts[i].type, "text/html") ||
+						!strcmp(parts[i].type, "text/calendar"));
+		kept[i] = (short)text;
+		if (text)
+			secs[nk++] = parts[i].sec;
+		else
+			left++;
+	}
+	cap = nk ? limit / nk : limit;
+	if (cap < 16384)
+		cap = 16384;
+	r = imap_fetch_sections(a->im, h->uid, secs, nk, cap, out, len);
+	if (r <= 0)
+		return r;
+	if (!out[0]) {
+		str_copy(mail_err, "The message is no longer on the server.", sizeof(mail_err));
+		return 0;
+	}
+	for (i = k = 0; i < n; i++)
+		if (kept[i]) {
+			if ((out[k + 1] ? len[k + 1] : 0) < parts[i].size)
+				cut = 1;
+			k++;
+		}
+	sb_init(&b);
+	add_header(&b, out[0], len[0]);
+	sb_adds(&b, "Content-Type: multipart/mixed; boundary=\"" LEFT_BND "\"\r\n\r\n");
+	/* the note first: what isn't here, and where it is */
+	sb_adds(&b, "--" LEFT_BND "\r\nContent-Type: text/plain; charset=\"us-ascii\"\r\n\r\n");
+	if (left)
+		sb_printf(&b, "[This message is %ld KB, more than the %d KB set in Settings: its attachments are on the server. Save one to download it.]\r\n",
+			  (h->size + 1023) / 1024, opt.bigkb);
+	if (cut)
+		sb_printf(&b, "[This message's text is longer than %d KB: only its start was downloaded.]\r\n", opt.bigkb);
+	for (i = k = 0; i < n; i++) {
+		IMAPPART *q = &parts[i];
+		sb_adds(&b, "--" LEFT_BND "\r\nContent-Type: ");
+		sb_adds(&b, q->type);
+		if (kept[i]) {
+			long got = out[k + 1] ? len[k + 1] : 0;
+			if (q->charset[0]) {
+				sb_adds(&b, "; charset=\"");
+				add_name(&b, q->charset);
+				sb_adds(&b, "\"");
+			}
+			sb_adds(&b, "\r\nContent-Transfer-Encoding: ");
+			sb_adds(&b, q->enc[0] ? q->enc : "7bit");
+			sb_adds(&b, "\r\n\r\n");
+			if (got)
+				sb_add(&b, out[k + 1], got);
+			sb_adds(&b, "\r\n");
+			k++;
+		} else {
+			sb_printf(&b, "; name=\"");
+			add_name(&b, q->name[0] ? q->name : "attachment");
+			sb_adds(&b, "\"\r\nContent-Disposition: attachment; filename=\"");
+			add_name(&b, q->name[0] ? q->name : "attachment");
+			sb_printf(&b, "\"\r\nX-EMail-Left: %s %s %ld\r\n\r\n", q->sec, q->enc[0] ? q->enc : "7bit", q->size);
+		}
+	}
+	sb_adds(&b, "--" LEFT_BND "--\r\n");
+	for (i = 0; i <= nk; i++)
+		free(out[i]);
+	if (!b.s) {
+		str_copy(mail_err, "Not enough memory for this message.", sizeof(mail_err));
+		return 0;
+	}
+	*data = b.s;
+	*dlen = b.len;
+	return 1;
+}
+
+/* an attachment left on the server, into the file path, decoded as it
+   comes, a piece at a time */
+typedef struct {
+	MIMEDEC dec;
+	int h;
+	long got, total;
+	char buf[MIME_DEC_PIECE + 8];
+} TOFILE;
+
+static int to_file(void *ud, const char *s, long n)
+{
+	TOFILE *t = ud;
+	while (n > 0) {
+		long k = n > MIME_DEC_PIECE ? MIME_DEC_PIECE : n, d = mime_dec_feed(&t->dec, s, k, t->buf);
+		if (d > 0 && pf_write(t->h, t->buf, d) != d)
+			return 0;
+		t->got += k;
+		s += k;
+		n -= k;
+	}
+	return !conn_stop;
+}
+
+int mail_part_to_file(FOLDER *f, unsigned long uid, const char *sec, short enc, long size, const char *path)
+{
+	ACCOUNT *a = f->acct;
+	TOFILE *t;
+	int r;
+	if (f->fi->local) {
+		str_copy(mail_err, "This folder is only on the Atari: the attachment isn't on a server.", sizeof(mail_err));
+		return 0;
+	}
+	if (!select_folder(a, f->fi))
+		return 0;
+	if ((t = malloc(sizeof(TOFILE))) == 0) {
+		str_copy(mail_err, "Not enough memory.", sizeof(mail_err));
+		return 0;
+	}
+	mime_dec_init(&t->dec, mime_enc_name(enc));
+	t->got = 0;
+	t->total = size;
+	if ((t->h = pf_open(path, PF_WRITE)) < 0) {
+		free(t);
+		snprintf(mail_err, sizeof(mail_err), "Can't write %s", path);
+		return 0;
+	}
+	prog_start(0, enc == ENC_BASE64 ? size / 3 * 4 : size, 0, "%s: downloading the attachment", a->name);
+	r = imap_fetch_stream(a->im, uid, sec, to_file, t);
+	prog_end();
+	pf_close(t->h);
+	free(t);
+	if (r <= 0) {
+		pf_remove(path);
+		if (r == 0 && !a->im->err[0])
+			str_copy(mail_err, conn_stop ? "Stopped." : "Can't write the file: is the disk full?", sizeof(mail_err));
+		else if (r == 0)
+			str_copy(mail_err, a->im->err, sizeof(mail_err));
+		return r < 0 ? imap_failed(a, r) : 0;
+	}
+	return 1;
+}
+
 /* the body from the server into the cache; with data: kept for the caller;
    what: the progress line's label, or 0 */
 static int download(FOLDER *f, HDR *h, char **data, long *len, const char *what)
@@ -987,7 +1242,10 @@ static int download(FOLDER *f, HDR *h, char **data, long *len, const char *what)
 		prog_start(0, h->size, 0, "%s: downloading the message", a->name);
 	t0 = pf_ms();
 	b0 = conn_bytes;
-	r = imap_fetch_body(a->im, h->uid, &body, &blen);
+	if (h->size > mail_big_limit())
+		r = partial(a, h, &body, &blen);	/* without its attachments */
+	else
+		r = imap_fetch_body(a->im, h->uid, &body, &blen);
 	prog_end();
 	if (r <= 0)
 		return imap_failed(a, r);

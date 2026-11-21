@@ -647,6 +647,352 @@ static void steal_cb(IMAP *im, void *ud, const char *s, long n)
 	}
 }
 
+/* ---------------- a large message's parts (Erez, 21 Nov 2026) ---------------- */
+
+typedef struct {
+	IMAPPART *p;
+	int max, n;
+} BSOUT;
+
+static void lower_str(char *s)
+{
+	for (; *s; s++)
+		*s = (char)tolower((u8)*s);
+}
+
+/* the rest of a list whose '(' was read, skipped */
+static void skip_rest(const char **pp, const char *end)
+{
+	TOK t;
+	t.type = T_LP;
+	skip_value(pp, end, &t);
+}
+
+/* a parameter list ("NAME" "x.pdf" "CHARSET" "utf-8"), its '(' read */
+static void bs_params(const char **pp, const char *end, IMAPPART *q, int disp)
+{
+	TOK k, v;
+	char key[24];
+	for (;;) {
+		next_tok(pp, end, &k);
+		if (k.type == T_RP || k.type == T_END)
+			return;
+		if (k.type == T_LP) {
+			skip_value(pp, end, &k);
+			continue;
+		}
+		next_tok(pp, end, &v);
+		if (v.type == T_LP) {
+			skip_value(pp, end, &v);
+			continue;
+		}
+		tok_str(&k, key, sizeof(key));
+		if (!q)
+			continue;
+		if (!strcasecmp(key, disp ? "filename" : "name") && (disp || !q->name[0]))
+			tok_str(&v, q->name, sizeof(q->name));
+		else if (!disp && !strcasecmp(key, "charset"))
+			tok_str(&v, q->charset, sizeof(q->charset));
+	}
+}
+
+static void bs_body(const char **pp, const char *end, const char *sec, BSOUT *o, int depth);
+
+/* a multipart, its first child's '(' read */
+static void bs_multi(const char **pp, const char *end, const char *sec, BSOUT *o, int depth)
+{
+	int first[IMAP_MAXPARTS], count[IMAP_MAXPARTS], kind[IMAP_MAXPARTS], nc = 0, i, pick = -1;
+	char sub[24], cs[20];
+	TOK t;
+	for (;;) {
+		int f = o->n;
+		snprintf(cs, sizeof(cs), sec[0] ? "%s.%d" : "%s%d", sec, nc + 1);
+		bs_body(pp, end, cs, o, depth + 1);
+		if (nc < IMAP_MAXPARTS) {
+			first[nc] = f;
+			count[nc] = o->n - f;
+			/* 2: a multipart (related: the HTML with its pictures), 1:
+			   HTML, 0: plain text, -1: anything else */
+			kind[nc] = o->n - f > 1 ? 2 : o->n == f ? -1 :
+				   !strcmp(o->p[f].type, "text/html") ? 1 :
+				   !strcmp(o->p[f].type, "text/plain") ? 0 : -1;
+			nc++;
+		}
+		next_tok(pp, end, &t);
+		if (t.type != T_LP)
+			break;
+	}
+	tok_str(&t, sub, sizeof(sub));
+	if (t.type != T_RP)
+		skip_rest(pp, end);	/* the extension data, to the multipart's ')' */
+	if (strcasecmp(sub, "alternative"))
+		return;
+	/* the HTML (or a multipart/related around it) before the plain text,
+	   the last of two alike (the richer, RFC 2046), as mime.c shows it */
+	for (i = 0; i < nc; i++)
+		if (kind[i] >= 0 && (pick < 0 || kind[i] >= kind[pick]))
+			pick = i;
+	if (pick < 0)
+		return;
+	if (first[pick] != first[0])
+		memmove(&o->p[first[0]], &o->p[first[pick]], count[pick] * sizeof(IMAPPART));
+	o->n = first[0] + count[pick];
+}
+
+/* one body, its '(' read */
+static void bs_body(const char **pp, const char *end, const char *sec, BSOUT *o, int depth)
+{
+	IMAPPART part, *q;
+	char sub[24];
+	TOK t;
+	if (depth > 8) {
+		skip_rest(pp, end);
+		return;
+	}
+	next_tok(pp, end, &t);
+	if (t.type == T_LP) {
+		bs_multi(pp, end, sec, o, depth);
+		return;
+	}
+	memset(&part, 0, sizeof(part));
+	q = &part;
+	str_copy(q->sec, sec[0] ? sec : "1", sizeof(q->sec));
+	tok_str(&t, q->type, sizeof(q->type) - 25);
+	next_tok(pp, end, &t);
+	tok_str(&t, sub, sizeof(sub));
+	strcat(q->type, "/");
+	strcat(q->type, sub);
+	lower_str(q->type);
+	next_tok(pp, end, &t);		/* the parameters */
+	if (t.type == T_LP)
+		bs_params(pp, end, q, 0);
+	next_tok(pp, end, &t);		/* id */
+	next_tok(pp, end, &t);		/* description */
+	next_tok(pp, end, &t);		/* encoding */
+	tok_str(&t, q->enc, sizeof(q->enc));
+	lower_str(q->enc);
+	next_tok(pp, end, &t);		/* size */
+	q->size = t.type == T_ATOM ? strtol(t.s, 0, 10) : 0;
+	/* the rest: lines, an enclosed message's envelope and body, md5, the
+	   disposition ("attachment" ("filename" "x.pdf")), language... */
+	for (;;) {
+		next_tok(pp, end, &t);
+		if (t.type == T_RP || t.type == T_END)
+			break;
+		if (t.type != T_LP)
+			continue;
+		next_tok(pp, end, &t);
+		if ((t.type == T_QUOTED || t.type == T_ATOM) &&
+		    ((t.n == 10 && !strncasecmp(t.s, "attachment", 10)) || (t.n == 6 && !strncasecmp(t.s, "inline", 6)))) {
+			q->attach = t.n == 10;
+			next_tok(pp, end, &t);
+			if (t.type == T_LP)
+				bs_params(pp, end, q, 1);
+			skip_rest(pp, end);
+		} else if (t.type == T_LP) {
+			skip_value(pp, end, &t);
+			skip_rest(pp, end);
+		} else if (t.type != T_RP) {
+			skip_rest(pp, end);
+		}
+	}
+	if (o->n < o->max)
+		o->p[o->n++] = part;
+}
+
+typedef struct {
+	BSOUT o;
+	int got;
+} BSCB;
+
+static void bs_cb(IMAP *im, void *ud, const char *s, long n)
+{
+	BSCB *b = ud;
+	const char *p = s + 2, *end = s + n, *k;
+	TOK t;
+	(void)im;
+	if (b->got || !(k = str_istr(s, "BODYSTRUCTURE ")) || k >= end)
+		return;
+	p = k + 14;
+	next_tok(&p, end, &t);
+	if (t.type != T_LP)
+		return;
+	b->got = 1;
+	bs_body(&p, end, "", &b->o, 0);
+}
+
+int imap_bodystructure(IMAP *im, unsigned long uid, IMAPPART *parts, int max, int *n)
+{
+	BSCB b;
+	int r;
+	memset(&b, 0, sizeof(b));
+	b.o.p = parts;
+	b.o.max = max;
+	r = run(im, 0, bs_cb, &b, "UID FETCH %lu (UID BODYSTRUCTURE)", uid);
+	*n = b.o.n;
+	if (r > 0 && !b.got)
+		*n = 0;
+	return r;
+}
+
+typedef struct {
+	const char *const *secs;
+	int n;
+	char **out;
+	long *len;
+} SECCB;
+
+static void keep(char **out, long *len, const TOK *t)
+{
+	if (*out || (t->type != T_LITERAL && t->type != T_QUOTED))
+		return;
+	if ((*out = malloc(t->n + 1)) != 0) {
+		memcpy(*out, t->s, t->n);
+		(*out)[t->n] = 0;
+		*len = t->n;
+	}
+}
+
+static void sec_cb(IMAP *im, void *ud, const char *s, long n)
+{
+	SECCB *c = ud;
+	const char *p = s + 2, *end = s + n;
+	TOK t;
+	(void)im;
+	next_tok(&p, end, &t);		/* the sequence number */
+	next_tok(&p, end, &t);		/* FETCH */
+	if (t.type != T_ATOM || t.n != 5 || strncasecmp(t.s, "FETCH", 5))
+		return;
+	next_tok(&p, end, &t);
+	if (t.type != T_LP)
+		return;
+	for (;;) {
+		char key[48], *b;
+		int i;
+		next_tok(&p, end, &t);
+		if (t.type != T_ATOM)
+			break;
+		tok_str(&t, key, sizeof(key));
+		next_tok(&p, end, &t);
+		if (strncasecmp(key, "BODY[", 5) || !(b = strchr(key, ']'))) {
+			skip_value(&p, end, &t);
+			continue;
+		}
+		*b = 0;
+		if (!strcasecmp(key + 5, "HEADER")) {
+			keep(&c->out[0], &c->len[0], &t);
+			continue;
+		}
+		for (i = 0; i < c->n; i++)
+			if (!strcmp(key + 5, c->secs[i]))
+				keep(&c->out[i + 1], &c->len[i + 1], &t);
+	}
+}
+
+int imap_fetch_sections(IMAP *im, unsigned long uid, const char *const *secs, int n, long cap,
+			char **out, long *len)
+{
+	char items[600];
+	SECCB c;
+	int i, r;
+	long o;
+	o = snprintf(items, sizeof(items), "UID FETCH %lu (UID BODY.PEEK[HEADER]", uid);
+	for (i = 0; i < n && o < (long)sizeof(items) - 60; i++)
+		o += snprintf(items + o, sizeof(items) - o, " BODY.PEEK[%s]<0.%ld>", secs[i], cap);
+	n = i;
+	str_copy(items + o, ")", sizeof(items) - o);
+	for (i = 0; i <= n; i++) {
+		out[i] = 0;
+		len[i] = 0;
+	}
+	c.secs = secs;
+	c.n = n;
+	c.out = out;
+	c.len = len;
+	r = run(im, 0, sec_cb, &c, "%s", items);
+	if (r <= 0)
+		for (i = 0; i <= n; i++) {
+			free(out[i]);
+			out[i] = 0;
+		}
+	return r;
+}
+
+/* the bytes of a literal that isn't ours, read and dropped a piece at a
+   time */
+static int stream_lit(IMAP *im, long lit, int (*put)(void *, const char *, long), void *ud)
+{
+	SBUF b;
+	int going = put != 0;
+	sb_init(&b);
+	while (lit > 0) {
+		long k = lit > 4096 ? 4096 : lit;
+		sb_reset(&b);
+		if (!conn_getbytes(im->c, &b, k)) {
+			str_copy(im->err, im->c->err, sizeof(im->err));
+			sb_free(&b);
+			return -1;
+		}
+		if (going && !put(ud, b.s, k))
+			going = 0;	/* the rest read and dropped */
+		lit -= k;
+	}
+	sb_free(&b);
+	return going || !put ? 1 : 0;
+}
+
+int imap_fetch_stream(IMAP *im, unsigned long uid, const char *sec,
+		      int (*put)(void *ud, const char *s, long n), void *ud)
+{
+	char tag[8], want[40];
+	SBUF line;
+	int ok = 1, got = 0;
+	snprintf(tag, sizeof(tag), "T%04u", ++im->tag);
+	snprintf(want, sizeof(want), "BODY[%s]", sec);
+	if (!conn_cmd(im->c, 0, "%s UID FETCH %lu (UID BODY.PEEK[%s])", tag, uid, sec)) {
+		str_copy(im->err, im->c->err, sizeof(im->err));
+		return -1;
+	}
+	sb_init(&line);
+	for (;;) {
+		long n = conn_getline(im->c, &line), lit;
+		const char *br;
+		if (n < 0) {
+			str_copy(im->err, im->c->err, sizeof(im->err));
+			sb_free(&line);
+			return -1;
+		}
+		if (n > 5 && !strncmp(line.s, tag, 5) && line.s[5] == ' ') {
+			int r = !strncasecmp(line.s + 6, "OK", 2);
+			if (!r)
+				str_copy(im->err, line.s + 6, sizeof(im->err));
+			sb_free(&line);
+			return r && got ? ok : r ? 0 : 0;
+		}
+		/* a line ending in {n}: n bytes follow; ours when it names the section */
+		if (n < 3 || line.s[n - 1] != '}' || !(br = strrchr(line.s, '{')))
+			continue;
+		lit = strtol(br + 1, 0, 10);
+		if (lit < 0) {
+			str_copy(im->err, "the server sent a damaged answer", sizeof(im->err));
+			sb_free(&line);
+			return -1;
+		}
+		if (!got && line.s[0] == '*' && str_istr(line.s, want)) {
+			int r = stream_lit(im, lit, put, ud);
+			if (r < 0) {
+				sb_free(&line);
+				return -1;
+			}
+			got = 1;
+			ok = r;
+		} else if (stream_lit(im, lit, 0, 0) < 0) {
+			sb_free(&line);
+			return -1;
+		}
+	}
+}
+
 int imap_fetch_body(IMAP *im, unsigned long uid, char **body, long *len)
 {
 	STEAL st;

@@ -6,9 +6,9 @@
 server: Options > Settings opens on Mail with the cursor in its first
 field;
 
-- Tab twice: past the two numbers to "Keep read messages on disk", a
-  ring round its tick; Space switches it off;
-- Shift+Tab three times: back through the fields to the list of pages,
+- Tab three times: past the three numbers to "Keep read messages on disk",
+  a ring round its tick; Space switches it off;
+- Shift+Tab four times: back through the fields to the list of pages,
   the ring round "Mail"; Down three times: the Look page;
 - Tab: "Use colours"; Space switches it off; Return: OK.
 
@@ -66,12 +66,14 @@ try:
     menu(340, 43)                        # Options > Settings...
     r.key(K["TAB"])
     time.sleep(0.4)
+    r.key(K["TAB"])                      # the large messages' size (2.26)
+    time.sleep(0.4)
     r.key(K["TAB"])                      # the tick "Keep read messages on disk"
     time.sleep(0.6)
     r.shot("k1-ring-on-tick")
     r.key(0x39)                          # Space: off
     time.sleep(0.8)
-    for _ in range(3):
+    for _ in range(4):
         r.key(K["TAB"], shift=True)      # the fields, then the list
         time.sleep(0.4)
     r.shot("k2-ring-on-list")

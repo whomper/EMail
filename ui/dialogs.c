@@ -743,7 +743,7 @@ int dlg_account(ACCOUNT *a)
  * black bar) and that part's settings on the right: ticks (a box that is
  * crossed when on, clicked on the box or its words) and framed fields. */
 
-static char s_zone[40], s_zlabel[42], s_check[4], s_page[5], s_wrap[3];
+static char s_zone[40], s_zlabel[42], s_check[4], s_page[5], s_wrap[3], s_big[5];
 #define SIG_ROWS 4
 #define SIG_W 40			/* a row shows */
 #define SIG_CAP 78			/* and holds: a line of mail */
@@ -1098,15 +1098,19 @@ static void band_badge(void)
 /* Settings' numbers in their ranges, or an alert that says what to type
    (Erez, 9 Nov 2026: D30, the words approved): the page shown with the
    field, which gets the cursor; nothing is saved until they are */
-static short f_page, f_wrap, s_ok_obj, s_next_edit;
+static short f_page, f_wrap, f_big, s_ok_obj, s_next_edit;
 
 static int settings_numbers_ok(void)
 {
-	short pg = (short)atoi(s_page), wr = (short)atoi(s_wrap), page = 0, field = 0;
+	short pg = (short)atoi(s_page), wr = (short)atoi(s_wrap), big = (short)atoi(s_big), page = 0, field = 0;
 	if (pg < 20 || pg > 1000) {
 		alert(1, "[1][Messages to load at a time:|type a number from 20 to 1000.][ OK ]");
 		page = page_of[f_page];
 		field = f_page;
+	} else if (big < 50 || big > 9999) {
+		alert(1, "[1][Messages larger than ... KB:|type a number from 50 to 9999.][ OK ]");
+		page = page_of[f_big];
+		field = f_big;
 	} else if (wr < 40 || wr > 78) {
 		alert(1, "[1][Wrap lines at column:|type a number from 40 to 78.][ OK ]");
 		page = page_of[f_wrap];
@@ -1224,6 +1228,7 @@ static void settings_load(void)
 	str_copy(s_lang, opt.translate_to[0] ? opt.translate_to : "en", sizeof(s_lang));
 	snprintf(s_check, sizeof(s_check), "%d", opt.check);
 	snprintf(s_page, sizeof(s_page), "%d", opt.page);
+	snprintf(s_big, sizeof(s_big), "%d", opt.bigkb);
 	snprintf(s_wrap, sizeof(s_wrap), "%d", opt.wrap);
 	s_on[T_KEEP] = opt.keepcache;
 	s_on[T_START] = opt.startoffline;
@@ -1276,8 +1281,14 @@ static void part_mail(short x, short y)
 	d_add(G_STRING, 0, 0, (long)"min", x + FX + 4, ROW(0), 3, 1);
 	d_add(G_STRING, 0, 0, (long)"Messages to load at a time", x, ROW(1), 26, 1);
 	f_page = d_field(x + FX, ROW(1), s_page, 4, '9');
-	d_tick(x, ROW(2), "Keep read messages on disk", T_KEEP);
-	d_tick(x, ROW(3), "Start offline, with the mail on disk", T_START);
+	/* a larger message comes without its attachments, which stay on the
+	   server and come when one is saved (Erez's words, 21 Nov 2026) */
+	d_add(G_STRING, 0, 0, (long)"Messages larger than", x, ROW(2), 20, 1);
+	f_big = d_field(x + FX, ROW(2), s_big, 4, '9');
+	d_add(G_STRING, 0, 0, (long)"KB:", x + FX + 5, ROW(2), 3, 1);
+	d_add(G_STRING, 0, 0, (long)"without attachments", x + 3, ROW(3), 19, 1);
+	d_tick(x, ROW(4), "Keep read messages on disk", T_KEEP);
+	d_tick(x, ROW(5), "Start offline, with the mail on disk", T_START);
 }
 
 static void part_writing(short x, short y)
@@ -1406,6 +1417,7 @@ int dlg_settings(void)
 	str_copy(opt.translate_to, s_lang, sizeof(opt.translate_to));
 	opt.check = (short)atoi(s_check);
 	opt.page = (short)atoi(s_page);		/* in range: settings_numbers_ok */
+	opt.bigkb = (short)atoi(s_big);
 	opt.wrap = (short)atoi(s_wrap);
 	opt.keepcache = s_on[T_KEEP];
 	opt.startoffline = s_on[T_START];

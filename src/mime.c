@@ -697,7 +697,8 @@ static void add_text(WALK *w, const char *body, long n, short enc, const char *c
 	free(txt);
 }
 
-static void add_part(WALK *w, const char *name, const char *type, long off, long len, short enc)
+static void add_part(WALK *w, const char *name, const char *type, long off, long len, short enc,
+		     const char *left)
 {
 	MIMEPART *p;
 	if (w->m->nparts >= MIME_MAXPARTS)
@@ -710,6 +711,26 @@ static void add_part(WALK *w, const char *name, const char *type, long off, long
 	p->enc = enc;
 	p->size = enc == ENC_BASE64 ? len * 3 / 4 : len;
 	p->summary = 0;
+	p->left = 0;
+	if (left) {
+		/* "X-EMail-Left: 2 base64 1048576": on the server, its section
+		   and its size there (the decoded size about 3/4 of it) */
+		char sec[16];
+		long n = (long)strcspn(left, " \t");
+		str_copy(sec, left, n + 1 < (long)sizeof(sec) ? n + 1 : (long)sizeof(sec));
+		p->left = strdup(sec);
+		left += n;
+		while (*left == ' ' || *left == '\t')
+			left++;
+		if (str_istarts(left, "base64"))
+			p->enc = ENC_BASE64;
+		else if (str_istarts(left, "quoted-printable"))
+			p->enc = ENC_QP;
+		left += strcspn(left, " \t");
+		p->size = atol(left);
+		if (p->enc == ENC_BASE64)
+			p->size = p->size / 4 * 3;
+	}
 }
 
 static void walk(WALK *w, long start, long end, int depth, int in_alt);
@@ -884,7 +905,11 @@ static void walk(WALK *w, long start, long end, int depth, int in_alt)
 			name = strdup("message.eml");
 		if (!name && !strcmp(type, "text/calendar"))
 			name = strdup("invite.ics");
-		add_part(w, name, type, start + hl, n - hl, enc);
+		{
+			char *left = mime_header(r, hl, "X-EMail-Left");
+			add_part(w, name, type, start + hl, n - hl, enc, left);
+			free(left);
+		}
 		free(name);
 		if (w->m->nparts && mime_is_calendar(&w->m->parts[w->m->nparts - 1]))
 			w->m->parts[w->m->nparts - 1].summary = ics_summary(w->raw, &w->m->parts[w->m->nparts - 1]);
@@ -1012,8 +1037,101 @@ void mime_free(MSG *m)
 		free(m->parts[i].name);
 		free(m->parts[i].type);
 		free(m->parts[i].summary);
+		free(m->parts[i].left);
 	}
 	free(m);
+}
+
+static int b64v(u8 c)
+{
+	if (c >= 'A' && c <= 'Z') return c - 'A';
+	if (c >= 'a' && c <= 'z') return c - 'a' + 26;
+	if (c >= '0' && c <= '9') return c - '0' + 52;
+	if (c == '+') return 62;
+	if (c == '/') return 63;
+	return -1;
+}
+
+static int hexv(u8 c)
+{
+	if (c >= '0' && c <= '9') return c - '0';
+	if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+	if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+	return -1;
+}
+
+void mime_dec_init(MIMEDEC *d, const char *encoding)
+{
+	memset(d, 0, sizeof(*d) - sizeof(d->work));
+	d->enc = encoding && str_istarts(encoding, "base64") ? ENC_BASE64 :
+		 encoding && str_istarts(encoding, "quoted-printable") ? ENC_QP : ENC_7BIT;
+}
+
+const char *mime_enc_name(short enc)
+{
+	return enc == ENC_BASE64 ? "base64" : enc == ENC_QP ? "quoted-printable" : "8bit";
+}
+
+long mime_dec_feed(MIMEDEC *d, const char *in, long n, char *out)
+{
+	char *p = out;
+	long i, m;
+	const char *w;
+	if (d->enc == ENC_BASE64) {
+		for (i = 0; i < n && !d->done; i++) {
+			int v;
+			if (in[i] == '=') {
+				d->done = 1;
+				break;
+			}
+			if ((v = b64v((u8)in[i])) < 0)
+				continue;
+			d->acc = (d->acc << 6) | v;
+			d->bits += 6;
+			if (d->bits >= 8) {
+				d->bits -= 8;
+				*p++ = (char)(d->acc >> d->bits);
+			}
+		}
+		return p - out;
+	}
+	if (d->enc != ENC_QP) {
+		memcpy(out, in, n);
+		return n;
+	}
+	/* quoted-printable: what the last piece kept, then this one */
+	if (n > MIME_DEC_PIECE)
+		n = MIME_DEC_PIECE;
+	memmove(d->work + d->nc, in, n);
+	m = d->nc + n;
+	w = d->work;
+	d->nc = 0;
+	for (i = 0; i < m; i++) {
+		u8 c = (u8)w[i];
+		if (c == '=') {
+			if (m - i < 3 && !(m - i == 2 && w[i + 1] == '\n')) {
+				/* "=", "=4", "=\r" at the end: the rest comes next */
+				d->nc = (short)(m - i);
+				memmove(d->work, w + i, d->nc);
+				break;
+			}
+			if (w[i + 1] == '\n') {
+				i++;
+				continue;
+			}
+			if (w[i + 1] == '\r' && w[i + 2] == '\n') {
+				i += 2;
+				continue;
+			}
+			if (hexv((u8)w[i + 1]) >= 0 && hexv((u8)w[i + 2]) >= 0) {
+				*p++ = (char)(hexv((u8)w[i + 1]) * 16 + hexv((u8)w[i + 2]));
+				i += 2;
+				continue;
+			}
+		}
+		*p++ = (char)c;
+	}
+	return p - out;
 }
 
 char *mime_part_data(const char *raw, const MIMEPART *p, long *outlen)

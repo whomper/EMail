@@ -295,7 +295,8 @@ int main(int argc, char **argv)
 		for (i = 0; i < m->nparts; i++) {
 			printf("Attachment: ");
 			say(m->parts[i].name);
-			printf(" (%s, %ld bytes)\n", m->parts[i].type, m->parts[i].size);
+			printf(" (%s, %ld bytes%s)\n", m->parts[i].type, m->parts[i].size,
+			       m->parts[i].left ? ", on the server" : "");
 			if (mime_is_calendar(&m->parts[i])) {
 				printf("Invitation: ");
 				say(m->parts[i].summary ? m->parts[i].summary : "");
@@ -308,6 +309,40 @@ int main(int argc, char **argv)
 		mime_free(m);
 		free(raw);
 		fold_close(f);
+	} else if (!strcmp(cmd, "savepart") && a && argc > 7) {
+		/* the reader's Save attachment: savepart ACCT FOLDER UID N FILE,
+		   the Nth attachment; one left on the server downloaded into
+		   the file a piece at a time (a large message: Erez, 21 Nov 2026) */
+		FINFO *fi = find_folder(a, argv[4]);
+		FOLDER *f;
+		HDR *h;
+		char *raw, *data;
+		long len, dl;
+		MSG *m;
+		short i = (short)atoi(argv[6]);
+		int ok;
+		if (!fi)
+			return 1;
+		f = fold_open(a, fi);
+		h = fold_get(f, strtoul(argv[5], 0, 10));
+		if (!h || !(raw = mail_fetch(f, h, &len)))
+			return fail("fetch");
+		m = mime_parse(raw, len);
+		if (i < 0 || i >= m->nparts)
+			return fail("no such attachment");
+		if (m->parts[i].left) {
+			ok = mail_part_to_file(f, h->uid, m->parts[i].left, m->parts[i].enc, m->parts[i].size, argv[7]);
+		} else {
+			data = mime_part_data(raw, &m->parts[i], &dl);
+			ok = data && pf_save(argv[7], data, dl) >= 0;
+			free(data);
+		}
+		printf("saved: %d%s\n", ok, m->parts[i].left ? " (from the server)" : "");
+		mime_free(m);
+		free(raw);
+		fold_close(f);
+		if (!ok)
+			return fail("savepart");
 	} else if (!strcmp(cmd, "invite") && a && argc > 6) {
 		/* the reader's Add to ECal without the VA_START: the message's
 		   first invitation, decoded, to the file named (INVITE.ICS) */

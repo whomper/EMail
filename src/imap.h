@@ -69,6 +69,32 @@ int imap_fetch_seq(IMAP *im, const char *seqset, const char *items,
 		   void (*cb)(void *ud, IMAPFETCH *f), void *ud);
 /* message and unseen counts of a mailbox without selecting it */
 int imap_status(IMAP *im, const char *mbox, long *messages, long *unseen);
+/* a message's parts, from its BODYSTRUCTURE: the leaves, in order, with
+   their section ("1", "2.1"); of a multipart/alternative only the part
+   EMail shows (the HTML or a multipart/related around it, else the plain
+   text: Erez, 24 Oct 2026), so the others are neither shown nor listed */
+typedef struct {
+	char sec[16];		/* "1", "2.1" */
+	char type[48];		/* "text/plain", lower case */
+	char name[64];		/* the file name (filename= or name=), as sent */
+	char charset[24];
+	char enc[20];		/* "base64", "quoted-printable", "7bit"... */
+	long size;		/* encoded bytes, as the server counts them */
+	short attach;		/* Content-Disposition: attachment */
+} IMAPPART;
+#define IMAP_MAXPARTS 32
+/* 1 and *n set; 0/-1 as run() */
+int imap_bodystructure(IMAP *im, unsigned long uid, IMAPPART *parts, int max, int *n);
+/* the header (BODY.PEEK[HEADER]) and the sections secs[0..n), each at most
+   cap bytes (BODY.PEEK[s]<0.cap>), in one command: out[0] the header,
+   out[1..n] the sections, malloc'ed (0: none came), len[] their sizes */
+int imap_fetch_sections(IMAP *im, unsigned long uid, const char *const *secs, int n, long cap,
+			char **out, long *len);
+/* one section streamed: put(ud, bytes, n) for each piece as it comes,
+   never all of it in memory (an attachment left on the server); put
+   returns 0 to give up (the rest is read and dropped) */
+int imap_fetch_stream(IMAP *im, unsigned long uid, const char *sec,
+		      int (*put)(void *ud, const char *s, long n), void *ud);
 /* a whole message (BODY.PEEK[]), malloc'ed; *body 0 when it is gone */
 int imap_fetch_body(IMAP *im, unsigned long uid, char **body, long *len);
 /* the same for n folders at once: the questions go out together and the
