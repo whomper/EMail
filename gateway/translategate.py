@@ -12,6 +12,13 @@ is common/src/translate.c:
     GET  /languages                 CODE<TAB>NAME, one line a language
     POST /translate?to=CODE[&from=CODE]   the text as the body (8 KB at most)
 
+  and for an app's Languages page (standards/TRANSLATION-SERVICE.md):
+
+    GET  /languages?all=1           cap_mb N / used_mb N / CODE NAME MB installed|available
+    POST /languages                 the languages wanted ("he,de"), sent on OK:
+                                    202 "job N" (X-Translate-Job), a job installs and removes
+    GET  /job                       job N / running + bytes D of T | done | failed: why
+
   answered by 200 with the translation (X-Translate-From: the language
   used), or, already in the target language, by 200 with X-Translate-Same: 1
   and no body; refused with one line "translategate: why" and 400, 413,
@@ -39,10 +46,12 @@ sentencepiece in its own venv (Erez, 7 Nov 2026).
 """
 
 import argparse
+import json
 import os
 import re
 import select
 import socket
+import socketserver
 import sys
 import threading
 import time
@@ -50,6 +59,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qsl, urlsplit
 
 import aeragate
+import translatelangs
 
 VERSION = "1.0"
 PROTOCOL = "1"
@@ -58,11 +68,17 @@ PROTOCOL = "1"
 class Config:
     allow = []
     max_bytes = 8192            # a request's body
+    local_bytes = 256 << 10     # one on the local socket: a whole page or text, for webgate and pdfgate
+    local_seconds = 600
     seconds = 60                # a request, then 504
     short = 300                 # a body this small has a worker of its own (a subject, a few words)
     workers = 2                 # requests translated at once, the short one's included
     verbose = False
     engine = None
+    models = "/opt/translategate/models"
+    state = "/var/lib/translategate"    # the languages' job: request (ours) and job (translatelangs')
+    start_job = None                    # tests: run the job here (on the Gateway systemd starts it)
+    restart = staticmethod(lambda: os._exit(0))     # systemd starts translategate again
 
 
 CODE = re.compile(r"[a-z]{2,3}(-[A-Za-z0-9]{2,4})?")
@@ -253,12 +269,19 @@ class Argos:
         return sorted(self.names.items())
 
     def pairs(self):
-        return set(self.pair)
+        """the installed pairs, and those through English (he>en>de)"""
+        direct = set(self.pair)
+        return direct | {(a, b) for a, x in direct for y, b in direct if x == "en" == y and a != b}
 
     def detect(self, text):
-        return detect(text, {a for a, _ in self.pair})
+        # among every language detect() knows, not only the installed
+        # sources: German with en,he installed is German (422, the pair
+        # isn't installed), never "already English"
+        return detect(text, set(STOPWORDS) | {code for code, _, _ in SCRIPTS} | {a for a, _ in self.pair})
 
     def translate(self, texts, src, dst, check=lambda: None):
+        if (src, dst) not in self.pair:         # through English
+            return self.translate(self.translate(texts, src, "en", check), "en", dst, check)
         tr, sp = self.pair[(src, dst)]
         out = []
         for t in texts:
@@ -464,7 +487,16 @@ class Handler(BaseHTTPRequestHandler):
         self.reply(code if code in (400, 413) else 400, "bad request")
 
     def note(self, text):
-        aeragate.say("translategate: %s %s" % (self.client_address[0], text))
+        aeragate.say("translategate: %s %s" % (self.who(), text))
+
+    def who(self):
+        return self.client_address[0]
+
+    def max_bytes(self):
+        return Config.max_bytes
+
+    def seconds(self):
+        return Config.seconds
 
     def reply(self, status, why, headers=(), body=None):
         data = body if body is not None else ("translategate: %s\n" % why).encode()
@@ -482,8 +514,8 @@ class Handler(BaseHTTPRequestHandler):
         except OSError:
             pass
 
-    def refuse(self, status, why, n=0, pair=""):
-        self.reply(status, why)
+    def refuse(self, status, why, n=0, pair="", headers=()):
+        self.reply(status, why, headers=headers)
         self.note("%s%d, %d bytes (%s)" % (pair + " " if pair else "", status, n, why))
 
     def allowed(self):
@@ -500,6 +532,23 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/status":
             text = "translategate %s\nengine %s %s\n%s\n" % (
                 PROTOCOL, eng.name, eng.version, "ready" if eng.ready() else "loading")
+        elif path == "/languages" and urlsplit(self.path).query == "all=1":
+            # the Languages page: every language that can be had, its MB,
+            # whether it is here; the room for them (translatelangs.CAP_MB)
+            here = translatelangs.installed(Config.models)
+            rows = translatelangs.table()
+            text = "cap_mb %d\nused_mb %d\n" % (translatelangs.CAP_MB, translatelangs.size_mb(here, rows))
+            text += "".join("%s\t%s\t%d\t%s\n" % (c, n, mb, "installed" if c in here else "available")
+                            for c, n, mb in rows)
+        elif path == "/job":
+            jid, state, job = Jobs.current()
+            text = "job %d\n" % jid
+            if state == "running":
+                text += "running\nbytes %d of %d\n" % (job.get("done", 0), job.get("total", 0))
+            elif state == "failed":
+                text += "failed: %s\n" % job.get("why", "")
+            else:
+                text += state + "\n"
         elif path == "/languages":
             text = "".join("%s\t%s\n" % kv for kv in eng.languages()) if eng.ready() else ""
             if not eng.ready():
@@ -516,6 +565,9 @@ class Handler(BaseHTTPRequestHandler):
         if not self.allowed():
             return
         url = urlsplit(self.path)
+        if url.path == "/languages":
+            self.languages()
+            return
         if url.path != "/translate":
             self.refuse(404, "no such page")
             return
@@ -534,8 +586,8 @@ class Handler(BaseHTTPRequestHandler):
             self.refuse(400, "no Content-Length")
             return
         size = int(size)
-        if size > Config.max_bytes:
-            self.refuse(413, "the text is over %d KB" % (Config.max_bytes >> 10), size)
+        if size > self.max_bytes():
+            self.refuse(413, "the text is over %d KB" % (self.max_bytes() >> 10), size)
             return
         data = self.rfile.read(size)
         if len(data) < size:
@@ -560,9 +612,11 @@ class Handler(BaseHTTPRequestHandler):
             return
         langs = dict(eng.languages())
         if used not in langs or to not in langs or (used, to) not in eng.pairs():
-            self.refuse(422, "that pair of languages isn't installed", size, pair)
+            # (X-Translate-From: the language found, so the app can name it)
+            self.refuse(422, "that pair of languages isn't installed", size, pair,
+                        headers=[("X-Translate-From", used)])
             return
-        deadline = t0 + Config.seconds
+        deadline = t0 + self.seconds()
         sock = self.connection
 
         def check():
@@ -583,7 +637,7 @@ class Handler(BaseHTTPRequestHandler):
             if str(e) == "dropped":
                 self.note("%s dropped, %d bytes" % (pair, size))
             else:
-                self.refuse(504, "it took over %d s" % Config.seconds, size, pair)
+                self.refuse(504, "it took over %d s" % self.seconds(), size, pair)
             return
         except Exception as e:          # the engine's words could hold the text: its name only
             self.refuse(500, "the engine failed", size, pair + " (%s)" % type(e).__name__)
@@ -595,12 +649,159 @@ class Handler(BaseHTTPRequestHandler):
         self.note("%s 200, %d bytes in, %d out, %.1f s" % (pair, size, len(out), time.monotonic() - t0))
 
 
+def _languages(self):
+    """POST /languages: the set of languages wanted (codes, by commas or
+    lines), sent once when the Languages page closes with OK: installed
+    and removed by a job; answered at once with its number"""
+    size = self.headers.get("Content-Length", "")
+    if not size.isdigit() or int(size) > 4096:
+        self.refuse(400, "no Content-Length" if not size.isdigit() else "too long")
+        return
+    try:
+        codes = set(re.split(r"[\s,]+", self.rfile.read(int(size)).decode("ascii").strip())) - {""}
+    except UnicodeDecodeError:
+        codes = {"?"}
+    rows = translatelangs.table()
+    known = {c for c, _, _ in rows}
+    if not all(CODE.fullmatch(c) and c in known for c in codes):
+        self.refuse(400, "a language code isn't right")
+        return
+    want = codes | {"en"}
+    need = translatelangs.size_mb(want, rows)
+    if need > translatelangs.CAP_MB:
+        self.refuse(422, "those languages take %d MB; %d MB fit" % (need, translatelangs.CAP_MB))
+        return
+    if want == translatelangs.installed(Config.models):
+        self.reply(200, "", body=b"job 0\ndone\n")
+        return
+    try:
+        jid = Jobs.start(want)
+    except OSError as e:
+        self.refuse(503, "can't start the job (%s)" % type(e).__name__)
+        return
+    if jid is None:
+        self.refuse(503, "a languages job is running")
+        return
+    self.reply(202, "", headers=[("X-Translate-Job", str(jid))], body=("job %d\n" % jid).encode())
+    self.note("languages job %d: %s" % (jid, ",".join(sorted(want))))
+
+
+class Jobs:
+    """the languages' job: one at a time, started by POST /languages,
+    done by translatelangs (translategate-langs.service); when it ends
+    with the models changed, translategate starts again with them"""
+    lock = threading.Lock()
+    started = None
+
+    @staticmethod
+    def read(name):
+        try:
+            with open(os.path.join(Config.state, name)) as f:
+                return json.load(f)
+        except (OSError, ValueError):
+            return None
+
+    @classmethod
+    def current(cls):
+        """(id, state, the job's dict)"""
+        req, job = cls.read("request") or {}, cls.read("job") or {}
+        rid, jid = req.get("id", 0), job.get("id", 0)
+        if rid > jid:
+            return rid, "running", {"done": 0, "total": 0}
+        return jid, job.get("state", "none") if jid else "none", job
+
+    @classmethod
+    def start(cls, want):
+        with cls.lock:
+            jid, state, _ = cls.current()
+            if state == "running":
+                return None
+            jid += 1
+            path = os.path.join(Config.state, "request")
+            with open(path + ".new", "w") as f:
+                json.dump({"id": jid, "want": sorted(want)}, f)
+            os.replace(path + ".new", path)
+            cls.started = jid
+        if Config.start_job:
+            Config.start_job()
+        return jid
+
+    @classmethod
+    def watch(cls):
+        while True:
+            time.sleep(2)
+            cls.check()
+
+    @classmethod
+    def check(cls):
+        if cls.started is None:
+            return
+        jid, state, job = cls.current()
+        if jid == cls.started and state in ("done", "failed"):
+            cls.started = None
+            if job.get("changed"):
+                aeragate.say("translategate: the languages changed; starting again with them")
+                Config.restart()
+
+
+Handler.languages = _languages
+
+
 class Server(ThreadingHTTPServer):
     daemon_threads = True
 
     def handle_error(self, request, client_address):
         # never the traceback: its lines and values could quote the text
-        aeragate.say("translategate: %s error (%s)" % (client_address[0], sys.exc_info()[0].__name__))
+        who = client_address[0] if isinstance(client_address, tuple) else "local"
+        aeragate.say("translategate: %s error (%s)" % (who, sys.exc_info()[0].__name__))
+
+
+class LocalHandler(Handler):
+    """the local socket: the Gateway's own gateways (webgate, pdfgate,
+    through translateclient), on the same machine. The same /translate,
+    /status and /languages; a whole page or text at once (it is shaped
+    and translated here a paragraph at a time), with longer to do it;
+    nothing of the Languages page"""
+
+    def allowed(self):
+        if self.command == "POST" and urlsplit(self.path).path != "/translate" or \
+                urlsplit(self.path).path == "/job" or "all=1" in urlsplit(self.path).query:
+            self.refuse(404, "no such page")
+            return False
+        return True                     # who may connect is the socket's group and mode
+
+    def who(self):
+        return "local"
+
+    def max_bytes(self):
+        return Config.local_bytes
+
+    def seconds(self):
+        return Config.local_seconds
+
+
+class LocalServer(socketserver.ThreadingUnixStreamServer):
+    daemon_threads = True
+
+    def handle_error(self, request, client_address):
+        aeragate.say("translategate: local error (%s)" % sys.exc_info()[0].__name__)
+
+
+def serve_local(path):
+    """the local socket at path, for the gateways' users only (0660; the
+    group is the unit's, aera-translate)"""
+    try:
+        os.unlink(path)
+    except FileNotFoundError:
+        pass
+    old = os.umask(0o117)
+    try:
+        srv = LocalServer(path, LocalHandler)
+    finally:
+        os.umask(old)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    aeragate.say("translategate: local socket %s" % path)
+    return srv
 
 
 def parser():
@@ -612,8 +813,11 @@ def parser():
                     help="only this Atari's address may use the gateway (may repeat)")
     ap.add_argument("--engine", choices=sorted(ENGINES), default="stand-in")
     ap.add_argument("--models", default="/opt/translategate/models", help="argos: its models, one folder a pair")
+    ap.add_argument("--state", default="/var/lib/translategate", help="the languages' job's files")
     ap.add_argument("--workers", type=int, default=2, help="requests at once (one kept for short ones)")
     ap.add_argument("--time", type=int, default=60, help="seconds a request may take")
+    ap.add_argument("--local", help="a Unix socket for the Gateway's own gateways (translateclient), "
+                    "e.g. /run/translategate/local.sock")
     ap.add_argument("-v", "--verbose", action="store_true")
     return ap
 
@@ -626,7 +830,13 @@ def main(argv=None):
     Config.workers = a.workers
     Config.verbose = a.verbose
     LANES = Lanes(a.workers)
+    Config.models, Config.state = a.models, a.state
+    if Jobs.current()[1] == "running":  # a job translategate's start cut short: picked up again
+        Jobs.started = Jobs.current()[0]
+    threading.Thread(target=Jobs.watch, daemon=True).start()
     srv = Server((a.bind, a.port), Handler)
+    if a.local:
+        serve_local(a.local)
     aeragate.say("translategate %s listening on %s:%d" % (VERSION, a.bind, srv.server_address[1]))
     Config.engine = Argos(a.models, workers=Config.workers) if a.engine == "argos" else StandIn()
     if a.engine != "argos":             # (argos says its own once it has loaded)
