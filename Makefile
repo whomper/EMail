@@ -70,21 +70,18 @@ PATARI  := $(patsubst plat_tos,plat_tos pad_plat,$(patsubst tls_ovl,tls_ovl pad_
 PUI     := $(patsubst main,main pad_main,$(UI))
 PADS    := $(foreach p,nf conn store ovl plat tlsovl main,-Wl,-u,pad_$(p)) -Wl,-u,pad_store_ro -Wl,-u,pad_tlsovl_ro
 OBJS0   := $(OBJDIR)/crt0.o $(OBJDIR)/sting_s.o $(OBJDIR)/nf.o $(OBJDIR)/pad_nf.o $(OBJDIR)/crash_s.o \
-           $(addprefix $(OBJDIR)/,$(addsuffix .o,$(PCORE) ovl pad_ovl $(PATARI) $(PUI)))
+           $(addprefix $(OBJDIR)/,$(addsuffix .o,$(PCORE) ovl pad_ovl $(PATARI) $(PUI) cpucheck))
 # 2.21's pads (the syncs of 17 Nov 2026 moved nearly every function): after
 # each object, code, read-only data, data and BSS in bytes, so everything
 # outside the files the syncs changed is at 2.20's places modulo 256, as
 # common/tools/profpad.py found them against 2.20's build. Each is
 # common/atari/codepad.S, its symbols kept with -u
-KEEP := nf:194:0:0:0 pad_nf:0:0:252:0 util:0:183:0:0 conn:192:0:0:0 pad_conn:122:0:0:88 \
-	smtp:36:0:252:0 ovl:124:0:0:0 tos:60:0:4:0 net_tos:78:0:0:0 gem:144:0:254:252 crash:198:0:0:0 \
-	bigbuf:122:0:250:6 text:196:0:0:242 find:100:0:0:250 dialogs:48:0:0:180 av:190:0:0:252 \
-	aboutbox:174:0:252:0 iconify:0:232:0:44 dd:0:0:0:202 field:170:0:0:0 pad_main:132:0:0:0 \
-	draw:202:0:254:0 tooltip:22:0:0:0 aboutline:80:0:246:154 win:242:0:0:0 list:44:0:0:0 \
-	editor:244:0:0:248 people_ask:200:0:0:240 dialog:134:0:0:232 compose:232:0:0:94 notify:0:0:0:66 \
-	mbar:0:0:252:0 main:160:0:0:0 reader:136:0:0:0 about:208:0:0:0 folders:0:0:248:4 sting_s:0:0:124:0 \
-	charset:170:0:0:0 mime:172:0:0:0 imap:174:0:0:0 pop3:152:0:0:0 store:172:0:0:0 mail:48:0:0:0 \
-	arrowed:202:0:0:0
+KEEP := nf:194:0:0:0 pad_nf:0:0:252:0 util:0:183:0:0 conn:192:0:0:0 pad_conn:122:0:0:88 smtp:36:0:252:0 ovl:124:0:0:0 tos:60:0:4:0 \
+	net_tos:78:0:0:0 gem:144:0:254:252 crash:198:0:0:0 bigbuf:122:0:250:6 text:196:0:0:242 find:100:0:0:250 dialogs:48:0:0:180 av:218:0:0:252 \
+	aboutbox:174:0:252:0 iconify:0:232:0:44 dd:0:0:0:202 field:170:0:0:0 pad_main:132:0:0:0 draw:202:0:254:0 tooltip:22:0:0:0 aboutline:80:0:246:154 \
+	win:242:0:0:0 list:44:0:0:0 editor:244:0:0:248 people_ask:200:0:0:240 dialog:134:0:0:232 compose:232:0:0:94 notify:0:0:0:66 mbar:0:0:252:0 \
+	main:160:0:0:0 reader:136:0:0:0 about:208:0:0:0 folders:0:0:248:4 sting_s:0:0:80:0 charset:170:0:0:0 mime:172:0:0:0 imap:174:0:0:0 \
+	pop3:152:0:0:0 store:172:0:0:0 mail:48:0:0:0 arrowed:202:0:0:0 tz:254:0:0:0 help:214:0:0:0 print:98:0:56:94 crash_s:0:0:0:176
 kp_obj   = $(word 1,$(subst :, ,$(1)))
 kp_size  = $(word $(2),$(subst :, ,$(1)))
 OBJS    := $(foreach o,$(OBJS0),$(o) $(foreach k,$(KEEP),$(if $(filter $(OBJDIR)/$(call kp_obj,$(k)).o,$(o)),$(OBJDIR)/keep_$(call kp_obj,$(k)).o)))
@@ -94,10 +91,21 @@ HDRS    := $(wildcard src/*.h atari/*.h atari/include/*.h ui/*.h \
            common/src/*.h common/atari/*.h common/atari/include/*.h common/ui/*.h common/dsp/*.h)
 
 # what goes onto the Atari: binary/ (built, never committed)
-all: binary/email.prg binary/emailchk.acc binary/tls.ovl binary/tlsfb.ovl binary/roots.dat
+all: binary/email.prg binary/emailchk.acc binary/emailfb.prg binary/emchkfb.acc binary/tls.ovl binary/tlsfb.ovl binary/roots.dat
 
 binary/email.prg: $(OBJDIR)/mail.elf common/tools/elf2tos.py | binary
 	PRGFLAGS=7 python3 common/tools/elf2tos.py $< $@
+
+# the FireBee edition (Erez, 22 Nov 2026; the guidelines, 7.4): the same
+# objects built again for the ColdFire by common's mkfirebee.py, from the
+# commands make gives for the 68000 build (cpucheck.c becomes
+# cpucheck_cf.S, which sends any other machine to EMAIL.PRG)
+binary/emailfb.prg: $(OBJDIR)/mail.elf common/tools/mkfirebee.py | binary
+	python3 common/tools/mkfirebee.py --elf $(OBJDIR)/mail.elf --outdir $(OBJDIR)/cf/ $@
+# and EMail check's, in place of EMAILCHK.ACC (a FireBee loads every .ACC)
+binary/emchkfb.acc: binary/emailchk.acc common/tools/mkfirebee.py | binary
+	python3 common/tools/mkfirebee.py --elf $(CHKDIR)/emailchk.elf \
+		--make 'OBJDIR=$(CHKDIR) APPCF= TRACECF="-ffunction-sections -fdata-sections"' --outdir $(OBJDIR)/cfchk/ $@
 
 # the family's TLS.OVL as AERA-Atari built it: copied, never built here
 binary/tls.ovl: common/tlsovl/tls.ovl | binary
@@ -170,7 +178,7 @@ $(OBJDIR)/pad_%.o: atari/pad_%.S | $(OBJDIR)
 CHKDIR  := build/chk
 CHKOBJ  := sting_s nf util charset mime links conn imap pop3 store newmail futil bidi secret ctime tz \
            ovl libc tos plat_tos net_tos sting gem tls_ovl bigbuf \
-           emailchk notify aboutline dsp_ovl av alert dialog aboutbox accmem bgwork twin busy field clip clipedit crash crash_s text click
+           emailchk notify aboutline dsp_ovl av alert dialog aboutbox accmem bgwork twin busy field clip clipedit crash crash_s text click cpucheck
 binary/emailchk.acc: FORCE | binary
 	$(MAKE) OBJDIR=$(CHKDIR) APPCF= TRACECF="-ffunction-sections -fdata-sections" $(CHKDIR)/emailchk.elf
 	PRGFLAGS=7 python3 common/tools/elf2tos.py $(CHKDIR)/emailchk.elf $@
@@ -336,6 +344,39 @@ REPLAYSRC   := common/tests/fuzz/fuzz_net.c common/tests/fuzz/replay.c
 $(OBJDIR)/replay_%: tests/fuzz/fuzz_%.c $(HOSTSRC) $(HDRS) $(HOSTLIB) $(REPLAYSRC) | $(OBJDIR)
 	$(HOSTCC) $(REPLAYFLAGS) -o $@ $< $(HOSTSRC) $(REPLAYSRC) $(HOSTLIB)
 
+# the FireBee edition's mail core under qemu-m68k -cpu cfv4e (Erez, 22 Nov
+# 2026): tests/coldfire/core.c with EMAILFB.PRG's own ColdFire objects
+# (build/cf/) and on the build machine; each input and 300 changed copies
+# through the MIME parser and the IMAP client, the two builds' sums the same
+CFT     := $(OBJDIR)/cftest
+CFTCC   := $(CC) -mcpu=5475 -Os -fomit-frame-pointer -ffreestanding -fno-builtin -fno-pic -fno-pie \
+           -fno-tree-loop-distribute-patterns -fno-asynchronous-unwind-tables -Wall -Wno-pointer-sign -DMAIL_TOS \
+           -nostdinc -isystem $(GCCINC) -Iatari/include -Icommon/atari/include -Isrc -Icommon/src -Iatari \
+           -Icommon/atari -Icommon/tests/fuzz
+CFTOBJ  := mime imap charset util links conn libc ctime store
+CFTIN_MIME := tests/mail/*.eml tests/fuzz/seeds/mime/*
+CFTIN_IMAP := tests/fuzz/seeds/imap/* tests/fuzz/found/imap/*
+$(CFT)/core_cf: tests/coldfire/core.c tests/coldfire/main_cf.c tests/coldfire/stubs_cf.c common/tests/fuzz/fuzz_net.c \
+		common/tests/coldfire/rt.S binary/emailfb.prg $(HDRS)
+	@mkdir -p $(CFT)
+	$(CC) -mcpu=5475 -c -o $(CFT)/rt.o common/tests/coldfire/rt.S
+	for f in tests/coldfire/core.c tests/coldfire/main_cf.c tests/coldfire/stubs_cf.c common/tests/fuzz/fuzz_net.c; do \
+	  $(CFTCC) -c -o $(CFT)/$$(basename $$f .c).o $$f || exit 1; done
+	$(CC) -mcpu=5475 -nostdlib -static -no-pie -Wl,-z,noexecstack -Wl,--gc-sections -o $@ \
+		$(addprefix $(CFT)/,rt.o main_cf.o core.o fuzz_net.o stubs_cf.o) \
+		$(addprefix $(OBJDIR)/cf/,$(addsuffix .o,$(CFTOBJ))) $(OBJDIR)/cf/rt/ll64.o
+$(CFT)/core_host: tests/coldfire/core.c tests/coldfire/main_host.c common/tests/fuzz/fuzz_net.c $(HOSTSRC) $(HDRS) $(HOSTLIB)
+	@mkdir -p $(CFT)
+	$(HOSTCC) $(REPLAYFLAGS) -o $@ tests/coldfire/main_host.c tests/coldfire/core.c $(HOSTSRC) \
+		common/tests/fuzz/fuzz_net.c $(HOSTLIB)
+cftest: $(CFT)/core_cf $(CFT)/core_host
+	$(CFT)/core_host mime $(CFTIN_MIME) > $(CFT)/host.txt
+	$(CFT)/core_host imap $(CFTIN_IMAP) >> $(CFT)/host.txt
+	qemu-m68k -cpu cfv4e $(CFT)/core_cf mime $(CFTIN_MIME) > $(CFT)/cf.txt
+	qemu-m68k -cpu cfv4e $(CFT)/core_cf imap $(CFTIN_IMAP) >> $(CFT)/cf.txt
+	diff $(CFT)/host.txt $(CFT)/cf.txt
+	@echo "cftest: $$(wc -l < $(CFT)/cf.txt) inputs, each with 300 changed copies: the ColdFire's core gives the host's every sum"
+
 # the 68000 builds looked at for word and long accesses at an odd stack
 # or frame offset, an address error on a 68000 (the guidelines, The
 # machines: common/tools/oddaccess.py)
@@ -365,7 +406,7 @@ binary/email.hyp: docs/GUIDE.md tools/mkhelp.py VERSION docs/front.json docs/hel
 # dist/email-x.y.zip (the icons in icons/), for the release workflow;
 # every name in lowercase (the guidelines' 6.6: MiNT's ext2 drives tell
 # EMAIL.PRG and email.prg apart)
-DIST    := binary/email.prg binary/emailchk.acc binary/tls.ovl binary/tlsfb.ovl binary/cacert.pem binary/roots.dat binary/email.hyp binary/email.ref
+DIST    := binary/email.prg binary/emailchk.acc binary/emailfb.prg binary/emchkfb.acc binary/tls.ovl binary/tlsfb.ovl binary/cacert.pem binary/roots.dat binary/email.hyp binary/email.ref
 ICONS   := icons/EMAIL.RSC icons/EMAILNV.RSC icons/EMAIL.ICN icons/EMAILMK.ICN
 dist: all help
 	rm -rf dist
@@ -379,4 +420,4 @@ dist: all help
 clean:
 	rm -rf $(OBJDIR) binary dist
 
-.PHONY: help all icons dist test itest clean fuzz FORCE
+.PHONY: help all icons dist test itest cftest clean fuzz FORCE
