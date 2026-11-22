@@ -8,8 +8,10 @@ The detail behind the README's Building, Source and Tests sections.
 
 ```sh
 sudo apt install gcc-m68k-linux-gnu python3   # Debian/Ubuntu; no MiNTLib needed
-make                          # binary/EMAIL.PRG, EMAILCHK.ACC, TLS.OVL (common's, as it is), CACERT.PEM and ROOTS.DAT
+make                          # binary/EMAIL.PRG, EMAILCHK.ACC, the FireBee's EMAILFB.PRG and EMCHKFB.ACC,
+                              # TLS.OVL and TLSFB.OVL (common's, as they are), CACERT.PEM and ROOTS.DAT
 make test                     # unit tests on this computer, the fuzz inputs again, the gateway's tests
+make cftest                   # the FireBee edition's mail core under qemu-m68k -cpu cfv4e, against this computer's
 make itest                    # against a local Dovecot and a test SMTP server
 make help HCP=/path/to/hcp    # binary/EMAIL.HYP and EMAIL.REF from docs/GUIDE.md
 make dist HCP=/path/to/hcp    # dist/: each release file, and EMAIL-x.y.zip, as on the Releases page
@@ -30,7 +32,14 @@ notes. Pushing a tag `v1.31` made with `git tag -a` does the same, with the tag'
 
 No MiNTLib is needed: the program is freestanding (`common/atari/` and `atari/`) and
 `common/tools/elf2tos.py` writes the TOS executable. It is built for the 68000, so it runs on every
-Atari from the ST to the Falcon. A Direct connection's TLS is not in it but in `TLS.OVL` (the AERA
+Atari from the ST to the Falcon. The FireBee edition, `EMAILFB.PRG` and `EMCHKFB.ACC` (Erez, 22 Nov 2026;
+the AERA guidelines, 7.4), is the same sources built again for the ColdFire by
+`common/tools/mkfirebee.py`, from the commands `make` gives for the 68000 build (in `build/cf/` and
+`build/cfchk/`). The first code of each is `common/atari/cpucheck.c` (`cpucheck_cf.S` in the FireBee
+files): `EMAIL.PRG` on a FireBee, and `EMAILFB.PRG` anywhere else, says which file to run and goes;
+an accessory says it once and stays quiet. `make cftest` runs the FireBee edition's own mail core
+(`build/cf/`) under `qemu-m68k -cpu cfv4e` against the same driver on this computer
+(`tests/coldfire/`). A Direct connection's TLS is not in it but in `TLS.OVL` (the AERA
 guidelines, 7.4): BearSSL, `tls.c` and the DSP code, 68030 code built once for the family in AERA-Atari
 (`common/tlsovl/TLS.OVL`) and copied to `binary/` as it is. `common/atari/tls_ovl.c` loads it the
 first time a Direct connection needs it, on a 68020 or better; an ST never does, and an `EMAIL.INF`
@@ -103,10 +112,12 @@ make build/fakeweb.acc build/fakeweb.prg && tests/hatari/link_test.py /tmp/mail-
 make help build/fakehelp.acc && tests/hatari/help_test.py /tmp/mail-help   # the Help key asks (a stand-in for) EHypView
 tests/hatari/langs_test.py /tmp/mail-langs         # Settings > Languages... and Translate into, against common's stand-in translategate
 tests/hatari/emailchk_test.py /tmp/mail-chk        # EMAILCHK.ACC: new mail told at the desktop, none while EMail runs
-tests/hatari/big_test.py /tmp/mail-big            # a large message on a 1 MB ST: without its attachment, then saved from the server
-tests/hatari/print_test.py /tmp/mail-print        # ^P under NVDI to its metafile driver, read back (PRINT_WDIALOG=1, PRINT_NOGDOS=1)
                                                    # (Falcon; also ST-1 or TT, never ST or Falcon-4: no accessory
                                                    # is tested on the 4 MB machines, Erez, 4 Nov 2026)
+tests/hatari/big_test.py /tmp/mail-big            # a large message on a 1 MB ST: without its attachment, then saved from the server
+tests/hatari/print_test.py /tmp/mail-print        # ^P under NVDI to its metafile driver, read back (PRINT_WDIALOG=1, PRINT_NOGDOS=1)
+tests/hatari/firebee_test.py /tmp/mail-fb          # each file on the other's machine: EMAIL.PRG and EMAILCHK.ACC on the FireBee
+                                                   # stand-in, EMAILFB.PRG on a Falcon and an ST, EMCHKFB.ACC on an ST-1: the alert
 AERA_WITH_NVDI=1 tests/hatari/font_test.py /tmp/mail-font   # a GDOS font under NVDI (Falcon, Falcon-4)
 tests/hatari/net_test.py /tmp/mail-st ST-1         # the same EMAIL.PRG on a 1 MB ST, through the gateway
 make build/trace/EMAIL.PRG && tests/hatari/scroll_test.py /tmp/mail-scroll   # what the panes draw while scrolling and choosing

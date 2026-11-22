@@ -34,8 +34,10 @@ reads and writes Hebrew.
 The files are in the latest release on EMail's GitHub page
 (github.com/whomper/EMail/releases), each on its own and all together in
 `EMAIL-x.y.zip`. Copy `EMAIL.PRG` to any folder on any drive: nothing
-has to be in a particular place. It is the same program for every Atari,
-from a 1 MB ST to a Falcon.
+has to be in a particular place. It is the same program for every ST,
+STE, TT and Falcon, from a 1 MB ST to a Falcon. On a FireBee, copy
+`EMAILFB.PRG` instead: the same EMail, built for the FireBee's ColdFire
+(each of the two says so if it is started on the other's machine).
 
 `TLS.OVL` holds the encryption for a Direct connection (see [Direct
 connection](#direct-connection)). On a TT or Falcon, copy it next to
@@ -47,7 +49,7 @@ is started from, which the desktop makes its own folder, so a folder of
 its own keeps it all together. Here it is `C:\EMAIL\`:
 
 ```
-C:\EMAIL\EMAIL.PRG      the program
+C:\EMAIL\EMAIL.PRG      the program (EMAILFB.PRG on a FireBee)
 C:\EMAIL\TLS.OVL       the encryption for a Direct connection (TT, Falcon)
 C:\EMAIL\TLSFB.OVL     the same on a FireBee, built for its ColdFire
 C:\EMAIL\EMAIL.INF      settings and accounts (each setting has a note above it)
@@ -71,7 +73,8 @@ Start it. The first time, EMail asks for your account.
 
 `EMAILCHK.ACC`, EMail check, is a desk accessory that tells you when new
 mail has come while EMail isn't running. It goes in the root of the
-boot drive (`C:\EMAILCHK.ACC`), with its settings beside it
+boot drive (`C:\EMAILCHK.ACC`; on a FireBee `EMCHKFB.ACC`, in its
+place), with its settings beside it
 (`C:\EMAILCHK.INF`); leave it out if you don't want it. See [New mail
 while EMail isn't running](#new-mail-while-email-isnt-running).
 
@@ -248,7 +251,7 @@ A Direct connection needs:
 - `TLS.OVL` next to `EMAIL.PRG`, from the release: the encryption
   (BearSSL, and the DSP's part), about 140 KB, the same file for every
   AERA program. On a FireBee, `TLSFB.OVL` (the same, built for its
-  ColdFire): EMail takes it there by itself. EMail loads it when you switch the Direct connection on,
+  ColdFire): `EMAILFB.PRG` takes it there by itself. EMail loads it when you switch the Direct connection on,
   and says at once if it is missing or doesn't suit
 - 4 MB of memory or more (1 MB is not enough for TLS next to your mail)
 - `CACERT.PEM` and `ROOTS.DAT` next to `EMAIL.PRG`, both in the
@@ -540,7 +543,8 @@ the message being written at the cursor, or starts a new message.
 
 ## New mail while EMail isn't running
 
-**EMail check** (`EMAILCHK.ACC`, in the release beside `EMAIL.PRG`) is
+**EMail check** (`EMAILCHK.ACC`, in the release beside `EMAIL.PRG`;
+on a FireBee `EMCHKFB.ACC`, never both) is
 a small desk accessory that looks for new mail while EMail isn't
 running. Copy it to the root of the boot drive (`C:\`), with the other
 accessories, and restart the Atari. It takes about 180 KB: itself and

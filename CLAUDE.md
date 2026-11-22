@@ -103,9 +103,11 @@ These come from AERA-Atari's repo template and are the same in every app's CLAUD
   builds the help file with the version; no rigs, itest or real-TOS run.
   A change to the docs alone needs no release of its own: it goes out
   with the next one.
-- **A release** carries `EMAIL.PRG` (one program for every Atari), `EMAILCHK.ACC` (EMail check, the
-  new-mail accessory: `ui/emailchk.c`, `src/newmail.c`), `TLS.OVL` (common's, copied as it
-  is, never built here: guidelines 7.4), `EMAIL.HYP` and `.REF` (hcp from `common/tools/build-hcp.sh`),
+- **A release** carries `EMAIL.PRG` (the ST, STE, TT and Falcon), `EMAILCHK.ACC` (EMail check, the
+  new-mail accessory: `ui/emailchk.c`, `src/newmail.c`), the FireBee edition `EMAILFB.PRG` and
+  `EMCHKFB.ACC` (Erez, 22 Nov 2026; `common/tools/mkfirebee.py`, each file's alert naming the
+  other's: `make cftest` and `tests/hatari/firebee_test.py` when they change), `TLS.OVL` and
+  `TLSFB.OVL` (common's, copied as they are, never built here: guidelines 7.4), `EMAIL.HYP` and `.REF` (hcp from `common/tools/build-hcp.sh`),
   `CACERT.PEM`, `ROOTS.DAT` and the icon. The icons are committed in `icons/` (`make icons`).
 - The help file's front page (guidelines 4.3) is `docs/front.json`, laid out by
   `common/tools/helpfront.py`. Its window picture `docs/help/WINDOW.IMG` is committed: when
