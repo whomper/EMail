@@ -26,24 +26,22 @@ An e-mail program for the Atari ST, STE, TT and Falcon, written in C for GEM.
 memory (EMail takes about 332 KB); STinG, STiK, MiNTnet or MagiC-Net; and for encrypted mail (nearly all
 providers) the Gateway or a Direct connection (a Falcon or TT with 4 MB).
 
-Download the files from the **[latest release](https://github.com/whomper/EMail/releases/latest)**, one by
-one or all together in `EMAIL-x.y.zip`. For a FireBee, take `EMAIL-x.y-FIREBEE.ZIP` instead: the same files,
-by the same names, built for its ColdFire (each package's program says so if it is started on the other's
-machine).
+Download `EMAIL-x.y.zip` from the **[latest release](https://github.com/whomper/EMail/releases/latest)**;
+for a FireBee, `EMAIL-x.y-FIREBEE.ZIP`: the same files, by the same names, built for its ColdFire (each
+package's EMail says so if it is started on the other's machine). In either:
 
 | File | What it is |
 |---|---|
 | `EMAIL.PRG` | the program, for the ST, STE, TT and Falcon |
 | `EMAIL.HYP`, `EMAIL.REF` | the user guide, opened by the Help key |
-| `TLS.OVL`, `CACERT.PEM`, `ROOTS.DAT` | a Direct connection on a TT or Falcon: TLS and the root certificates |
-| `TLSFB.OVL` | in the FireBee package, in place of `TLS.OVL` |
+| `TLS.OVL`, `CACERT.PEM`, `ROOTS.DAT` | a Direct connection on a TT, Falcon or FireBee: TLS and the root certificates |
 | `EMAILCHK.ACC` | EMail check, the new-mail accessory (optional) |
 | `EMAIL.RSC`, `EMAILNV.RSC`, `*.ICN` | the desktop icon ([which one](docs/GUIDE.md#the-desktop-icon)) |
 
 1. Copy `EMAIL.PRG`, `EMAIL.HYP` and `EMAIL.REF` to a folder of their own, such as `C:\EMAIL\`.
 2. Set up [AERA-Gateway](https://github.com/whomper/AERA-Gateway) on a Raspberry Pi with your
    provider's servers. Or, on a Falcon or TT, copy `TLS.OVL`, `CACERT.PEM` and `ROOTS.DAT` beside
-   `EMAIL.PRG` (on a FireBee, `TLSFB.OVL`) and switch on **Options > Direct connection**.
+   `EMAIL.PRG` and switch on **Options > Direct connection**.
 3. Start EMail and fill in your account in **Options > Accounts**. Gmail, iCloud, Yahoo and Fastmail need
    an [app password](docs/GUIDE.md#app-passwords-gmail-icloud-yahoo-fastmail).
 4. Press **Help** for the [user guide](docs/GUIDE.md).

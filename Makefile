@@ -92,7 +92,7 @@ HDRS    := $(wildcard src/*.h atari/*.h atari/include/*.h ui/*.h \
 
 # what goes onto the Atari: binary/ (built, never committed)
 all: binary/email.prg binary/emailchk.acc binary/tls.ovl binary/roots.dat \
-	binary/firebee/email.prg binary/firebee/emailchk.acc binary/firebee/tlsfb.ovl
+	binary/firebee/email.prg binary/firebee/emailchk.acc binary/firebee/tls.ovl
 
 binary/email.prg: $(OBJDIR)/mail.elf common/tools/elf2tos.py | binary
 	PRGFLAGS=7 python3 common/tools/elf2tos.py $< $@
@@ -102,7 +102,8 @@ binary/email.prg: $(OBJDIR)/mail.elf common/tools/elf2tos.py | binary
 # binary/firebee/, EMAIL.PRG and EMAILCHK.ACC built again for the ColdFire
 # by common's mkfirebee.py from the commands make gives for the 68000 build
 # (cpucheck.c becomes cpucheck_cf.S, which sends any other machine to the
-# standard package), with TLSFB.OVL for TLS
+# standard package), with common's tlsfb.ovl as tls.ovl ("rename all other
+# FB files into their standard filename": a FireBee build loads tls.ovl)
 binary/firebee:
 	mkdir -p $@
 binary/firebee/email.prg: $(OBJDIR)/mail.elf common/tools/mkfirebee.py | binary/firebee
@@ -110,7 +111,7 @@ binary/firebee/email.prg: $(OBJDIR)/mail.elf common/tools/mkfirebee.py | binary/
 binary/firebee/emailchk.acc: binary/emailchk.acc common/tools/mkfirebee.py | binary/firebee
 	python3 common/tools/mkfirebee.py --elf $(CHKDIR)/emailchk.elf \
 		--make 'OBJDIR=$(CHKDIR) APPCF= TRACECF="-ffunction-sections -fdata-sections"' --outdir $(OBJDIR)/cfchk/ $@
-binary/firebee/tlsfb.ovl: common/tlsovl/tlsfb.ovl | binary/firebee
+binary/firebee/tls.ovl: common/tlsovl/tlsfb.ovl | binary/firebee
 	cp $< $@
 
 # the family's TLS.OVL as AERA-Atari built it: copied, never built here
@@ -408,20 +409,20 @@ binary/email.hyp: docs/GUIDE.md tools/mkhelp.py VERSION docs/front.json docs/hel
 # dist/email-x.y.zip (the icons in icons/), for the release workflow;
 # every name in lowercase (the guidelines' 6.6: MiNT's ext2 drives tell
 # EMAIL.PRG and email.prg apart)
-# a release: the standard package's files one by one, and two zips with
-# the same names inside, email-x.y.zip and email-x.y-firebee.zip (Erez,
-# 22 Nov 2026; EUpdate takes the one for the machine it runs on)
+# a release: two zips and nothing else, email-x.y.zip and
+# email-x.y-firebee.zip, the same names inside (Erez, 22 Nov 2026: "Remove
+# all files from root and just have two ZIP files, one for each platform";
+# EUpdate takes the one for the machine it runs on)
 SHARED  := binary/cacert.pem binary/roots.dat binary/email.hyp binary/email.ref
 DIST    := binary/email.prg binary/emailchk.acc binary/tls.ovl $(SHARED)
-DISTFB  := binary/firebee/email.prg binary/firebee/emailchk.acc binary/firebee/tlsfb.ovl $(SHARED)
+DISTFB  := binary/firebee/email.prg binary/firebee/emailchk.acc binary/firebee/tls.ovl $(SHARED)
 ICONS   := icons/EMAIL.RSC icons/EMAILNV.RSC icons/EMAIL.ICN icons/EMAILMK.ICN
 dist: all help
 	rm -rf dist
 	mkdir -p dist/zip/icons dist/zipfb/icons
-	cp $(DIST) dist/
 	cp $(DIST) dist/zip/
 	cp $(DISTFB) dist/zipfb/
-	for f in $(ICONS); do b=$$(basename $$f | tr A-Z a-z); cp $$f dist/$$b; cp $$f dist/zip/icons/$$b; \
+	for f in $(ICONS); do b=$$(basename $$f | tr A-Z a-z); cp $$f dist/zip/icons/$$b; \
 	  cp $$f dist/zipfb/icons/$$b; done
 	cd dist/zip && zip -q -9 -r ../email-$(VERSION_STR).zip .
 	cd dist/zipfb && zip -q -9 -r ../email-$(VERSION_STR)-firebee.zip .

@@ -32,13 +32,12 @@ reads and writes Hebrew.
 ## Installing
 
 The files are in the latest release on EMail's GitHub page
-(github.com/whomper/EMail/releases), each on its own and all together in
-`EMAIL-x.y.zip`. Copy `EMAIL.PRG` to any folder on any drive: nothing
+(github.com/whomper/EMail/releases), in `EMAIL-x.y.zip`. Copy `EMAIL.PRG` to any folder on any drive: nothing
 has to be in a particular place. It is the same program for every ST,
 STE, TT and Falcon, from a 1 MB ST to a Falcon. A FireBee has a package
 of its own, `EMAIL-x.y-FIREBEE.ZIP`: the same files by the same names,
-built for its ColdFire, with `TLSFB.OVL` in place of `TLS.OVL`. Each
-package's EMail says so if it is started on the other's machine.
+built for its ColdFire. Each package's EMail says so if it is started on
+the other's machine.
 
 `TLS.OVL` holds the encryption for a Direct connection (see [Direct
 connection](#direct-connection)). On a TT or Falcon, copy it next to
@@ -51,8 +50,7 @@ its own keeps it all together. Here it is `C:\EMAIL\`:
 
 ```
 C:\EMAIL\EMAIL.PRG      the program
-C:\EMAIL\TLS.OVL       the encryption for a Direct connection (TT, Falcon)
-C:\EMAIL\TLSFB.OVL     the same on a FireBee (its package)
+C:\EMAIL\TLS.OVL       the encryption for a Direct connection (TT, Falcon, FireBee)
 C:\EMAIL\EMAIL.INF      settings and accounts (each setting has a note above it)
 C:\EMAIL\EMAIL.KEY      the key the passwords in EMAIL.INF are encrypted with
 C:\EMAIL\ADDRESS.TXT   the addresses you wrote to (Ctrl+B without EContact)
@@ -250,8 +248,8 @@ A Direct connection needs:
   through the gateway there and leaves the setting as it is
 - `TLS.OVL` next to `EMAIL.PRG`, from the release: the encryption
   (BearSSL, and the DSP's part), about 140 KB, the same file for every
-  AERA program. On a FireBee, `TLSFB.OVL` (the same, built for its
-  ColdFire), in the FireBee package. EMail loads it when you switch the Direct connection on,
+  AERA program (the FireBee package's is the same, built for its
+  ColdFire). EMail loads it when you switch the Direct connection on,
   and says at once if it is missing or doesn't suit
 - 4 MB of memory or more (1 MB is not enough for TLS next to your mail)
 - `CACERT.PEM` and `ROOTS.DAT` next to `EMAIL.PRG`, both in the

@@ -9,7 +9,7 @@ The detail behind the README's Building, Source and Tests sections.
 ```sh
 sudo apt install gcc-m68k-linux-gnu python3   # Debian/Ubuntu; no MiNTLib needed
 make                          # binary/EMAIL.PRG, EMAILCHK.ACC, TLS.OVL (common's, as it is), CACERT.PEM and
-                              # ROOTS.DAT; binary/firebee/: the FireBee package's EMAIL.PRG, EMAILCHK.ACC, TLSFB.OVL
+                              # ROOTS.DAT; binary/firebee/: the FireBee package's EMAIL.PRG, EMAILCHK.ACC, TLS.OVL
 make test                     # unit tests on this computer, the fuzz inputs again, the gateway's tests
 make cftest                   # the FireBee package's mail core under qemu-m68k -cpu cfv4e, against this computer's
 make itest                    # against a local Dovecot and a test SMTP server
