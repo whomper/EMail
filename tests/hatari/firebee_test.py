@@ -7,12 +7,12 @@
 1. EMAIL.PRG on the FireBee stand-in (_CF_ in the jar): its alert
    (cpu_cf_alert: run EMAILFB.PRG), and after Return it is gone: no
    EMAIL.LOG (its own code never ran), no CRASH.LOG.
-2. EMAILCHK.ACC on the FireBee stand-in: its alert once as the desktop
-   comes up, then the accessory stays quiet and the desktop goes on (its
-   Desk menu opens and closes).
+2. EMAILCHK.ACC on the FireBee stand-in: nothing as the desktop comes up
+   (the guidelines, 2.2); its Desk entry, "EMail check", shows the alert
+   each time it is opened, and after OK the desktop is as it was.
 3. EMAILFB.PRG on a Falcon (a 68030, no _CF_) and on an ST (a 68000): its
    alert (cpu_alert: run EMAIL.PRG), then gone, no EMAIL.LOG.
-4. EMCHKFB.ACC on an ST-1: its alert once, then the desktop goes on.
+4. EMCHKFB.ACC on an ST-1: the same.
 
 The FireBee edition's own code can't run here (the stand-in is a 68060,
 without the ColdFire's own instructions): make cftest runs its core under
@@ -74,51 +74,54 @@ def prg(name, machine, src, as_name):
 
 
 def acc(name, machine, src):
-    """an accessory in C:\\ and no program: its alert as the desktop comes
-    up; after Return the desktop's Desk menu opens and closes"""
+    """an accessory in C:\\ and no program: the desktop as it came up, then
+    the accessory's Desk entry opened twice (the Desk menu's third row,
+    after Desktop info and the line): the alert's screen each time against
+    the desktop's, and the desktop after OK against the first"""
     w = os.path.join(work, name)
     shutil.rmtree(w, ignore_errors=True)
     hd = os.path.join(w, "hd")
     os.makedirs(hd)
     shutil.copy(os.path.join(rig.ROOT, "binary", src), os.path.join(hd, src))
     r = rig.Rig(w, machine, auto=None)
+    alerts = []
     try:
         time.sleep(30)
-        alert = r.shot("%s-1-alert" % name)
-        r.key(K["RETURN"])
-        time.sleep(4)
-        desk = r.shot("%s-2-desktop" % name)
-        r.move(20, 8)                    # the Desk menu
-        time.sleep(2)
-        menu = r.shot("%s-3-desk-menu" % name)
-        r.move(300, 300)
-        r.click(300, 300)                # closed again
-        time.sleep(2)
-        again = r.shot("%s-4-desktop" % name)
+        desk = r.shot("%s-0-desktop" % name)
+        for k in (1, 2):
+            r.move(20, 8)                    # the Desk menu
+            time.sleep(2)
+            r.shot("%s-%d-desk-menu" % (name, k))
+            r.click(60, 19 + 2 * 16 + 8)     # its third row: "  EMail check"
+            time.sleep(4)
+            alerts.append(changed(desk, r.shot("%s-%d-alert" % (name, k))))
+            r.key(K["RETURN"])
+            time.sleep(3)
+        after = changed(desk, r.shot("%s-3-desktop" % name))
         alive = r.proc.poll() is None
     finally:
         r.stop()
-    return changed(alert, desk), changed(desk, menu), changed(desk, again), alive
+    return alerts, after, alive
 
 
 d, alive, log, crash = prg("prg-firebee", "FireBee:16", "email.prg", "email.prg")
 check("EMAIL.PRG on the FireBee stand-in: an alert", d > 0.01, "%.1f%% of the screen" % (100 * d))
 check("... then gone, EMail's own code never ran (no EMAIL.LOG), no CRASH.LOG", alive and not log and not crash)
 
-d, menu, again, alive = acc("acc-firebee", "FireBee:16", "emailchk.acc")
-check("EMAILCHK.ACC on the FireBee stand-in: an alert", d > 0.01, "%.1f%% of the screen" % (100 * d))
-check("... then the desktop goes on: its Desk menu opens and closes", alive and menu > 0.002 and again < 0.002,
-      "menu %.2f%%, after %.2f%%" % (100 * menu, 100 * again))
+alerts, after, alive = acc("acc-firebee", "FireBee:16", "emailchk.acc")
+check("EMAILCHK.ACC on the FireBee stand-in: its Desk entry gives the alert, each time",
+      min(alerts) > 0.01, " / ".join("%.1f%%" % (100 * a) for a in alerts))
+check("... nothing at boot, and after OK the desktop as it was", alive and after < 0.002, "%.2f%%" % (100 * after))
 
 for name, machine in (("fb-falcon", "Falcon:16"), ("fb-st", "ST:mono")):
     d, alive, log, crash = prg(name, machine, "emailfb.prg", "emailfb.prg")
     check("EMAILFB.PRG on %s: an alert" % machine, d > 0.01, "%.1f%% of the screen" % (100 * d))
     check("... then gone, no EMAIL.LOG, no CRASH.LOG", alive and not log and not crash)
 
-d, menu, again, alive = acc("fbacc-st1", "ST-1", "emchkfb.acc")
-check("EMCHKFB.ACC on an ST-1: an alert", d > 0.01, "%.1f%% of the screen" % (100 * d))
-check("... then the desktop goes on: its Desk menu opens and closes", alive and menu > 0.002 and again < 0.002,
-      "menu %.2f%%, after %.2f%%" % (100 * menu, 100 * again))
+alerts, after, alive = acc("fbacc-st1", "ST-1", "emchkfb.acc")
+check("EMCHKFB.ACC on an ST-1: its Desk entry gives the alert, each time",
+      min(alerts) > 0.01, " / ".join("%.1f%%" % (100 * a) for a in alerts))
+check("... nothing at boot, and after OK the desktop as it was", alive and after < 0.002, "%.2f%%" % (100 * after))
 
 print("screenshots in", work)
 print("firebee test:", "all passed" if not fails else "%d failed" % len(fails))

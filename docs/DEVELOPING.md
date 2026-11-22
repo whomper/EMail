@@ -37,7 +37,7 @@ the AERA guidelines, 7.4), is the same sources built again for the ColdFire by
 `common/tools/mkfirebee.py`, from the commands `make` gives for the 68000 build (in `build/cf/` and
 `build/cfchk/`). The first code of each is `common/atari/cpucheck.c` (`cpucheck_cf.S` in the FireBee
 files): `EMAIL.PRG` on a FireBee, and `EMAILFB.PRG` anywhere else, says which file to run and goes;
-an accessory says it once and stays quiet. `make cftest` runs the FireBee edition's own mail core
+an accessory keeps its Desk entry and says it each time it is opened (nothing at boot: the guidelines, 2.2). `make cftest` runs the FireBee edition's own mail core
 (`build/cf/`) under `qemu-m68k -cpu cfv4e` against the same driver on this computer
 (`tests/coldfire/`). A Direct connection's TLS is not in it but in `TLS.OVL` (the AERA
 guidelines, 7.4): BearSSL, `tls.c` and the DSP code, 68030 code built once for the family in AERA-Atari

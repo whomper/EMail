@@ -771,10 +771,11 @@ static long read_at(const char *path, long off, void *buf, long n)
 }
 
 /* common/atari/cpucheck.c (cpucheck_cf.S in the FireBee edition) runs
-   first and calls app_main: on the other machine the accessory says once
-   which one to use and stays quiet (the guidelines, 7.4; Erez, 22 Nov
-   2026) */
+   first and calls app_main: on the other machine the accessory keeps its
+   Desk entry and says, each time it is opened, which file to use (the
+   guidelines, 7.4 and 2.2; Erez, 22 Nov 2026) */
 const long cpu_need = 0;
+const char cpu_acc_name[] = "  EMail check";
 #ifdef __mcoldfire__
 const char cpu_alert[] = "[3][EMail check for the FireBee|needs a ColdFire: on this|machine use EMAILCHK.ACC.][ OK ]";
 #else
