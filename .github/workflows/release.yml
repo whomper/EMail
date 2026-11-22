@@ -72,5 +72,15 @@ jobs:
           else
             printf '%s\n' "$NOTES" > "$RUNNER_TEMP/notes.md"
           fi
-          gh release create "$TAG" dist/* --target "$GITHUB_SHA" --title "EMail $(cat VERSION)" \
+          # the FireBee package first and the standard one last, one at a time: every EUpdate up to 2.14
+          # takes each zip of a release, and the last one unpacked wins (the guidelines, 7.4)
+          V=$(cat VERSION)
+          gh release create "$TAG" "dist/email-$V-firebee.zip" --target "$GITHUB_SHA" --title "EMail $V" \
             --notes-file "$RUNNER_TEMP/notes.md"
+          gh release upload "$TAG" "dist/email-$V.zip"
+          order=$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" --jq '[.assets | sort_by(.id) | .[].name] | join(" ")')
+          echo "assets: $order"
+          if [ "$order" != "email-$V-firebee.zip email-$V.zip" ]; then
+            echo "::error::the assets are not the FireBee zip, then the standard zip: $order"
+            exit 1
+          fi
