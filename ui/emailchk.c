@@ -770,7 +770,19 @@ static long read_at(const char *path, long off, void *buf, long n)
 	return got;
 }
 
-int main(void)
+/* common/atari/cpucheck.c (cpucheck_cf.S in the FireBee edition) runs
+   first and calls app_main: on the other machine the accessory says once
+   which one to use and stays quiet (the guidelines, 7.4; Erez, 22 Nov
+   2026) */
+const long cpu_need = 0;
+#ifdef __mcoldfire__
+const char cpu_alert[] = "[3][EMail check for the FireBee|needs a ColdFire: on this|machine use EMAILCHK.ACC.][ OK ]";
+#else
+const char cpu_alert[] = "";		/* every 68000 passes cpu_need */
+const char cpu_cf_alert[] = "[3][EMAILCHK.ACC is for the ST,|TT and Falcon. On the FireBee,|use EMCHKFB.ACC in its place.][ OK ]";
+#endif
+
+int app_main(void)
 {
 	short msg[8];
 	AEVENT ev;
