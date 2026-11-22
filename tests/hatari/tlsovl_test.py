@@ -80,9 +80,9 @@ def run(name, machine, ovl, option_y):
 # the menu bar's items are 16 pixels apart either way)
 FALCON = (8, 136)             # Options: Direct connection, its eighth row (Translate has its section, D5)
 
-# (the FireBee stand-in's row went with 2.28: EMAIL.PRG says there to run
-# EMAILFB.PRG, tests/hatari/firebee_test.py, and TLSFB.OVL is the FireBee
-# edition's, under qemu-m68k in common/tests/coldfire's test_tlsfb)
+# (the FireBee stand-in's row went with 2.28: EMAIL.PRG says there to
+# install the FireBee package, tests/hatari/firebee_test.py, and TLSFB.OVL
+# is that package's, under qemu-m68k in common/tests/coldfire's test_tlsfb)
 
 d, inf, log, crash = run("missing", "Falcon:16", False, FALCON)
 check("Falcon without TLS.OVL: an alert", d > 0.01, "%.1f%% of the screen" % (100 * d))

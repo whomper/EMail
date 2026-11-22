@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later
  * Copyright (C) 2026 AERA | Erez Yaary */
 /* main_cf.c - core.c as ColdFire code under qemu-m68k -cpu cfv4e: Linux's
- * own calls (common/tests/coldfire/rt.S), the Atari libc of EMAILFB.PRG
+ * own calls (common/tests/coldfire/rt.S), the Atari libc of the FireBee package's EMAIL.PRG
  * (build/cf/libc.o) on a heap of its own, as an accessory's */
 #include <stdio.h>
 #include <string.h>

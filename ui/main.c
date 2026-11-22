@@ -1752,15 +1752,16 @@ static void start_mark(const char *what)
 
 static char vwk_note[80];	/* the v_opnvwk line, said after store_init */
 
-/* common/atari/cpucheck.c (cpucheck_cf.S in the FireBee edition) runs
-   first and calls app_main: each file says, on the other machine, which
-   one to run (the guidelines, 7.4; Erez, 22 Nov 2026) */
+/* common/atari/cpucheck.c (cpucheck_cf.S in the FireBee package's) runs
+   first and calls app_main: on the other package's machine EMail says
+   which package to install, and goes (Erez's words, 22 Nov 2026; the
+   guidelines, 7.4) */
 const long cpu_need = 0;
 #ifdef __mcoldfire__
-const char cpu_alert[] = "[3][EMail for the FireBee needs|a ColdFire: on this machine|run EMAIL.PRG.][ Quit ]";
+const char cpu_alert[] = "[3][EMAIL.PRG is for the FireBee.|On an ST, a TT or a Falcon,|install EMail's standard|package.][ Quit ]";
 #else
 const char cpu_alert[] = "";		/* every 68000 passes cpu_need */
-const char cpu_cf_alert[] = "[3][EMAIL.PRG is for the ST, TT|and Falcon. On the FireBee,|run EMAILFB.PRG.][ Quit ]";
+const char cpu_cf_alert[] = "[3][EMAIL.PRG is for the ST, TT|and Falcon. On the FireBee,|install EMail's FireBee|package.][ Quit ]";
 #endif
 
 int app_main(void)

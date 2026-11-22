@@ -27,23 +27,23 @@ memory (EMail takes about 332 KB); STinG, STiK, MiNTnet or MagiC-Net; and for en
 providers) the Gateway or a Direct connection (a Falcon or TT with 4 MB).
 
 Download the files from the **[latest release](https://github.com/whomper/EMail/releases/latest)**, one by
-one or all together in `EMAIL-x.y.zip`:
+one or all together in `EMAIL-x.y.zip`. For a FireBee, take `EMAIL-x.y-FIREBEE.ZIP` instead: the same files,
+by the same names, built for its ColdFire (each package's program says so if it is started on the other's
+machine).
 
 | File | What it is |
 |---|---|
 | `EMAIL.PRG` | the program, for the ST, STE, TT and Falcon |
-| `EMAILFB.PRG` | the program for the FireBee, built for its ColdFire |
 | `EMAIL.HYP`, `EMAIL.REF` | the user guide, opened by the Help key |
 | `TLS.OVL`, `CACERT.PEM`, `ROOTS.DAT` | a Direct connection on a TT or Falcon: TLS and the root certificates |
-| `TLSFB.OVL` | a Direct connection on a FireBee (`EMAILFB.PRG`): the same TLS, built for its ColdFire |
-| `EMAILCHK.ACC` | EMail check, the new-mail accessory (optional); on a FireBee, `EMCHKFB.ACC` in its place |
+| `TLSFB.OVL` | in the FireBee package, in place of `TLS.OVL` |
+| `EMAILCHK.ACC` | EMail check, the new-mail accessory (optional) |
 | `EMAIL.RSC`, `EMAILNV.RSC`, `*.ICN` | the desktop icon ([which one](docs/GUIDE.md#the-desktop-icon)) |
 
-1. Copy `EMAIL.PRG` (on a FireBee, `EMAILFB.PRG`), `EMAIL.HYP` and `EMAIL.REF` to a folder of their own,
-   such as `C:\EMAIL\`.
+1. Copy `EMAIL.PRG`, `EMAIL.HYP` and `EMAIL.REF` to a folder of their own, such as `C:\EMAIL\`.
 2. Set up [AERA-Gateway](https://github.com/whomper/AERA-Gateway) on a Raspberry Pi with your
    provider's servers. Or, on a Falcon or TT, copy `TLS.OVL`, `CACERT.PEM` and `ROOTS.DAT` beside
-   the program (on a FireBee, `TLSFB.OVL`) and switch on **Options > Direct connection**.
+   `EMAIL.PRG` (on a FireBee, `TLSFB.OVL`) and switch on **Options > Direct connection**.
 3. Start EMail and fill in your account in **Options > Accounts**. Gmail, iCloud, Yahoo and Fastmail need
    an [app password](docs/GUIDE.md#app-passwords-gmail-icloud-yahoo-fastmail).
 4. Press **Help** for the [user guide](docs/GUIDE.md).
@@ -64,7 +64,7 @@ connection does TLS on the Atari itself. Setting it up, every provider and optio
 
 ```sh
 sudo apt install gcc-m68k-linux-gnu python3   # no MiNTLib needed
-make                                          # binary/: EMAIL.PRG, EMAILCHK.ACC, the FireBee's EMAILFB.PRG and EMCHKFB.ACC, the rest
+make                                          # binary/: EMAIL.PRG, EMAILCHK.ACC and the rest; binary/firebee/: the FireBee package's
 make help HCP=/path/to/hcp                    # the help file from docs/GUIDE.md
 make dist HCP=/path/to/hcp                    # the release files and the zip
 ```

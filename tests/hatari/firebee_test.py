@@ -1,20 +1,23 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-2.0-or-later
 # Copyright (C) 2026 AERA | Erez Yaary
-"""Each of EMail's files on the machine it isn't for says which one to run
-(the FireBee edition: Erez, 22 Nov 2026; the guidelines, 7.4).
+"""Each package's files on the other package's machine say which package to
+install (two packages, the same names inside: Erez, 22 Nov 2026; the
+guidelines, 7.4). The standard package's are binary/, the FireBee
+package's binary/firebee/.
 
-1. EMAIL.PRG on the FireBee stand-in (_CF_ in the jar): its alert
-   (cpu_cf_alert: run EMAILFB.PRG), and after Return it is gone: no
-   EMAIL.LOG (its own code never ran), no CRASH.LOG.
-2. EMAILCHK.ACC on the FireBee stand-in: nothing as the desktop comes up
+1. The standard EMAIL.PRG on the FireBee stand-in (_CF_ in the jar): its
+   alert (cpu_cf_alert: install the FireBee package), and after Return it
+   is gone: no EMAIL.LOG (its own code never ran), no CRASH.LOG.
+2. The standard EMAILCHK.ACC on the FireBee stand-in: nothing as the desktop comes up
    (the guidelines, 2.2); its Desk entry, "EMail check", shows the alert
    each time it is opened, and after OK the desktop is as it was.
-3. EMAILFB.PRG on a Falcon (a 68030, no _CF_) and on an ST (a 68000): its
-   alert (cpu_alert: run EMAIL.PRG), then gone, no EMAIL.LOG.
-4. EMCHKFB.ACC on an ST-1: the same.
+3. The FireBee package's EMAIL.PRG on a Falcon (a 68030, no _CF_) and on
+   an ST (a 68000): its alert (cpu_alert: install the standard package),
+   then gone, no EMAIL.LOG.
+4. The FireBee package's EMAILCHK.ACC on an ST-1: as 2.
 
-The FireBee edition's own code can't run here (the stand-in is a 68060,
+The FireBee package's own code can't run here (the stand-in is a 68060,
 without the ColdFire's own instructions): make cftest runs its core under
 qemu-m68k -cpu cfv4e.
 
@@ -49,17 +52,17 @@ INF = ("[options]\r\nnatfeats=1\r\ntz=180\r\noffline=1\r\nlog=1\r\n[account]\r\n
        "email=dana@test.local\r\nin=imap\r\nhost=192.168.1.2\r\nport=143\r\nuser=dana\r\npass=x\r\n")
 
 
-def prg(name, machine, src, as_name):
+def prg(name, machine, src):
     """a program started by the desktop: its alert's screen against the
     desktop's after Return, and EMAIL.LOG and CRASH.LOG afterwards"""
     w = os.path.join(work, name)
     shutil.rmtree(w, ignore_errors=True)
     hd = os.path.join(w, "hd")
     os.makedirs(hd)
-    shutil.copy(os.path.join(rig.ROOT, "binary", src), os.path.join(hd, as_name))
+    shutil.copy(os.path.join(rig.ROOT, "binary", src), os.path.join(hd, "email.prg"))
     with open(os.path.join(hd, "email.inf"), "w", newline="") as f:
         f.write(INF)
-    r = rig.Rig(w, machine, auto="C:\\" + as_name.upper())
+    r = rig.Rig(w, machine, auto="C:\\EMAIL.PRG")
     try:
         time.sleep(30)
         alert = r.shot("%s-1-alert" % name)
@@ -82,7 +85,7 @@ def acc(name, machine, src):
     shutil.rmtree(w, ignore_errors=True)
     hd = os.path.join(w, "hd")
     os.makedirs(hd)
-    shutil.copy(os.path.join(rig.ROOT, "binary", src), os.path.join(hd, src))
+    shutil.copy(os.path.join(rig.ROOT, "binary", src), os.path.join(hd, "emailchk.acc"))
     r = rig.Rig(w, machine, auto=None)
     alerts = []
     try:
@@ -104,22 +107,22 @@ def acc(name, machine, src):
     return alerts, after, alive
 
 
-d, alive, log, crash = prg("prg-firebee", "FireBee:16", "email.prg", "email.prg")
-check("EMAIL.PRG on the FireBee stand-in: an alert", d > 0.01, "%.1f%% of the screen" % (100 * d))
+d, alive, log, crash = prg("prg-firebee", "FireBee:16", "email.prg")
+check("the standard EMAIL.PRG on the FireBee stand-in: an alert", d > 0.01, "%.1f%% of the screen" % (100 * d))
 check("... then gone, EMail's own code never ran (no EMAIL.LOG), no CRASH.LOG", alive and not log and not crash)
 
 alerts, after, alive = acc("acc-firebee", "FireBee:16", "emailchk.acc")
-check("EMAILCHK.ACC on the FireBee stand-in: its Desk entry gives the alert, each time",
+check("the standard EMAILCHK.ACC on the FireBee stand-in: its Desk entry gives the alert, each time",
       min(alerts) > 0.01, " / ".join("%.1f%%" % (100 * a) for a in alerts))
 check("... nothing at boot, and after OK the desktop as it was", alive and after < 0.002, "%.2f%%" % (100 * after))
 
 for name, machine in (("fb-falcon", "Falcon:16"), ("fb-st", "ST:mono")):
-    d, alive, log, crash = prg(name, machine, "emailfb.prg", "emailfb.prg")
-    check("EMAILFB.PRG on %s: an alert" % machine, d > 0.01, "%.1f%% of the screen" % (100 * d))
+    d, alive, log, crash = prg(name, machine, "firebee/email.prg")
+    check("the FireBee package's EMAIL.PRG on %s: an alert" % machine, d > 0.01, "%.1f%% of the screen" % (100 * d))
     check("... then gone, no EMAIL.LOG, no CRASH.LOG", alive and not log and not crash)
 
-alerts, after, alive = acc("fbacc-st1", "ST-1", "emchkfb.acc")
-check("EMCHKFB.ACC on an ST-1: its Desk entry gives the alert, each time",
+alerts, after, alive = acc("fbacc-st1", "ST-1", "firebee/emailchk.acc")
+check("the FireBee package's EMAILCHK.ACC on an ST-1: its Desk entry gives the alert, each time",
       min(alerts) > 0.01, " / ".join("%.1f%%" % (100 * a) for a in alerts))
 check("... nothing at boot, and after OK the desktop as it was", alive and after < 0.002, "%.2f%%" % (100 * after))
 

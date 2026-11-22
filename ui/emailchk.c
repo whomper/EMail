@@ -770,17 +770,21 @@ static long read_at(const char *path, long off, void *buf, long n)
 	return got;
 }
 
-/* common/atari/cpucheck.c (cpucheck_cf.S in the FireBee edition) runs
+/* common/atari/cpucheck.c (cpucheck_cf.S in the FireBee package's) runs
    first and calls app_main: on the other machine the accessory keeps its
-   Desk entry and says, each time it is opened, which file to use (the
+   Desk entry and says, each time it is opened, which package to install (the
    guidelines, 7.4 and 2.2; Erez, 22 Nov 2026) */
 const long cpu_need = 0;
 const char cpu_acc_name[] = "  EMail check";
+/* the accessory's words (Erez's, 22 Nov 2026), with OK; started as a
+   program, the same with Quit */
 #ifdef __mcoldfire__
-const char cpu_alert[] = "[3][EMail check for the FireBee|needs a ColdFire: on this|machine use EMAILCHK.ACC.][ OK ]";
+const char cpu_alert[] = "[3][EMAILCHK.ACC is for the|FireBee. On an ST, a TT or a|Falcon, install EMail's|standard package.][ Quit ]";
+const char cpu_acc_alert[] = "[3][EMAILCHK.ACC is for the|FireBee. On an ST, a TT or a|Falcon, install EMail's|standard package.][ OK ]";
 #else
 const char cpu_alert[] = "";		/* every 68000 passes cpu_need */
-const char cpu_cf_alert[] = "[3][EMAILCHK.ACC is for the ST,|TT and Falcon. On the FireBee,|use EMCHKFB.ACC in its place.][ OK ]";
+const char cpu_cf_alert[] = "[3][EMAILCHK.ACC is for the ST,|TT and Falcon. On the FireBee,|install EMail's FireBee|package.][ Quit ]";
+const char cpu_cf_acc_alert[] = "[3][EMAILCHK.ACC is for the ST,|TT and Falcon. On the FireBee,|install EMail's FireBee|package.][ OK ]";
 #endif
 
 int app_main(void)

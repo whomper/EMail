@@ -80,7 +80,7 @@ KEEP := nf:194:0:0:0 pad_nf:0:0:252:0 util:0:183:0:0 conn:192:0:0:0 pad_conn:122
 	net_tos:78:0:0:0 gem:144:0:254:252 crash:198:0:0:0 bigbuf:122:0:250:6 text:196:0:0:242 find:100:0:0:250 dialogs:48:0:0:180 av:218:0:0:252 \
 	aboutbox:174:0:252:0 iconify:0:232:0:44 dd:0:0:0:202 field:170:0:0:0 pad_main:132:0:0:0 draw:202:0:254:0 tooltip:22:0:0:0 aboutline:80:0:246:154 \
 	win:242:0:0:0 list:44:0:0:0 editor:244:0:0:248 people_ask:200:0:0:240 dialog:134:0:0:232 compose:232:0:0:94 notify:0:0:0:66 mbar:0:0:252:0 \
-	main:160:0:0:0 reader:136:0:0:0 about:208:0:0:0 folders:0:0:248:4 sting_s:0:0:168:0 charset:170:0:0:0 mime:172:0:0:0 imap:174:0:0:0 \
+	main:160:0:0:0 reader:136:0:0:0 about:208:0:0:0 folders:0:0:248:4 sting_s:0:0:152:0 charset:170:0:0:0 mime:172:0:0:0 imap:174:0:0:0 \
 	pop3:152:0:0:0 store:172:0:0:0 mail:48:0:0:0 arrowed:202:0:0:0 tz:254:0:0:0 help:214:0:0:0 print:96:0:56:94 crash_s:0:0:0:176
 kp_obj   = $(word 1,$(subst :, ,$(1)))
 kp_size  = $(word $(2),$(subst :, ,$(1)))
@@ -91,30 +91,32 @@ HDRS    := $(wildcard src/*.h atari/*.h atari/include/*.h ui/*.h \
            common/src/*.h common/atari/*.h common/atari/include/*.h common/ui/*.h common/dsp/*.h)
 
 # what goes onto the Atari: binary/ (built, never committed)
-all: binary/email.prg binary/emailchk.acc binary/emailfb.prg binary/emchkfb.acc binary/tls.ovl binary/tlsfb.ovl binary/roots.dat
+all: binary/email.prg binary/emailchk.acc binary/tls.ovl binary/roots.dat \
+	binary/firebee/email.prg binary/firebee/emailchk.acc binary/firebee/tlsfb.ovl
 
 binary/email.prg: $(OBJDIR)/mail.elf common/tools/elf2tos.py | binary
 	PRGFLAGS=7 python3 common/tools/elf2tos.py $< $@
 
-# the FireBee edition (Erez, 22 Nov 2026; the guidelines, 7.4): the same
-# objects built again for the ColdFire by common's mkfirebee.py, from the
-# commands make gives for the 68000 build (cpucheck.c becomes
-# cpucheck_cf.S, which sends any other machine to EMAIL.PRG)
-binary/emailfb.prg: $(OBJDIR)/mail.elf common/tools/mkfirebee.py | binary
+# the FireBee package (Erez, 22 Nov 2026: "two packages, one for FireBee
+# and the other for standard ST", "Same names"; the guidelines, 7.4):
+# binary/firebee/, EMAIL.PRG and EMAILCHK.ACC built again for the ColdFire
+# by common's mkfirebee.py from the commands make gives for the 68000 build
+# (cpucheck.c becomes cpucheck_cf.S, which sends any other machine to the
+# standard package), with TLSFB.OVL for TLS
+binary/firebee:
+	mkdir -p $@
+binary/firebee/email.prg: $(OBJDIR)/mail.elf common/tools/mkfirebee.py | binary/firebee
 	python3 common/tools/mkfirebee.py --elf $(OBJDIR)/mail.elf --outdir $(OBJDIR)/cf/ $@
-# and EMail check's, in place of EMAILCHK.ACC (a FireBee loads every .ACC)
-binary/emchkfb.acc: binary/emailchk.acc common/tools/mkfirebee.py | binary
+binary/firebee/emailchk.acc: binary/emailchk.acc common/tools/mkfirebee.py | binary/firebee
 	python3 common/tools/mkfirebee.py --elf $(CHKDIR)/emailchk.elf \
 		--make 'OBJDIR=$(CHKDIR) APPCF= TRACECF="-ffunction-sections -fdata-sections"' --outdir $(OBJDIR)/cfchk/ $@
+binary/firebee/tlsfb.ovl: common/tlsovl/tlsfb.ovl | binary/firebee
+	cp $< $@
 
 # the family's TLS.OVL as AERA-Atari built it: copied, never built here
 binary/tls.ovl: common/tlsovl/tls.ovl | binary
 	cp $< $@
 
-# its ColdFire build, for a FireBee (tls_ovl.c loads it there by the _CF_
-# cookie; Erez, 15 Nov 2026): copied too
-binary/tlsfb.ovl: common/tlsovl/tlsfb.ovl | binary
-	cp $< $@
 
 # the version: VERSION holds the last release (major.minor, e.g. 1.30),
 # and the build never writes it. Every build shows it as it is, in the
@@ -345,7 +347,7 @@ $(OBJDIR)/replay_%: tests/fuzz/fuzz_%.c $(HOSTSRC) $(HDRS) $(HOSTLIB) $(REPLAYSR
 	$(HOSTCC) $(REPLAYFLAGS) -o $@ $< $(HOSTSRC) $(REPLAYSRC) $(HOSTLIB)
 
 # the FireBee edition's mail core under qemu-m68k -cpu cfv4e (Erez, 22 Nov
-# 2026): tests/coldfire/core.c with EMAILFB.PRG's own ColdFire objects
+# 2026): tests/coldfire/core.c with the FireBee package's own ColdFire objects
 # (build/cf/) and on the build machine; each input and 300 changed copies
 # through the MIME parser and the IMAP client, the two builds' sums the same
 CFT     := $(OBJDIR)/cftest
@@ -357,7 +359,7 @@ CFTOBJ  := mime imap charset util links conn libc ctime store
 CFTIN_MIME := tests/mail/*.eml tests/fuzz/seeds/mime/*
 CFTIN_IMAP := tests/fuzz/seeds/imap/* tests/fuzz/found/imap/*
 $(CFT)/core_cf: tests/coldfire/core.c tests/coldfire/main_cf.c tests/coldfire/stubs_cf.c common/tests/fuzz/fuzz_net.c \
-		common/tests/coldfire/rt.S binary/emailfb.prg $(HDRS)
+		common/tests/coldfire/rt.S binary/firebee/email.prg $(HDRS)
 	@mkdir -p $(CFT)
 	$(CC) -mcpu=5475 -c -o $(CFT)/rt.o common/tests/coldfire/rt.S
 	for f in tests/coldfire/core.c tests/coldfire/main_cf.c tests/coldfire/stubs_cf.c common/tests/fuzz/fuzz_net.c; do \
@@ -406,16 +408,24 @@ binary/email.hyp: docs/GUIDE.md tools/mkhelp.py VERSION docs/front.json docs/hel
 # dist/email-x.y.zip (the icons in icons/), for the release workflow;
 # every name in lowercase (the guidelines' 6.6: MiNT's ext2 drives tell
 # EMAIL.PRG and email.prg apart)
-DIST    := binary/email.prg binary/emailchk.acc binary/emailfb.prg binary/emchkfb.acc binary/tls.ovl binary/tlsfb.ovl binary/cacert.pem binary/roots.dat binary/email.hyp binary/email.ref
+# a release: the standard package's files one by one, and two zips with
+# the same names inside, email-x.y.zip and email-x.y-firebee.zip (Erez,
+# 22 Nov 2026; EUpdate takes the one for the machine it runs on)
+SHARED  := binary/cacert.pem binary/roots.dat binary/email.hyp binary/email.ref
+DIST    := binary/email.prg binary/emailchk.acc binary/tls.ovl $(SHARED)
+DISTFB  := binary/firebee/email.prg binary/firebee/emailchk.acc binary/firebee/tlsfb.ovl $(SHARED)
 ICONS   := icons/EMAIL.RSC icons/EMAILNV.RSC icons/EMAIL.ICN icons/EMAILMK.ICN
 dist: all help
 	rm -rf dist
-	mkdir -p dist/zip/icons
+	mkdir -p dist/zip/icons dist/zipfb/icons
 	cp $(DIST) dist/
 	cp $(DIST) dist/zip/
-	for f in $(ICONS); do b=$$(basename $$f | tr A-Z a-z); cp $$f dist/$$b; cp $$f dist/zip/icons/$$b; done
+	cp $(DISTFB) dist/zipfb/
+	for f in $(ICONS); do b=$$(basename $$f | tr A-Z a-z); cp $$f dist/$$b; cp $$f dist/zip/icons/$$b; \
+	  cp $$f dist/zipfb/icons/$$b; done
 	cd dist/zip && zip -q -9 -r ../email-$(VERSION_STR).zip .
-	rm -rf dist/zip
+	cd dist/zipfb && zip -q -9 -r ../email-$(VERSION_STR)-firebee.zip .
+	rm -rf dist/zip dist/zipfb
 
 clean:
 	rm -rf $(OBJDIR) binary dist
