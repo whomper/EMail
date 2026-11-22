@@ -36,6 +36,8 @@ when it is there.
 
 Find (D4, MD10): decided by Erez on 10 Nov 2026, `Find` where it is; nothing to do (the label lost its dots in 2.15).
 Nothing to do: Accounts... is in Options already (D13); `Open|Later` fits (W25).
+Progress (5.9): decided by Erez on 22 Nov 2026, "Keep the progress in the info line": EMail's text progress stays
+in the window's info line, not common's `progbar`; nothing to do.
 
 Done (17 Nov 2026, with Erez's decision that every app keeps every family rule): "Hebrew in fonts" goes from every app (Erez, 12 Nov 2026). Drop the Settings item, the
 `HEBFONT=` key (an old one read and ignored), `heb_font_map` and the ISO 8859-8 / PC 862 code, its tests and the
