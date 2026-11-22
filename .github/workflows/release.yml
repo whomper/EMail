@@ -78,9 +78,11 @@ jobs:
           gh release create "$TAG" "dist/email-$V-firebee.zip" --target "$GITHUB_SHA" --title "EMail $V" \
             --notes-file "$RUNNER_TEMP/notes.md"
           gh release upload "$TAG" "dist/email-$V.zip"
-          order=$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" --jq '[.assets | sort_by(.id) | .[].name] | join(" ")')
+          # the order GitHub gives them, as EUpdate reads them (by name, not by upload; 7.4, AERA-Atari
+          # b539163): the standard zip must be the last
+          order=$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" --jq '[.assets[].name] | join(" ")')
           echo "assets: $order"
-          if [ "$order" != "email-$V-firebee.zip email-$V.zip" ]; then
-            echo "::error::the assets are not the FireBee zip, then the standard zip: $order"
+          if [ "${order##* }" != "email-$V.zip" ] || [ "$order" = "email-$V.zip" ]; then
+            echo "::error::the standard zip is not the last of two assets as GitHub returns them: $order"
             exit 1
           fi
