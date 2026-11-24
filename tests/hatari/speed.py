@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 # Copyright (C) 2026 AERA | Erez Yaary
 """EMail's speed on the family's stock machines (the guidelines' Speed:
-the stock machines set it; Erez, 26 Oct 2026), with common's speed rig
+the stock machines set it; decided 26 Oct 2026), with common's speed rig
 (common/tests/speed/speed.py): the longest stretch between event calls of
 each action, from build/speed/email.prg (-DAES_PROFILE=20), against the
 guidelines' times.
@@ -33,7 +33,7 @@ offline (STARTOFFLINE=1), so no network is needed. The actions, by keys
 
 With ACC=1, EMail check (build/speed/emailchk.acc) is opened from the
 Desk menu instead, on ST-1, TT or Falcon (Falcon:16 without): the
-accessories are not tested on the 4 MB machines, ST and Falcon-4 (Erez,
+accessories are not tested on the 4 MB machines, ST and Falcon-4 (the owner,
 4 Nov 2026).
 """
 import os
@@ -62,7 +62,7 @@ work = os.path.abspath(a[0])
 acc = os.environ.get("ACC") == "1"
 machine = a[1] if len(a) > 1 else ("Falcon:16" if acc else "Falcon-4:16")
 if acc and machine.partition(":")[0] in ("ST", "Falcon-4"):
-    sys.exit("speed.py: no accessory runs on ST or Falcon-4 (Erez, 4 Nov 2026): use ST-1, TT or Falcon")
+    sys.exit("speed.py: no accessory runs on ST or Falcon-4 (decided 4 Nov 2026): use ST-1, TT or Falcon")
 nvdi = "nvdi" in a[2:] or os.environ.get("AERA_WITH_NVDI") == "1"   # NVDI by either: the start waits for its fonts
 for f in (PRG, CLI):
     if not os.path.exists(f):
@@ -148,7 +148,7 @@ def undo():
 host, inf = mirror(os.path.join(r.work, "fixture"))
 shutil.copytree(os.path.join(host, "email"), os.path.join(r.hd, "EMAIL", "email"))
 r.put(PRG, "EMAIL")
-# FONT=ID,PT: the text in that font (a GDOS font under NVDI, as Erez's
+# FONT=ID,PT: the text in that font (a GDOS font under NVDI, as the owner's
 # EMAIL.INF has it: font_test.py with AERA_WITH_NVDI=1 writes the first
 # monospaced one's FONT= there)
 font = os.environ.get("FONT")
@@ -203,7 +203,7 @@ try:
         from PIL import Image
         row = 16 if Image.open(r.shot("start")).size[1] >= 400 else 8
         # the list's third row clicked: highlighted first, then shown
-        # (Erez, 4 Nov 2026); Home goes back to the first for the keys
+        # (decided 4 Nov 2026); Home goes back to the first for the keys
         r.act("a message chosen with a click", speed.PAGE, lambda: r.click(400, 103 + 2 * row if row == 16 else 51 + 2 * row))
         r.key("Home")
         time.sleep(3)
@@ -242,7 +242,7 @@ try:
         # window): what the message window covered drawn; then resized with
         # its sizer, smaller and back, the panes laid out again and drawn
         # whole (the guidelines' Speed: a draw past 300 ms in pieces of at
-        # most 100 ms; Erez, 19 Nov 2026)
+        # most 100 ms; decided 19 Nov 2026)
         sw, sh = Image.open(r.shot("pre-size")).size
         r.act("the main window topped (Ctrl+W): uncovered", speed.WINDOW, lambda: r.key("ctrl+w"))
 

@@ -97,13 +97,11 @@ all: binary/email.prg binary/emailchk.acc binary/tls.ovl binary/roots.dat \
 binary/email.prg: $(OBJDIR)/mail.elf common/tools/elf2tos.py | binary
 	PRGFLAGS=7 python3 common/tools/elf2tos.py $< $@
 
-# the FireBee package (Erez, 22 Nov 2026: "two packages, one for FireBee
-# and the other for standard ST", "Same names"; the guidelines, 7.4):
+# the FireBee package (decided 22 Nov 2026; the guidelines, 7.4):
 # binary/firebee/, EMAIL.PRG and EMAILCHK.ACC built again for the ColdFire
 # by common's mkfirebee.py from the commands make gives for the 68000 build
 # (cpucheck.c becomes cpucheck_cf.S, which sends any other machine to the
-# standard package), with common's tlsfb.ovl as tls.ovl ("rename all other
-# FB files into their standard filename": a FireBee build loads tls.ovl)
+# standard package), with common's tlsfb.ovl as tls.ovl (a FireBee build loads tls.ovl)
 binary/firebee:
 	mkdir -p $@
 binary/firebee/email.prg: $(OBJDIR)/mail.elf common/tools/mkfirebee.py | binary/firebee
@@ -347,7 +345,7 @@ REPLAYSRC   := common/tests/fuzz/fuzz_net.c common/tests/fuzz/replay.c
 $(OBJDIR)/replay_%: tests/fuzz/fuzz_%.c $(HOSTSRC) $(HDRS) $(HOSTLIB) $(REPLAYSRC) | $(OBJDIR)
 	$(HOSTCC) $(REPLAYFLAGS) -o $@ $< $(HOSTSRC) $(REPLAYSRC) $(HOSTLIB)
 
-# the FireBee edition's mail core under qemu-m68k -cpu cfv4e (Erez, 22 Nov
+# the FireBee edition's mail core under qemu-m68k -cpu cfv4e (decided 22 Nov
 # 2026): tests/coldfire/core.c with the FireBee package's own ColdFire objects
 # (build/cf/) and on the build machine; each input and 300 changed copies
 # through the MIME parser and the IMAP client, the two builds' sums the same
@@ -410,8 +408,7 @@ binary/email.hyp: docs/GUIDE.md tools/mkhelp.py VERSION docs/front.json docs/hel
 # every name in lowercase (the guidelines' 6.6: MiNT's ext2 drives tell
 # EMAIL.PRG and email.prg apart)
 # a release: two zips and nothing else, email-x.y.zip and
-# email-x.y-firebee.zip, the same names inside (Erez, 22 Nov 2026: "Remove
-# all files from root and just have two ZIP files, one for each platform";
+# email-x.y-firebee.zip, the same names inside (decided 22 Nov 2026;
 # EUpdate takes the one for the machine it runs on)
 SHARED  := binary/cacert.pem binary/roots.dat binary/email.hyp binary/email.ref
 DIST    := binary/email.prg binary/emailchk.acc binary/tls.ovl $(SHARED)

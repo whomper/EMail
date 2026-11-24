@@ -247,7 +247,7 @@ static void inf_read(void)
 		*eq = 0;
 		k = str_trim(k);
 		/* NATFEATS=1: the emulator's debug output, which only the test
-		   rigs ask for (Erez, 15 Nov 2026; guidelines 6.5); kept by
+		   rigs ask for (decided 15 Nov 2026; guidelines 6.5); kept by
 		   inf_write as a setting it doesn't know */
 		if (!strcasecmp(k, "NATFEATS") && *str_trim(eq + 1) == '1')
 			nf_on = 1;
@@ -445,7 +445,7 @@ static int choose_folder(void)
  * something can start it: an AES that runs programs side by side
  * (MagiC, MiNT), or a desktop that speaks the AV protocol (Thing,
  * TeraDesk, Gemini, jinnee), which takes AV_STARTPROG. Elsewhere the
- * box only tells (Erez, 24 Oct 2026). */
+ * box only tells (decided 24 Oct 2026). */
 #define AV_STARTPROG	0x4722
 
 static int multitasking(void)
@@ -627,7 +627,7 @@ static void check(int asked)
 		return;
 	pf_idle();		/* a turn for the others between the check and its box */
 	if (!total) {
-		if (naccts_skip)	/* what it is, and what to do (Erez, 26 Oct 2026) */
+		if (naccts_skip)	/* what it is, and what to do (decided 26 Oct 2026) */
 			alert(1, "[3][Direct connections need 230 KB|more than EMail check takes|"
 				 "from ST RAM. Use the Gateway,|or put HEAPKB=300 in|"
 				 "C:\\EMAILCHK.INF and restart.][ OK ]");
@@ -773,10 +773,10 @@ static long read_at(const char *path, long off, void *buf, long n)
 /* common/atari/cpucheck.c (cpucheck_cf.S in the FireBee package's) runs
    first and calls app_main: on the other machine the accessory keeps its
    Desk entry and says, each time it is opened, which package to install (the
-   guidelines, 7.4 and 2.2; Erez, 22 Nov 2026) */
+   guidelines, 7.4 and 2.2; decided 22 Nov 2026) */
 const long cpu_need = 0;
 const char cpu_acc_name[] = "  EMail check";
-/* the accessory's words (Erez's, 22 Nov 2026), with OK; started as a
+/* the accessory's words (the owner's, 22 Nov 2026), with OK; started as a
    program, the same with Quit */
 #ifdef __mcoldfire__
 const char cpu_alert[] = "[3][EMAILCHK.ACC is for the|FireBee. On an ST, a TT or a|Falcon, install EMail's|standard package.][ Quit ]";

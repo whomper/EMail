@@ -3,7 +3,7 @@
 # Copyright (C) 2026 AERA | Erez Yaary
 """How much EMail draws, and how long it takes, on a Falcon as sold.
 
-Erez's videos of 26 Oct 2026, a stock Falcon (16 MHz, no DFB1X): one
+videos of 26 Oct 2026 from a stock Falcon (16 MHz, no DFB1X): one
 click on the message pane's scroll bar turned two pages; deleting a
 message from the right-click menu drew the three panes again and again;
 every page of a message took about a second to draw. EMAIL.PRG is the
@@ -24,7 +24,7 @@ a long one; on the Falcon-4 unless another machine is named:
     redraw_test.py WORKDIR [MACHINE]     (needs Xvfb, xdotool, dovecot)
 
 AERA_FONT=5419,10 (a GDOS font's id and size, under AERA_WITH_NVDI=1)
-starts EMail with that font, as Erez runs it.
+starts EMail with that font, as the owner runs it.
 """
 import os
 import re

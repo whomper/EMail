@@ -263,7 +263,7 @@ int pop3_retr(POP3 *p, long num, SBUF *out)
 }
 
 /* TOP: the header and the body's first lines, kept up to cap bytes (the
-   rest read and dropped): a message larger than Settings' limit (Erez,
+   rest read and dropped): a message larger than Settings' limit (the owner,
    21 Nov 2026) */
 typedef struct {
 	SBUF *out;

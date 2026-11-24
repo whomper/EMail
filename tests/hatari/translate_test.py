@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-2.0-or-later
 # Copyright (C) 2026 AERA | Erez Yaary
-"""Options > Translate and the reader's "Translate..." (Erez, 7 Nov 2026),
+"""Options > Translate and the reader's "Translate..." (decided 7 Nov 2026),
 with the Gateway's translategate (gateway/translategate.py, the released
 copy) and its stand-in engine (it answers "en: TEXT IN CAPITALS") on port 8480,
 as net_test.py otherwise (Dovecot, FAKESTNG.PRG over the serial port), on
@@ -21,7 +21,7 @@ an emulated Falcon with the test build (build/trace/email.prg says
    (common/tests/langs/fakegate.py: it answers in Hebrew, with a Latin run
    and a number in it): the English newsletter's translation is drawn right
    to left, set against the reader's right edge, and so is Translate...'s
-   box (Erez, 8 Nov 2026).
+   box (decided 8 Nov 2026).
 5. Into a language the Gateway hasn't installed (German): its 422 gives
    the alert that names Settings > Languages ("TRANSLATE not installed"
    on the console).

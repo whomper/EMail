@@ -367,7 +367,7 @@ static void add_signature(SBUF *b)
 }
 
 /* in a reply or a forward it goes with what is typed, above the quote
-   (Erez, 20 Oct); without the "-- " line, after which some mail programs
+   (decided 20 Oct); without the "-- " line, after which some mail programs
    hide the rest, the quote too */
 static void add_signature_above(SBUF *b)
 {

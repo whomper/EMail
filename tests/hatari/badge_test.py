@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-2.0-or-later
 # Copyright (C) 2026 AERA | Erez Yaary
-"""The Hebrew keyboard's badge (Erez, 6 Nov 2026; guideline 5.3): the
+"""The Hebrew keyboard's badge (decided 6 Nov 2026; guideline 5.3): the
 letters ayin and bet at the right end of the main window's top row (the
 message list's header: the info line is the AES's own, which it draws
 again unasked) and of the Settings dialog's title band while the keyboard

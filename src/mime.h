@@ -21,7 +21,7 @@ typedef struct {
 	short enc;		/* ENC_* */
 	long size;		/* approximate decoded size */
 	char *summary;		/* a calendar invitation's SUMMARY (Atari charset), or NULL */
-	char *left;		/* left on the server (a large message: Erez, 21 Nov 2026):
+	char *left;		/* left on the server (a large message: decided 21 Nov 2026):
 				   its IMAP section ("2"), or NULL */
 } MIMEPART;
 

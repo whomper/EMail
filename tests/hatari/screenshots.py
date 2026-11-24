@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-2.0-or-later
 # Copyright (C) 2026 AERA | Erez Yaary
-"""The screenshots in docs/, on an emulated Falcon in 256 colours (Erez,
+"""The screenshots in docs/, on an emulated Falcon in 256 colours (the owner,
 28 Oct 2026: the family's pictures in 256 colours).
 
 An inbox of everyday English mail (the Hebrew test messages stay with the

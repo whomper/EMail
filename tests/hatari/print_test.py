@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-2.0-or-later
 # Copyright (C) 2026 AERA | Erez Yaary
-"""File > Print... (^P) through the GDOS (Erez, 21 Nov 2026).
+"""File > Print... (^P) through the GDOS (decided 21 Nov 2026).
 
 Dovecot holds two messages: a long letter (a hundred numbered lines and a
 Hebrew one: two pages) and a short note with an attachment (one page).
-EMail (Falcon-4:256 with Erez's NVDI by default) shows the long one; ^P
+EMail (Falcon-4:256 with NVDI by default) shows the long one; ^P
 prints it; then ^A selects both and ^P prints each, from a new page, in
-one job. Erez's NVDI with ASSIGN.SYS's printer (21) pointed at NVDI's
+one job. NVDI with ASSIGN.SYS's printer (21) pointed at NVDI's
 metafile driver (META.SYS) in this run's C: only, and no WDIALOG, so the
 job goes to the default printer without the dialog: C:\\GEMFILE.GEM holds
 each page and each text drawn, read back here (the pages, the header
 with its labels apart, the Hebrew line to the right, "Page n of m", the
 attachment line). On a machine without a GDOS, ^P gives the alert and
-prints nothing (PRINT_NOGDOS=1). PRINT_WDIALOG=1 adds Erez's WDIALOG.PRG
+prints nothing (PRINT_NOGDOS=1). PRINT_WDIALOG=1 adds WDIALOG.PRG
 after NVDI: ^P then shows its printer dialog, and Return prints.
 
     print_test.py WORKDIR [MACHINE]     (needs Xvfb, xdotool, dovecot)
@@ -35,7 +35,7 @@ IMAP, SMTP = 10143, 10025
 
 work, machine, more = rig.cli("Falcon-4:256")
 nogdos = bool(os.environ.get("PRINT_NOGDOS"))
-wdialog = bool(os.environ.get("PRINT_WDIALOG"))     # Erez's WDIALOG.PRG too: its dialog, Return
+wdialog = bool(os.environ.get("PRINT_WDIALOG"))     # WDIALOG.PRG too: its dialog, Return
 if not nogdos:
     os.environ["AERA_WITH_NVDI"] = "1"
 os.makedirs(work, exist_ok=True)
@@ -87,7 +87,7 @@ with open(os.path.join(hd, "email.inf"), "w", newline="") as f:
 
 # the printer (21) is NVDI's metafile driver, in this run's ASSIGN.SYS only:
 # it writes C:\\GEMFILE.GEM, each text and each page in it
-# (Erez's own is copied in by machines.py and taken out again at the end)
+# (the owner's own is copied in by machines.py and taken out again at the end)
 _nvdi = rig.machines.Machine.nvdi
 
 
@@ -100,7 +100,7 @@ def nvdi_img(self):
     wd = os.path.join(os.environ.get("AERA_NVDI", os.path.expanduser("~/.aera/nvdi/x")), "auto", "wdialog.prg")
     if ok and wdialog and os.path.exists(wd):
         to = os.path.join(self.hd, "AUTO", "WDIALOG.PRG")
-        shutil.copy(wd, to)                     # after NVDI.PRG; Erez's copy, never left in a kept hd
+        shutil.copy(wd, to)                     # after NVDI.PRG; the owner's copy, never left in a kept hd
         atexit.register(lambda: os.path.exists(to) and os.remove(to))
     return ok
 

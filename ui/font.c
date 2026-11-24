@@ -11,7 +11,7 @@
  *
  * The system and bitmap fonts have their Hebrew letters at the Atari
  * character set's places (TOS, EmuTOS; "Hebrew in fonts" went from every
- * app, Erez, 12 Nov 2026). A vector font (Speedo, TrueType, Type 1) is asked through
+ * app, decided 12 Nov 2026). A vector font (Speedo, TrueType, Type 1) is asked through
  * NVDI for its Hebrew letters by Unicode; when it has none, they are
  * drawn in the system font in the same cells.
  */
@@ -92,7 +92,7 @@ static void probe_hebrew(short id)
 
 /* how the GDOS font now set draws a run (FC_*): a run drawn a character
    to a cell is a VDI call a character, some 2,000 a page of a message
-   (a Falcon at 16 MHz, Erez's video of 26 Oct 2026: a second a page) */
+   (a Falcon at 16 MHz, a report of 26 Oct 2026: a second a page) */
 static short mode_of(short width, short n, int mono)
 {
 	if (width == n * cw)

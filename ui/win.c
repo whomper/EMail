@@ -12,7 +12,7 @@
  *
  * What the AES draws in its own look is the AES's (the guidelines, 5.1):
  * the main window is sized by its SIZER; the message pane, at the
- * window's right edge, scrolls with the window's own slider (Erez, 24 Oct
+ * window's right edge, scrolls with the window's own slider (decided 24 Oct
  * 2026: the column the AES keeps beside its size box is used, not left
  * empty), and the folder and list panes have bars of their own,
  * common/ui/panebar.c's, AES objects drawn by objc_draw.
@@ -445,7 +445,7 @@ static void main_redraw(GRECT *area)
    and draws in the next: the AES's WM_REDRAW for the same window, queued
    by the resize, is drawn with it, once (until 2.23 an ST drew the
    window twice when it grew, 885 and 460 ms: the guidelines' Speed,
-   Erez 19 Nov 2026) */
+   decided 19 Nov 2026) */
 static GRECT due_r;
 static int due_set;
 
@@ -836,7 +836,7 @@ int win_is_top(WIN *w)
 
 /* What a pane shows in a, moved dy pixels down (up when dy < 0) on the
    screen, as scroll_copy moves its rows: Find's row coming or going
-   moves the list under it rather than drawing it again (Erez, 31 Oct
+   moves the list under it rather than drawing it again (decided 31 Oct
    2026: the ST drew the whole list, 115 ms). 0 where the pane isn't all
    in sight: the caller draws it */
 int win_shift(WIN *w, GRECT *a, short dy)
@@ -876,7 +876,7 @@ int win_shift(WIN *w, GRECT *a, short dy)
 /* A pane scrolled by fewer rows than it shows: the rows that stay move
    on the screen with one raster copy and only the new ones are drawn. A
    GDOS font's rows are drawn a letter at a time, so a pane drawn afresh
-   at every step was seen filling in (Erez's video, 20 Oct 2026). Only
+   at every step was seen filling in (a report, 20 Oct 2026). Only
    where nothing covers the pane; else 0, and it is drawn as before */
 static int scroll_copy(WIN *w, GRECT *a, long d)
 {

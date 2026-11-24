@@ -300,7 +300,7 @@ int store_lost_passwords, store_plain_passwords;
 
 /* a password from EMAIL.INF: encrypted ({E}...) or, from an older EMail,
    as typed. One this EMAIL.KEY can't open is left empty */
-/* EMAIL.INF is written only when a setting changed (guidelines 6.1; Erez,
+/* EMAIL.INF is written only when a setting changed (guidelines 6.1; the owner,
    12 Nov 2026): the new text is compared with the file at the save, so
    the start does no work for it; each password's sealed text is kept as
    it was read, so an unchanged password is written as it was (a new seal
@@ -554,7 +554,7 @@ static void set_opt(const char *k, const char *v)
 			str_copy(opt.translate_to, v, sizeof(opt.translate_to));
 	}
 	else if (!strcmp(k, "colour") || !strcmp(k, "color")) opt.colour = n != 0;
-	/* HEBFONT= (the font's Hebrew places, gone: Erez, 12 Nov 2026) is read and dropped */
+	/* HEBFONT= (the font's Hebrew places, gone: decided 12 Nov 2026) is read and dropped */
 }
 
 /* EMAIL.INF being read: what store_begin loaded, the line store_step is
@@ -1328,7 +1328,7 @@ FOLDER *fold_open(ACCOUNT *a, FINFO *fi)
 	end = buf + blen;
 	/* line ends and tabs found with memchr: an 8 MHz ST takes some 18
 	   cycles a character there, 60 in a C loop (strchr): 500 headers'
-	   index, 65 KB, took 920 ms of the Inbox's opening (Erez, 13 Nov 2026) */
+	   index, 65 KB, took 920 ms of the Inbox's opening (decided 13 Nov 2026) */
 	for (line = buf; line && line < end && *line; line = next) {
 		next = memchr(line, '\n', end - line);
 		if (next)

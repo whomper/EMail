@@ -62,7 +62,7 @@ static long selection;		/* several messages selected: how many */
 static int half;		/* parsed, its head and body made, not yet laid out and drawn */
 
 /* the message shown is forgotten, not drawn: reader_show draws the next
-   once it is laid out, so the pane doesn't go blank meanwhile (Erez's
+   once it is laid out, so the pane doesn't go blank meanwhile (the owner's
    video, 20 Oct 2026: "No message selected" for the layout's time) */
 /* Options > Translate: the message shown translated (its subject and text
    in place of the originals, which are kept to put back) */
@@ -704,7 +704,7 @@ void reader_show_layout(void)
 
 /* drawn, in one stretch with what the caller draws after it (its row,
    the list's titles, the folders' counts): a redraw of 300 ms or less
-   is drawn in one piece (the guidelines' Speed; Erez, 19 Nov 2026) */
+   is drawn in one piece (the guidelines' Speed; decided 19 Nov 2026) */
 void reader_show_draw(void)
 {
 	if (half != 2)
@@ -805,7 +805,7 @@ void reader_show(HDR *h)
 
 /* ---------------- words chosen with the mouse (common/ui/textsel.c) ----------------
    A drag over the text chooses words (a double click a word), ^C copies
-   them, and the right-click on them offers Copy and "Translate..." (Erez,
+   them, and the right-click on them offers Copy and "Translate..." (the owner,
    7 Nov 2026). The layout's lines are the view; a new layout is a new
    generation, and an old selection is never drawn. */
 static TSVIEW view;
@@ -1107,7 +1107,7 @@ static void short_name(const char *name, char *out)
 
 /* attachment i into the file path: from the message when it is here,
    from the server, a piece at a time, when it was left there (a large
-   message: Erez, 21 Nov 2026); 1 if written */
+   message: decided 21 Nov 2026); 1 if written */
 static int part_to_file(short i, const char *path)
 {
 	MIMEPART *p = &cur_msg->parts[i];
@@ -1178,7 +1178,7 @@ static void reader_to_epdf(short i)
 }
 
 /* a click on a PDF attachment: open it in EPDF, save it, or nothing
-   (Erez, 13 Nov 2026) */
+   (decided 13 Nov 2026) */
 static void reader_pdf(short i)
 {
 	char name[31], *p;	/* an alert line holds 30 */
@@ -1187,7 +1187,7 @@ static void reader_pdf(short i)
 	for (p = name; *p; p++)
 		if (*p == '|' || *p == '[' || *p == ']')
 			*p = ' ';	/* the alert's own marks */
-	/* Erez's words; Cancel on the left, as in the family's dialogs (5.10) */
+	/* decideds; Cancel on the left, as in the family's dialogs (5.10) */
 	r = alert(3, "[2][%s|is a PDF document.][Cancel|Save to disk|Open with EPDF]", name);
 	if (r == 3)
 		reader_to_epdf(i);
@@ -1324,7 +1324,7 @@ static void rclick(WIN *w, short mx, short my)
 	view_now();
 	if (cur_msg && ts_has(&sel, &view) && ts_inside(&sel, &view, i, mx)) {
 		/* on the words chosen: copy them, or their translation in a box
-		   (Erez, 7 Nov 2026: whatever Options > Translate says) */
+		   (decided 7 Nov 2026: whatever Options > Translate says) */
 		static const char *const lab[] = { "Copy              ^C", "Translate..." };
 		short r = popup_m(mx, my, lab, 2);
 		if (r >= 0 && !popup_put_back)

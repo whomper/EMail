@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-2.0-or-later
 # Copyright (C) 2026 AERA | Erez Yaary
-"""Find (Erez, 31 Oct 2026), as net_test.py: Dovecot, FAKESTNG.PRG over
+"""Find (decided 31 Oct 2026), as net_test.py: Dovecot, FAKESTNG.PRG over
 the serial port, the test build (build/trace/email.prg says on the
 console "FIND on", "FIND off" and, each time the list follows the field,
 "FIND disk|server "text" N", N the rows listed).

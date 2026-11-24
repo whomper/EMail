@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 # Copyright (C) 2026 AERA | Erez Yaary
 """EContact's CONTACTS.TXT when EContact isn't loaded (the guidelines, 4.1:
-an option, Settings > Contacts; Erez, 21 Oct 2026).
+an option, Settings > Contacts; decided 21 Oct 2026).
 
 As people_test.py (Dovecot, the SMTP stand-in, FAKESTNG.PRG over the
 serial port, a reply to Dana with ", Grace" typed and ^B), with
@@ -43,7 +43,7 @@ mode = more[0] if more else "file"
 if mode not in ("file", "econtact"):
     sys.exit(__doc__)
 if mode == "econtact" and machine.partition(":")[0] == "ST-1":
-    print("SKIPPED: the whole test on %s: 1 MB: EMail and the accessory don't fit together, Erez 19 Oct" % machine)
+    print("SKIPPED: the whole test on %s: 1 MB: EMail and the accessory don't fit together, decided 19 Oct" % machine)
     print("%s: 0 passed, 1 skipped" % os.path.basename(__file__))
     sys.exit(0)
 os.makedirs(work, exist_ok=True)

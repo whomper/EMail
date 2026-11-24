@@ -73,7 +73,7 @@ def undrawn(shot):
 
 
 # 1. the first start: the welcome box comes at once (no account; only
-# NATFEATS=1, so that EMail's NatFeats lines come, Erez 15 Nov 2026)
+# NATFEATS=1, so that EMail's NatFeats lines come, decided 15 Nov 2026)
 inf1 = os.path.join(work, "inf1", "email.inf")
 os.makedirs(os.path.dirname(inf1), exist_ok=True)
 with open(inf1, "w", newline="") as f:

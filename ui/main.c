@@ -69,7 +69,7 @@ static const MBAR_ITEM m_file[] = {
 	{ "Send Outbox", 0, C_SENDQ },
 	{ "-", 0, 0 },
 	{ "Save attachment...", 0, C_SAVEATT },
-	{ "Print...", "^P", C_PRINT },	/* the family's ^P (Erez, 21 Nov 2026) */
+	{ "Print...", "^P", C_PRINT },	/* the family's ^P (decided 21 Nov 2026) */
 	{ "-", 0, 0 },
 	{ "Close window", "^U", C_CLOSE },
 	{ "Next window", "^W", C_NEXTWIN },
@@ -109,7 +109,7 @@ static const MBAR_ITEM m_edit[] = {
 	{ 0, 0, 0 }
 };
 static const MBAR_ITEM m_fold[] = {
-	{ "Folder pane", "\x01^S", C_FOLDERPANE },	/* shows or hides it (Erez, 10 Nov 2026: D45) */
+	{ "Folder pane", "\x01^S", C_FOLDERPANE },	/* shows or hides it (decided 10 Nov 2026: D45) */
 	{ "Show folders", 0, C_FOLDERS },
 	{ "Refresh folder list", 0, C_REFRESH },
 	{ "New folder...", 0, C_NEWFOLDER },
@@ -124,7 +124,7 @@ static const MBAR_ITEM m_opts[] = {
 	{ "Settings...", "^,", C_SETTINGS },
 	{ "Font...", 0, C_FONT },
 	{ "-", 0, 0 },
-	{ "Translate", 0, C_TRANSLATE },	/* a section of its own (Erez, 9 Nov 2026: D5) */
+	{ "Translate", 0, C_TRANSLATE },	/* a section of its own (decided 9 Nov 2026: D5) */
 	{ "-", 0, 0 },
 	{ "Work offline", 0, C_OFFLINE },
 	{ "Direct connection", 0, C_FALCON },
@@ -290,7 +290,7 @@ static void set_logging(void)
 }
 
 /* the Hebrew keyboard (common/ui/hebkey.c) switched (F10 only, no menu
-   entry: Erez, 7 Nov 2026): the badge (guideline 5.3) */
+   entry: decided 7 Nov 2026): the badge (guideline 5.3) */
 static short badge_later;	/* switched in a dialog: drawn once it is gone */
 
 static void hebrew_changed(void)
@@ -414,7 +414,7 @@ void cmd_check_all(void)
 		char m[120];
 		snprintf(m, sizeof(m), total == 1 ? "1 new message" : "%s new messages", num(total));
 		/* all of it outside the Inbox: where it went, not counted twice
-		   ("3 new in Junk"; Erez, 7 Nov 2026) */
+		   ("3 new in Junk"; decided 7 Nov 2026) */
 		if (mail_new_folders == 1 && mail_new_other == total)
 			snprintf(m, sizeof(m), "%s new in %s", num(total), mail_new_where);
 		else if (mail_new_folders > 1 && mail_new_other == total)
@@ -584,7 +584,7 @@ static void start_browser(const char *url)
 
 /* a PDF document (path, written in EMail's folder) to EPDF: the running
    one by VA_START, else EPDF started on it: beside EMail where the AES
-   runs both, on plain TOS in its place once EMail has quit (Erez, 13 Nov
+   runs both, on plain TOS in its place once EMail has quit (decided 13 Nov
    2026) */
 void open_in_epdf(const char *path)
 {
@@ -1616,7 +1616,7 @@ static int shortcut(short kstate, short key)
 		case 0x25: cmd = C_CHECK; break;	/* K */
 		case 0x10: cmd = C_QUIT; break;		/* Q */
 		case 0x16: cmd = C_CLOSE; break;	/* U */
-		case 0x24: cmd = C_UNREAD; break;	/* J: Mark as unread, off Shift+^U (Erez, 9 Nov 2026: D1) */
+		case 0x24: cmd = C_UNREAD; break;	/* J: Mark as unread, off Shift+^U (decided 9 Nov 2026: D1) */
 		case 0x11: cmd = C_NEXTWIN; break;	/* W */
 		case 0x13: cmd = shift ? C_REPLYALL : C_REPLY; break;	/* R */
 		case 0x12: cmd = C_REPLYALL; break;	/* E */
@@ -1652,7 +1652,7 @@ static int shortcut(short kstate, short key)
 		}
 	}
 	/* Insert opens the context menu where the selection is, or at the
-	   pane's top left (Erez, 10 Nov 2026: D17) */
+	   pane's top left (decided 10 Nov 2026: D17) */
 	if (scan == 0x52 && !(kstate & (K_LSHIFT | K_RSHIFT)) && top && top->rclick && (top->pane || top == &w_editor)) {
 		short x = top->work.x, y = top->work.y + top->head_h;
 		if (top->insert_at)
@@ -1711,7 +1711,7 @@ static void quit_clearing(const char *account, const char *folder)
 /* EMail crashed and CRASH.LOG is written: say so and leave GEM tidy.
    Only the AES and VDI: the heap may be what went wrong */
 /* each step of quitting into the protocol log at once: if the Atari
-   bombs after the window has gone, the last line says where (Erez,
+   bombs after the window has gone, the last line says where (the owner,
    10 Nov 2026: two bombs as EMail quits; EFTP's quit_step) */
 static void quit_step(const char *what)
 {
@@ -1754,7 +1754,7 @@ static char vwk_note[80];	/* the v_opnvwk line, said after store_init */
 
 /* common/atari/cpucheck.c (cpucheck_cf.S in the FireBee package's) runs
    first and calls app_main: on the other package's machine EMail says
-   which package to install, and goes (Erez's words, 22 Nov 2026; the
+   which package to install, and goes (decideds, 22 Nov 2026; the
    guidelines, 7.4) */
 const long cpu_need = 0;
 #ifdef __mcoldfire__
@@ -1843,7 +1843,7 @@ int app_main(void)
 	falcon_usable = get_cookie(0x5F435055L) >= 20;	/* _CPU: TLS.OVL needs a 68020 */
 	store_init(dir);
 	/* NATFEATS=1 in EMAIL.INF: the emulator's debug output (NatFeats),
-	   which only the test rigs ask for (Erez, 15 Nov 2026; guidelines
+	   which only the test rigs ask for (decided 15 Nov 2026; guidelines
 	   6.5). Without it nothing is probed, so a real machine never runs
 	   the probe's illegal instruction (a Vampire V4SA's Atari core ended
 	   EMail on it). Taken from store_init's own reading of EMAIL.INF, so
@@ -1865,7 +1865,7 @@ int app_main(void)
 	email_theme_init();
 	font_apply();
 	hebrew_kbd_hook = hebrew_changed;
-	hebrew_kbd = 0;		/* off at the start, F10 only (Erez, 8 Nov 2026; guideline 5.3) */
+	hebrew_kbd = 0;		/* off at the start, F10 only (decided 8 Nov 2026; guideline 5.3) */
 	set_logging();
 	net_init();
 	pf_idle = job_idle;

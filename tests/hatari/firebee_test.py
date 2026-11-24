@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 # Copyright (C) 2026 AERA | Erez Yaary
 """Each package's files on the other package's machine say which package to
-install (two packages, the same names inside: Erez, 22 Nov 2026; the
+install (two packages, the same names inside: decided 22 Nov 2026; the
 guidelines, 7.4). The standard package's are binary/, the FireBee
 package's binary/firebee/.
 

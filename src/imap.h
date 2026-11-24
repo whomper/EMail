@@ -72,7 +72,7 @@ int imap_status(IMAP *im, const char *mbox, long *messages, long *unseen);
 /* a message's parts, from its BODYSTRUCTURE: the leaves, in order, with
    their section ("1", "2.1"); of a multipart/alternative only the part
    EMail shows (the HTML or a multipart/related around it, else the plain
-   text: Erez, 24 Oct 2026), so the others are neither shown nor listed */
+   text: decided 24 Oct 2026), so the others are neither shown nor listed */
 typedef struct {
 	char sec[16];		/* "1", "2.1" */
 	char type[48];		/* "text/plain", lower case */

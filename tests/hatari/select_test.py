@@ -109,7 +109,7 @@ try:
         r.shot("s4-chosen")
         # then Archive with a quick double click, which takes it (no OK):
         # the whole list drawn again on the first press lost the second
-        # (Erez, 11 Nov 2026)
+        # (decided 11 Nov 2026)
         r.move(rx, ry)
         r.xdo("click", "--repeat", "2", "--delay", os.environ.get("DCLICK_MS", "70"), "1")    # a quick one: 70 ms between
         time.sleep(25)

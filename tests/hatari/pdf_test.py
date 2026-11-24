@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-2.0-or-later
 # Copyright (C) 2026 AERA | Erez Yaary
-"""A PDF attachment: a click offers Open with EPDF, Save to disk or Cancel (Erez,
+"""A PDF attachment: a click offers Open with EPDF, Save to disk or Cancel (the owner,
 13 Nov 2026).
 
 As invite_test.py (Dovecot, FAKESTNG.PRG over the serial port). The newest

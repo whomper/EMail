@@ -3,7 +3,7 @@
 # Copyright (C) 2026 AERA | Erez Yaary
 """What EMail draws while the lists are used, on an emulated Falcon.
 
-Erez's video of 20 Oct 2026 showed panes drawn again for no reason: every
+a report of 20 Oct 2026 showed panes drawn again for no reason: every
 row of the list at each scroll step and again when EContact's names came,
 the whole folder pane when a message was chosen, the reader blank while
 a message was laid out. EMAIL.PRG is the test build build/trace/email.prg
@@ -25,7 +25,7 @@ Dovecot (as net_test.py: FAKESTNG.PRG and serial_bridge.py), it checks:
     scroll_test.py WORKDIR [MACHINE]     (needs Xvfb, xdotool, dovecot)
 
 AERA_FONT=5419,10 (a GDOS font's id and size, under AERA_WITH_NVDI=1)
-starts EMail with that font, as Erez runs it; a row's height is taken
+starts EMail with that font, as the owner runs it; a row's height is taken
 from what is drawn.
 """
 import os

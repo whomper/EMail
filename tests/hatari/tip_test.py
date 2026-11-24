@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-2.0-or-later
 # Copyright (C) 2026 AERA | Erez Yaary
-"""Tooltips over text cut short (Erez, 27 Oct 2026), as net_test.py:
+"""Tooltips over text cut short (decided 27 Oct 2026), as net_test.py:
 Dovecot, FAKESTNG.PRG over the serial port, the test build
 (build/trace/email.prg says each tooltip on the console: "TIP text").
 The mouse rests on the list's From and Subject of a message whose name

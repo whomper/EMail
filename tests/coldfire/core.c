@@ -1,8 +1,8 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later
  * Copyright (C) 2026 AERA | Erez Yaary */
 /*
- * core.c - EMail's mail core as the FireBee edition runs it (Erez, 22 Nov
- * 2026: "Make the other apps native on the FireBee too"): the same driver
+ * core.c - EMail's mail core as the FireBee edition runs it (decided 22 Nov
+ * 2026: the same driver
  * built twice, for the build machine and, with the FireBee package's own ColdFire
  * objects (build/cf/), for qemu-m68k -cpu cfv4e. Each input, and 300
  * changed copies of it (bytes changed, cut, repeated: the same for both),

@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 # Copyright (C) 2026 AERA | Erez Yaary
 """A large message on a 1 MB ST (a tester's fault in 2.25: one large
-message gave a memory error; Erez, 21 Nov 2026: above Settings' limit, 500
+message gave a memory error; decided 21 Nov 2026: above Settings' limit, 500
 KB, it comes without its attachments, which stay on the server).
 
 Dovecot holds a short message and, newest, one of about 800 KB: a text and
@@ -121,7 +121,7 @@ try:
     # the PDF's line: under the note, the text and the rule; its click
     # asks Cancel | Save to disk | Open with EPDF; Save to disk, then
     # Return in the file selector (C:\EMAIL\, CASE.PDF)
-    # the rows sit lower on a 480-line screen (Erez's configuration), and
+    # the rows sit lower on a 480-line screen (the reference configuration), and
     # the alert is centred on the screen
     from PIL import Image
     tall = Image.open(os.path.join(shots, "b2-read.png")).height

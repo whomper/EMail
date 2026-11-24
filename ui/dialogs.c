@@ -340,7 +340,7 @@ static void band_badge(void);
    (main.c draws the badge's place once it is gone) */
 int dialog_up;
 
-/* The keyboard's reach (D25, 5.10; Erez, 10 Nov 2026: "kept as built",
+/* The keyboard's reach (D25, 5.10; decided 10 Nov 2026,
    as the family's Settings engine): Tab and Shift+Tab go through the
    dialog's text fields and controls (ticks, the buttons that open a list
    or another dialog) and, in Settings, the list of pages; Space acts on
@@ -513,7 +513,7 @@ static short form_loop(short start)
 				   F10 go on as before) */
 			} else if (sc == 0x44) {
 				/* F10: the Hebrew keyboard on or off, here too (as
-				   common's dlg_do; Erez, 6 Nov 2026); the band's badge
+				   common's dlg_do; decided 6 Nov 2026); the band's badge
 				   shows it */
 				set_hebrew_kbd(!hebrew_kbd);
 				if (band_obj && !dlg_in_window()) {
@@ -886,7 +886,7 @@ static short first_edit(void)
 /* the zone button: its name, the offset now, and "..." */
 static short zone_btn;
 
-/* Options > Translate's language (Erez, 7 Nov 2026: chosen in Settings) */
+/* Options > Translate's language (decided 7 Nov 2026: chosen in Settings) */
 static const char *const lang_name[] = { "English", "Hebrew", "German", "French", "Spanish", "Italian",
 					 "Portuguese", "Dutch", "Russian", "Arabic" };
 static const char *const lang_code[] = { "en", "he", "de", "fr", "es", "it", "pt", "nl", "ru", "ar" };
@@ -1070,7 +1070,7 @@ static void pdir_pick(void)
 }
 
 /* the Hebrew keyboard's badge at the right end of the title band, white
-   on the black (Erez, 6 Nov 2026; guideline 5.3). In a window the band is
+   on the black (decided 6 Nov 2026; guideline 5.3). In a window the band is
    hidden and the AES's title says it: no badge there */
 static void band_badge(void)
 {
@@ -1096,7 +1096,7 @@ static void band_badge(void)
 
 /* the dialog stays open while ticks and pages change */
 /* Settings' numbers in their ranges, or an alert that says what to type
-   (Erez, 9 Nov 2026: D30, the words approved): the page shown with the
+   (decided 9 Nov 2026: D30, the words approved): the page shown with the
    field, which gets the cursor; nothing is saved until they are */
 static short f_page, f_wrap, f_big, s_ok_obj, s_next_edit;
 
@@ -1282,7 +1282,7 @@ static void part_mail(short x, short y)
 	d_add(G_STRING, 0, 0, (long)"Messages to load at a time", x, ROW(1), 26, 1);
 	f_page = d_field(x + FX, ROW(1), s_page, 4, '9');
 	/* a larger message comes without its attachments, which stay on the
-	   server and come when one is saved (Erez's words, 21 Nov 2026) */
+	   server and come when one is saved (decideds, 21 Nov 2026) */
 	d_add(G_STRING, 0, 0, (long)"Messages larger than", x, ROW(2), 20, 1);
 	f_big = d_field(x + FX, ROW(2), s_big, 4, '9');
 	d_add(G_STRING, 0, 0, (long)"KB:", x + FX + 5, ROW(2), 3, 1);
@@ -1321,7 +1321,7 @@ static void part_look(short x, short y)
 }
 
 /* EContact's contacts file, when EContact isn't loaded (the guidelines,
-   4.1; an option for a machine short of memory, Erez, 21 Oct 2026) */
+   4.1; an option for a machine short of memory, decided 21 Oct 2026) */
 static void part_contacts(short x, short y)
 {
 	rows_at(y);
@@ -1408,7 +1408,7 @@ int dlg_settings(void)
 	/* built and drawn in one stretch: a turn between them (2.25's
 	   candidate) made Settings 10-20 ms later on every machine, and a
 	   modal dialog answers nothing in it (the AES's draw, 330 ms an ST,
-	   accepted by Erez, 19 Nov 2026) */
+	   accepted by decided 19 Nov 2026) */
 	s_ok_obj = ok;
 	r = settings_run(box);
 	if (r != ok)
@@ -1581,7 +1581,7 @@ static short pick_w(const char *title, const char **items, short n, short lw)
 					   change drawn: the whole list drawn again flickered,
 					   and any drawing before the release is waited for lets
 					   a quick second press be taken for the first one's
-					   release (Erez, 11 Nov 2026; on an ST even two rows'
+					   release (decided 11 Nov 2026; on an ST even two rows'
 					   worth: common/ui/dialog.h) */
 #ifdef DLG_CLICK
 					dlg_touch_up();
@@ -1750,7 +1750,7 @@ char *dlg_pick_address(void)
 /* ---------------- the keys (Help) ---------------- */
 
 /* a text in a box of its own, wrapped, with OK (the reader's right-click
-   "Translate...": the chosen words' translation; Erez, 7 Nov 2026) */
+   "Translate...": the chosen words' translation; decided 7 Nov 2026) */
 #define TB_W 44
 #define TB_ROWS 12
 void words_box(const char *title, const char *text, long n)
@@ -1782,7 +1782,7 @@ void words_box(const char *title, const char *text, long n)
 		rows[nr][k] = 0;
 		/* GEM draws in storage order: Hebrew laid out right to left
 		   first, and a right-to-left paragraph's rows set against the
-		   right edge, as the reader shows them (Erez, 8 Nov 2026) */
+		   right edge, as the reader shows them (decided 8 Nov 2026) */
 		if (bidi_has_rtl(rows[nr], (short)k)) {
 			char vis[TB_W + 4];
 			long p = s0, pe = s0;

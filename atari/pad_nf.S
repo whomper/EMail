@@ -3,7 +3,7 @@
 |
 | Linked right after nf's object: 2.20's change to nf.S (NatFeats only where the INF asks, AERA-Atari c042ced)
 | made its code +84 bytes in the program as linked, and everything after it
-| moved; with the 68030's cache the start went 760 -> 770 ms on Erez's
+| moved; with the 68030's cache the start went 760 -> 770 ms on the owner's
 | configuration (Falcon-4:256, TOS 4.04, NVDI) in every pair against 2.19,
 | though none of the changed code runs there. The pad puts the code after
 | it back at 2.19's addresses mod 256 (+84 + 172 = 0 mod 256), as ECal's

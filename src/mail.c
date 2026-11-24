@@ -828,7 +828,7 @@ static void pop_cb(void *ud, long num, const char *uid, long size)
 	sb_init(&msg);
 	/* larger than Settings' limit, or than the memory there is: its
 	   header and the start of its text, the message left on the server
-	   (Erez, 21 Nov 2026; until 2.25 the memory error ended the check) */
+	   (decided 21 Nov 2026; until 2.25 the memory error ended the check) */
 	big = size > mail_big_limit() || (size > 4096 && !sb_reserve(&msg, size + 1024));
 	if (big) {
 		int cut = 0;
@@ -1025,7 +1025,7 @@ int mail_check(ACCOUNT *a, long *newmsgs)
 
 /* ---------------- reading and changing ---------------- */
 
-/* ---------------- a large message (Erez, 21 Nov 2026) ----------------
+/* ---------------- a large message (decided 21 Nov 2026) ----------------
  * A message larger than Settings' limit (opt.bigkb) comes without its
  * attachments: its header and text, and for each attachment a part that
  * says where it is ("X-EMail-Left: 2 base64 1048576"), downloaded to a

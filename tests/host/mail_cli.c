@@ -312,7 +312,7 @@ int main(int argc, char **argv)
 	} else if (!strcmp(cmd, "savepart") && a && argc > 7) {
 		/* the reader's Save attachment: savepart ACCT FOLDER UID N FILE,
 		   the Nth attachment; one left on the server downloaded into
-		   the file a piece at a time (a large message: Erez, 21 Nov 2026) */
+		   the file a piece at a time (a large message: decided 21 Nov 2026) */
 		FINFO *fi = find_folder(a, argv[4]);
 		FOLDER *f;
 		HDR *h;

@@ -36,7 +36,7 @@ work = os.path.abspath(a[0])
 acc = os.environ.get("ACC") == "1"
 machine = a[1] if len(a) > 1 else "ST-1:mono"
 if acc and machine.partition(":")[0] in ("ST", "Falcon-4"):
-    sys.exit("speed.py: no accessory runs on ST or Falcon-4 (Erez, 4 Nov 2026): use ST-1, TT or Falcon")
+    sys.exit("speed.py: no accessory runs on ST or Falcon-4 (decided 4 Nov 2026): use ST-1, TT or Falcon")
 nvdi = "nvdi" in a[2:]
 for f in (PRG, CLI):
     if not os.path.exists(f):

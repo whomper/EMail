@@ -375,7 +375,7 @@ void list_select_uid(unsigned long uid)
 
 /* ---------------- Find: only the rows that changed ----------------
  * What each row on the screen shows, before the list changes and
- * after: a row drawn again only where they differ (Erez, 31 Oct 2026:
+ * after: a row drawn again only where they differ (decided 31 Oct 2026:
  * Find on an ST drew the whole list at each look). The title and the
  * bar are drawn with them, in the same stretch. */
 typedef struct {
@@ -459,7 +459,7 @@ void list_find_refresh(long top, long force)
 	shown_valid = 1;
 	/* the title and the bar with the rows, in the same stretch (a
 	   redraw of 300 ms or less in one piece: the guidelines' Speed,
-	   Erez 19 Nov 2026; until 2.23 each came a turn later) */
+	   decided 19 Nov 2026; until 2.23 each came a turn later) */
 	list_titles();
 	win_sliders(&w_list);
 }
@@ -487,7 +487,7 @@ long list_count(void)
 /* after the current message was deleted or moved: nothing chosen, so
    no message is opened (and perhaps downloaded) unasked */
 /* after messages went (Delete, Move): the list drawn once; the reader
-   is its callers' to clear, before (Erez's video, 26 Oct 2026: the list
+   is its callers' to clear, before (a report, 26 Oct 2026: the list
    and the reader each drawn two and three times for one Delete) */
 void list_after_remove(void)
 {
@@ -506,7 +506,7 @@ static short wide;	/* room for the size column */
 /* the marks column: a dot (unread), ! (flagged) and @ (attachments),
    then a space. An unread message's row is blue where there is colour,
    with the dot; on monochrome the dot alone. Not bold: bold text is
-   drawn at a third of the speed (Erez, 26 Oct 2026) */
+   drawn at a third of the speed (decided 26 Oct 2026) */
 #define MK 4
 #define DOT '\xF9'
 
@@ -721,7 +721,7 @@ static void show_sel(void)
    the next turns, a step a turn: read and parse it; lay it out; draw it
    with its row, the list's titles and the folders' counts, in one
    stretch (a redraw of 300 ms or less in one piece: the guidelines'
-   Speed, Erez 19 Nov 2026; the two steps before it are work). Keys
+   Speed, decided 19 Nov 2026; the two steps before it are work). Keys
    typed or repeated meanwhile move on without each message on the way
    being shown (an ST takes 300 ms and more a message, a key 50) */
 static int later;
@@ -749,7 +749,7 @@ static void select_row(long i, int open)
 	}
 	anchor = i;
 	if (i == old && cur_msg && !reader_missing && cur_uid == cur_folder->h[view[i]].uid) {
-		/* the message shown already: nothing is drawn again (Erez's
+		/* the message shown already: nothing is drawn again (the owner's
 		   video, 20 Oct: a click on it redrew the row twice, the
 		   reader and the folders) */
 		win_ensure_visible(&w_list, sel);
@@ -776,7 +776,7 @@ static void select_row(long i, int open)
 	}
 	show_step = 0;
 	/* the row the user chose highlighted first, then the message shown
-	   (Erez, 4 Nov 2026: the item is selected before the action behind
+	   (decided 4 Nov 2026: the item is selected before the action behind
 	   it); the row drawn again only if reading it changed its look */
 	win_redraw_lines(&w_list, sel, 1);
 	show_sel();
@@ -924,7 +924,7 @@ static int drag_messages(long i, short mx, short my)
 		evnt_timer_(10);
 	}
 	/* the row dragged is selected first, highlighted at once and shown
-	   after the drag (Erez, 4 Nov 2026) */
+	   after the drag (decided 4 Nov 2026) */
 	if (!several && i != sel) {
 		later = 1;
 		select_row(i, 0);
@@ -1031,7 +1031,7 @@ static void click(WIN *w, short mx, short my, short clicks, short kstate)
 	}
 	if (clicks < 2 && i >= 0 && i < nview) {
 		/* a single press: the row highlighted at once, its message shown
-		   in the next turns, as a key does (Erez, 4 Nov 2026: the item
+		   in the next turns, as a key does (decided 4 Nov 2026: the item
 		   chosen is selected before the action behind it); held and moved,
 		   a drag onto a folder (press_track: 5.8, W24). A row of several
 		   selected keeps them for the drag, and is chosen alone on release */
@@ -1198,7 +1198,7 @@ static int key(WIN *w, short kstate, short k)
 }
 
 /* the tooltip over a name or a subject the list cuts short: all of it
-   (Erez, 27 Oct 2026) */
+   (decided 27 Oct 2026) */
 int list_tip(short mx, short my, char *out, int size)
 {
 	WIN *w = &w_list;

@@ -647,7 +647,7 @@ static void steal_cb(IMAP *im, void *ud, const char *s, long n)
 	}
 }
 
-/* ---------------- a large message's parts (Erez, 21 Nov 2026) ---------------- */
+/* ---------------- a large message's parts (decided 21 Nov 2026) ---------------- */
 
 typedef struct {
 	IMAPPART *p;

@@ -529,7 +529,7 @@ static void eb_invert(GRECT *r)
 }
 
 /* a press on the bar: the button sinks while it is held and the pointer
-   is on it, and acts when it is let go there (Erez, 9 Nov 2026: D32, 5.8);
+   is on it, and acts when it is let go there (decided 9 Nov 2026: D32, 5.8);
    let go elsewhere, nothing happens */
 static void bar_click(short mx, short my)
 {
@@ -733,7 +733,7 @@ static void wrap_current(void)
 
 /* line's columns from col on drawn again (and the cursor, a column
    before): a key typed in a plain body line draws what moved, not the
-   line (Erez's video, 26 Oct 2026: every key drew the whole sentence) */
+   line (a report, 26 Oct 2026: every key drew the whole sentence) */
 static void changed_cols(long line, short col)
 {
 	GRECT a;
@@ -1366,7 +1366,7 @@ static void rclick(WIN *w, short mx, short my)
 	lab[3] = "Attach file...    ^T";
 	lab[4] = "Address book...   ^B";
 	lab[5] = "-";
-	lab[6] = "Cut line          ^X";	/* (no Hebrew keyboard: F10 only; Erez, 7 Nov 2026) */
+	lab[6] = "Cut line          ^X";	/* (no Hebrew keyboard: F10 only; decided 7 Nov 2026) */
 	lab[7] = "Copy line         ^C";
 	lab[8] = "Paste             ^V";
 	r = popup_m(mx, my, lab, 9);

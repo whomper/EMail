@@ -475,7 +475,7 @@ static void t_zone(void)
 }
 
 /* EMAIL.INF is written only when a setting changed (guidelines 6.1;
-   Erez, 12 Nov 2026): a save with nothing changed leaves the file alone,
+   decided 12 Nov 2026): a save with nothing changed leaves the file alone,
    a password included (its seal is kept), one change writes it. A write
    is seen as a new modification time or file */
 static struct stat inf_st;
@@ -734,7 +734,7 @@ static void t_index(void)
 	rmdir(dir);
 }
 
-/* an attachment left on the server, decoded as it comes (Erez, 21 Nov
+/* an attachment left on the server, decoded as it comes (decided 21 Nov
    2026): base64 and quoted-printable cut into pieces anywhere, a quantum
    or an "=4" across two of them, decode as the whole does (base64: the
    bytes sent; quoted-printable, a text encoding, as qp_decode reads it) */

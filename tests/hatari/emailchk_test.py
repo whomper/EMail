@@ -40,7 +40,7 @@ such as an AES_PROFILE one (its stretches go to hatari.log as AESGAP).
     emailchk_test.py WORKDIR [MACHINE] [direct] [pop3] [trace]
 
 MACHINE is ST-1, TT or Falcon: the accessories are not tested on the
-4 MB machines, ST and Falcon-4 (Erez, 4 Nov 2026).
+4 MB machines, ST and Falcon-4 (decided 4 Nov 2026).
 """
 import imaplib
 import os
@@ -59,7 +59,7 @@ IMAP, SMTP = 10143, 10025
 
 work, machine, more = rig.cli("Falcon")
 if machine.partition(":")[0] in ("ST", "Falcon-4"):
-    sys.exit("emailchk_test.py: no accessory runs on ST or Falcon-4 (Erez, 4 Nov 2026): use ST-1, TT or Falcon")
+    sys.exit("emailchk_test.py: no accessory runs on ST or Falcon-4 (decided 4 Nov 2026): use ST-1, TT or Falcon")
 direct = "direct" in more
 trace = "trace" in more
 pop = "pop3" in more

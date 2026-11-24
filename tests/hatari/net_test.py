@@ -116,7 +116,7 @@ try:
             print("REPLY ARRIVED:", subj)
             print(body)
             ok = "שלום Dana, this reply comes from a Falcon." in body and "> " in body
-            # the signature goes with the reply, above the quote (Erez, 20 Oct 2026)
+            # the signature goes with the reply, above the quote (decided 20 Oct 2026)
             sig, said = body.find("Sent from my Falcon"), body.find(" wrote:")
             print("signature above the quote:", 0 < sig < said)
             ok = ok and 0 < sig < said
@@ -131,7 +131,7 @@ try:
         ok = ok and kept
     # and quit, with the mouse: File > Quit (ClaudeST 2.2 to 2.5 lost it
     # when a menu line went; hub, 11 Nov 2026); each step of it in
-    # EMAIL.LOG, to the last, and no CRASH.LOG (Erez, 10 Nov 2026: two
+    # EMAIL.LOG, to the last, and no CRASH.LOG (decided 10 Nov 2026: two
     # bombs as EMail quit)
     if machine.endswith(":med"):                     # 640x200: the window is shown doubled
         r.ctrl("q")

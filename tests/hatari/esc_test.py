@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-2.0-or-later
 # Copyright (C) 2026 AERA | Erez Yaary
-"""Esc and Undo (the AERA guidelines, 3.5: Erez, 27 Oct 2026), as
+"""Esc and Undo (the AERA guidelines, 3.5: decided 27 Oct 2026), as
 net_test.py: Dovecot, FAKESTNG.PRG over the serial port. Undo cancels a
 dialog; Esc empties the text field the cursor is in and the dialog stays,
 and cancels a dialog without a field and an alert. Each dialog and alert

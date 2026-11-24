@@ -66,7 +66,7 @@ int  mail_folder_create(ACCOUNT *a, const char *name);
 /* a new name (Atari text) under the same parent; newserver gets its name
    on the server */
 /* Settings' limit in bytes: a larger message comes without its
-   attachments (Erez, 21 Nov 2026) */
+   attachments (decided 21 Nov 2026) */
 long mail_big_limit(void);
 /* an attachment left on the server (MIMEPART.left: its section, encoding
    and size there) downloaded into path, decoded a piece at a time */

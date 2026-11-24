@@ -258,7 +258,7 @@ static void visual_at(short x, short y, const char *out, short n, short flags, s
 	   TOS's screen, a third of the VDI's time on an ST (the guidelines'
 	   Speed). Only where it can (text_plain_state not below 0): under
 	   NVDI or in a GDOS font it would be text_n in MD_REPLACE, not the
-	   transparent text below, as before 1.69 (Erez's video, 1 Nov 2026:
+	   transparent text below, as before 1.69 (a report, 1 Nov 2026:
 	   the lists and the letter slower than they were, in his font) */
 	if (!effects && on_white && col == 1 && font_cells == FC_RUNS && text_plain_state() >= 0) {
 		wr_mode(1);
@@ -291,7 +291,7 @@ static void visual_at(short x, short y, const char *out, short n, short flags, s
 	   its cells (common's text_bold_strike, the guidelines' Speed:
 	   text), never vst_effects' bold, which NVDI makes a pixel or more
 	   wider a letter, so the next run drawn covered the last letters
-	   (EHypView, Erez's photo: "On the Falcon itsel"). On TOS's own VDI
+	   (EHypView, a report. On TOS's own VDI
 	   the pixels are those of its bold */
 	text_effects(effects & ~1);
 	for (i = 0; i < n; i += 120) {

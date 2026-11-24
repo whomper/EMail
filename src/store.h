@@ -79,7 +79,7 @@ typedef struct {
 	short startoffline;	/* start working offline (Options > Work offline goes online) */
 	short page;		/* messages loaded at a time (more on request) */
 	short bigkb;		/* a message larger than this (KB) is downloaded without its
-				   attachments, which stay on the server (Erez, 21 Nov 2026) */
+				   attachments, which stay on the server (decided 21 Nov 2026) */
 	short keepcache;	/* keep message bodies on disk when quitting */
 	short log;		/* write EMAIL.LOG */
 	short offline;
@@ -100,7 +100,7 @@ typedef struct {
 	char peopledir[200];	/* EContact's folder, where CONTACTS.TXT is */
 	char browser[200];	/* EWeb's program, started on a link when no browser runs */
 	char epdf[200];		/* EPDF's program, started on a PDF attachment when it doesn't run */
-	short natfeats;		/* NATFEATS=1: the test rigs' only (Erez, 15 Nov 2026); kept, never offered */
+	short natfeats;		/* NATFEATS=1: the test rigs' only (decided 15 Nov 2026); kept, never offered */
 	short translate;	/* Options > Translate: each message shown in translate_to (the Gateway's translategate) */
 	char translate_to[8];	/* the language translated into, an ISO 639-1 code ("en") */
 } OPTIONS;

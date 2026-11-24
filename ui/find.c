@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later
  * Copyright (C) 2026 AERA | Erez Yaary */
 /*
- * find.c - Find in the open folder (Erez, 31 Oct 2026).
+ * find.c - Find in the open folder (decided 31 Oct 2026).
  *
  * Ctrl+F (Message > Find) puts a field across the top of the message
  * list. What is typed there, after a short pause, leaves in the list

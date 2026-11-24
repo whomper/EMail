@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-2.0-or-later
 # Copyright (C) 2026 AERA | Erez Yaary
-"""Settings from the keyboard (D25, guidelines 5.10; Erez, 10 Nov 2026:
-"kept as built", as the family's Settings engine). EMail offline, no
+"""Settings from the keyboard (D25, guidelines 5.10; decided 10 Nov 2026, as the family's Settings engine). EMail offline, no
 server: Options > Settings opens on Mail with the cursor in its first
 field;
 

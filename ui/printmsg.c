@@ -2,7 +2,7 @@
  * Copyright (C) 2026 AERA | Erez Yaary */
 /*
  * printmsg.c - File > Print... (^P), and Print... on a message's menu
- * (Erez, 21 Nov 2026): the messages a command works on, the selected
+ * (decided 21 Nov 2026): the messages a command works on, the selected
  * ones or the one shown, each from a new page, in one job through the
  * GDOS (common/ui/print.c). A page carries From, To, Cc, Date and
  * Subject with their labels in bold, the attachments by name and size
@@ -14,7 +14,7 @@
  * the printer dialog asks which of them to print; the system font is
  * sized to the grid on the printer. A message not on the Atari is
  * downloaded first; Esc or Undo stops between pages. The words are the
- * family's, EPDF's (Erez, 21 Nov 2026).
+ * family's, EPDF's (decided 21 Nov 2026).
  */
 #include <string.h>
 #include <stdio.h>
@@ -384,7 +384,7 @@ void cmd_print(void)
 	}
 	print_end(&pj);		/* what was drawn goes out, a stop too */
 	busy(0);
-	/* the family's words, as EPDF's (Erez, 21 Nov 2026) */
+	/* the family's words, as EPDF's (decided 21 Nov 2026) */
 	status(ok ? "Printed." : stopped ? "Printing stopped." : "");
 	if (!ok && !stopped)
 		alert(1, "[1][%s][ OK ]", mail_err[0] ? mail_err : "Not enough memory to print|this message.");

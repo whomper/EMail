@@ -777,7 +777,7 @@ kill $SPID 2>/dev/null
 
 # a message larger than Settings' limit (BIGMSG, 500 KB by default) comes
 # without its attachments (a tester's 2.25: one large message gave a
-# memory error and, on POP3, stopped the rest; Erez, 21 Nov 2026): a small
+# memory error and, on POP3, stopped the rest; decided 21 Nov 2026): a small
 # one, a 2 MB one with a PDF and an HTML text, and another small one
 python3 - "$D/home/dana/Maildir/new" "$D/big.pdf" <<'PY'
 import base64, os, sys

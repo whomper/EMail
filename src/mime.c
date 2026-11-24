@@ -826,7 +826,7 @@ static void walk_multipart(WALK *w, long start, long end, const char *boundary, 
 					else if (is_multi || is_plain || is_html) {
 						/* the HTML (or a multipart/related
 						   around it) before the plain text, as
-						   Erez chose (24 Oct 2026): its links
+						   the owner chose (24 Oct 2026): its links
 						   go by their names; of two alike the
 						   last, the richer (RFC 2046) */
 						short rank = is_plain && !is_html ? 1 : 0;

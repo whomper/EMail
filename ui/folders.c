@@ -30,7 +30,7 @@ static long nent, sel = -1;
 
 /* what each row showed when folders_build last drew: a new build draws
    only the rows that look different (choosing a message, a check that
-   found nothing, redrew every row: Erez's video, 20 Oct 2026) */
+   found nothing, redrew every row: a report, 20 Oct 2026) */
 static unsigned long look[MAXACCT * (MAXFOLDER + 1)];
 static long nlook = -1;
 
@@ -163,7 +163,7 @@ static void draw(WIN *w, GRECT *clip)
 }
 
 /* the tooltip over an account's or a folder's name the pane cuts short:
-   all of it (Erez, 27 Oct 2026) */
+   all of it (decided 27 Oct 2026) */
 int folders_tip(short mx, short my, char *out, int size)
 {
 	WIN *w = &w_folders;
@@ -323,7 +323,7 @@ static void rclick(WIN *w, short mx, short my)
 	a = ent[i].a;
 	fi = ent[i].fi;
 	/* the folder the menu is for selected first, as a click would
-	   (Erez, 4 Nov 2026: the item is selected before the action) */
+	   (decided 4 Nov 2026: the item is selected before the action) */
 	if (fi && !fi->noselect && fi != cur_finfo) {
 		folders_select(a, fi);
 		for (i = 0; i < nent && ent[i].fi != fi; i++)

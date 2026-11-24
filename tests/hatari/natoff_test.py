@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 # Copyright (C) 2026 AERA | Erez Yaary
 """One boot with NatFeats off (the regression gate's row 12; TEST-MATRIX.md,
-Erez, 17 Nov 2026): EMAIL.INF with no NATFEATS=, as every user's, so EMail
+decided 17 Nov 2026): EMAIL.INF with no NATFEATS=, as every user's, so EMail
 never probes the emulator. It starts offline with an account, its window
 is drawn, ^Q quits it, the desktop is back, and there is no CRASH.LOG.
 

@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later
  * Copyright (C) 2026 AERA | Erez Yaary */
 /*
- * xlate.c - Options > Translate (Erez, 7 Nov 2026): with its check mark
+ * xlate.c - Options > Translate (decided 7 Nov 2026): with its check mark
  * each message shown is sent whole, its subject and text, to the Gateway's
  * translation service (translategate, port 8480: common/src/translate.c)
  * and shown translated into the language Settings names; the status line
@@ -36,7 +36,7 @@
 #define TRACE(what) ((void)0)
 #endif
 
-#define TR_PORT 8480		/* translategate's (Erez, 7 Nov 2026) */
+#define TR_PORT 8480		/* translategate's (decided 7 Nov 2026) */
 #define KEEP 4			/* translations kept in memory */
 
 static TRANSLATE t;
@@ -61,7 +61,7 @@ static void say_not_installed(void)
 }
 
 /* the three phases of work handed to the Gateway on the status line
-   (Erez, 7 Nov 2026; guideline 7.3): sending, translating, receiving;
+   (decided 7 Nov 2026; guideline 7.3): sending, translating, receiving;
    then what it said before. A phase is drawn when it changes, not more
    often than every 100 ms (a 2 KB piece on a home network is mostly
    "translating") */

@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 # Copyright (C) 2026 AERA | Erez Yaary
 """Settings > Connection > Languages... (the family's dialog, common/ui/langs.c;
-Erez, 8 Nov 2026) and Translate into's pop-up, on an emulated Falcon in 16
+decided 8 Nov 2026) and Translate into's pop-up, on an emulated Falcon in 16
 colours, against common's stand-in translategate (common/tests/langs/fakegate.py,
 port 8480: it has Hebrew installed, 600 MB of room, and keeps what it was asked).
 EMail runs alone and offline; FAKESTNG.PRG carries its connection to the fake.

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-2.0-or-later
 # Copyright (C) 2026 AERA | Erez Yaary
-"""A GDOS font chosen in EMAIL.PRG, as Erez uses it under NVDI: the
+"""A GDOS font chosen in EMAIL.PRG, as the owner uses it under NVDI: the
 windows should redraw in it, and EMail, started again with it from
 EMAIL.INF, should draw its list and a Hebrew message whole.
 
@@ -16,7 +16,7 @@ the shot after it would hide a dialog that stayed), and EMAIL.INF says
 FONT= that font. Then ^Q, EMAIL.INF set offline, and EMail starts again
 in that font: the message list draws, and the Hebrew message, read from
 disk, draws right to left; the hint in the reader's header bar stands
-clear of the subject, and each header's label of its value (Erez's NVDI,
+clear of the subject, and each header's label of its value (NVDI,
 Courier 14: they ran together). Whether its letters are the right Hebrew ones
 is for the eye: shots/g2-hebrew-line.png is the first body line, enlarged.
 
@@ -230,7 +230,7 @@ def skip(why):
     print("  SKIPPED: " + why, flush=True)
 
 
-# 1. EMail as Erez starts it: the system font; read the Hebrew message, choose a GDOS font
+# 1. EMail as the owner starts it: the system font; read the Hebrew message, choose a GDOS font
 r = rig.Rig(work, machine, serial=(fifo_out, fifo_in))
 try:
     time.sleep(boot)                     # boot, log in, mirror the inbox

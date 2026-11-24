@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 # Copyright (C) 2026 AERA | Erez Yaary
 """Settings > Mail, "Start offline, with the mail on disk" (STARTOFFLINE=
-in EMAIL.INF), and Options > Work offline (Erez, 25 Oct 2026: started
+in EMAIL.INF), and Options > Work offline (decided 25 Oct 2026: started
 offline, EMail starts fast; going online connects and starts the timed
 checks; going offline stops them).
 

@@ -32,7 +32,7 @@ notes. Pushing a tag `v1.31` made with `git tag -a` does the same, with the tag'
 
 No MiNTLib is needed: the program is freestanding (`common/atari/` and `atari/`) and
 `common/tools/elf2tos.py` writes the TOS executable. It is built for the 68000, so it runs on every
-Atari from the ST to the Falcon. The FireBee package (Erez, 22 Nov 2026: two packages, the same names inside; the AERA
+Atari from the ST to the Falcon. The FireBee package (decided 22 Nov 2026: two packages, the same names inside; the AERA
 guidelines, 7.4), `binary/firebee/` and `EMAIL-x.y-FIREBEE.ZIP`, is the same sources built again for the
 ColdFire by
 `common/tools/mkfirebee.py`, from the commands `make` gives for the 68000 build (in `build/cf/` and
@@ -115,7 +115,7 @@ make help build/fakehelp.acc && tests/hatari/help_test.py /tmp/mail-help   # the
 tests/hatari/langs_test.py /tmp/mail-langs         # Settings > Languages... and Translate into, against common's stand-in translategate
 tests/hatari/emailchk_test.py /tmp/mail-chk        # EMAILCHK.ACC: new mail told at the desktop, none while EMail runs
                                                    # (Falcon; also ST-1 or TT, never ST or Falcon-4: no accessory
-                                                   # is tested on the 4 MB machines, Erez, 4 Nov 2026)
+                                                   # is tested on the 4 MB machines, decided 4 Nov 2026)
 tests/hatari/big_test.py /tmp/mail-big            # a large message on a 1 MB ST: without its attachment, then saved from the server
 tests/hatari/print_test.py /tmp/mail-print        # ^P under NVDI to its metafile driver, read back (PRINT_WDIALOG=1, PRINT_NOGDOS=1)
 tests/hatari/firebee_test.py /tmp/mail-fb          # each package on the other's machine: the standard EMAIL.PRG and EMAILCHK.ACC
@@ -139,7 +139,7 @@ you type, Esc, Search server for a word in a body, Undo and Ctrl+F to leave), `e
 (Undo cancels every dialog, Esc empties a field and cancels a dialog without one and every alert), `field_test.py` (more typed into a field than it shows, and
 all of it kept: the AERA guidelines, 5.4) and `colour_tour.py` run the same way. `font_test.py` chooses the
 first GDOS font in Options > Font, checks the windows redraw in it and that it is saved, then starts EMail
-again in it and reads a Hebrew message from disk; under NVDI it needs Erez's NVDI (`AERA_WITH_NVDI=1`,
+again in it and reads a Hebrew message from disk; under NVDI it needs NVDI (`AERA_WITH_NVDI=1`,
 `common/tools/machines.py`), and without a GDOS it checks the restart in the system font. EMail's tests run EMail alone (the AERA guidelines, 1.2): no other AERA
 program is loaded, started or fetched for them, and where EMail talks to one a stand-in built here
 plays the other side. `people_test.py` checks names and ^B with a stand-in for EContact
