@@ -134,17 +134,25 @@ try:
     time.sleep(40)                       # boot, log in, mirror the inbox
     r.click(330, 108)                    # the first row: selected, so the rows can be found
     time.sleep(10)
+    r.move(420, 300)                     # the message pane
+    time.sleep(1)                        # the pointer off the list
     img = Image.open(r.shot("d1-list")).convert("RGB")
     W, H = img.size
-    # the selected row: the lines between y 80 and 140 that are mostly one non-white colour
+    # the selected row: between y 50 and 160 the lines that are mostly one
+    # non-white colour make two bands, the pane's title and then the row
     px = img.load()
-    sel = []
-    for y in range(80, 140):
+    bands, start = [], None
+    for y in range(50, 161):
         row = [px[x, y] for x in range(250, 580)]
         top = max(set(row), key=row.count)
         if top != (255, 255, 255) and row.count(top) > 0.5 * len(row):
-            sel.append(y)
-    y0 = sel[0] if sel else None
+            start = y if start is None else start
+        elif start is not None:
+            bands.append((start, y - start))
+            start = None
+    print("bands (y, height):", bands)
+    tall = [b for b in bands if b[1] >= 14]     # (the line under the column titles is one)
+    y0 = tall[1][0] if len(tall) > 1 else None
     print("first row at y", y0, "screen", W, "x", H)
     if y0 is None:
         print("FAIL: no selected row found")
@@ -165,8 +173,11 @@ try:
             # the "Date" title over the column: ink in the title band at its first cell,
             # none in the cell before
             x = starts[0]
-            band = [(px[xx, yy] != px[x - 9, y0 - 20]) for yy in range(y0 - 20, y0 - 3) for xx in range(x, x + 8)]
-            before = [(px[xx, yy] != px[x - 9, y0 - 20]) for yy in range(y0 - 20, y0 - 3) for xx in range(x - 8, x)]
+            ys = range(y0 - 16, y0 - 3)            # the titles' line, above the rule under them
+            area = [px[xx, yy] for yy in ys for xx in range(x - 16, x + 16)]
+            bg = max(set(area), key=area.count)
+            band = [px[xx, yy] != bg for yy in ys for xx in range(x, x + 8)]
+            before = [px[xx, yy] != bg for yy in ys for xx in range(x - 8, x)]
             title = any(band) and not any(before)
             print("the Date title over the column:", title)
             ok = ok and title
