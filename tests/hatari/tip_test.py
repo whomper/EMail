@@ -51,6 +51,13 @@ with open(os.path.join(srv, "dovecot.conf"), "w") as f:
     f.write(conf)
 for m in sorted(os.listdir(os.path.join(ROOT, "tests", "mail"))):
     shutil.copy(os.path.join(ROOT, "tests", "mail", m), os.path.join(srv, "home/dana/Maildir/new", m))
+# the newsletter's subject longer than its column, which the short dates
+# widened (decided 24 Nov 2026): "Newsletter October" fits it now
+nl = os.path.join(srv, "home/dana/Maildir/new", "3-newsletter.eml")
+with open(nl, "rb") as f:
+    t = f.read()
+with open(nl, "wb") as f:
+    f.write(t.replace(b"Subject: Newsletter October", b"Subject: Newsletter October: the STE, the Falcon and its DSP", 1))
 # a folder whose name the folder pane cuts short
 for d in ("cur", "new", "tmp"):
     os.makedirs(os.path.join(srv, "home/dana/Maildir", "." + LONG, d))
