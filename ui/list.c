@@ -514,7 +514,7 @@ static void columns(short cols, short *c_from, short *c_subj, short *c_date)
 {
 	short rest;
 	wide = cols >= 76;	/* the size column */
-	*c_date = 15;		/* "11.10.26 14:05": always with the year */
+	*c_date = 9;		/* "18:20", "09.10" or "09.10.25" (decided 24 Nov 2026) */
 	rest = cols - MK - *c_date - (wide ? 6 : 0);
 	*c_from = rest / 3;
 	if (*c_from > 24)
@@ -560,12 +560,14 @@ static void draw(WIN *w, GRECT *clip)
 	short xf, xs, xd, xz;		/* the columns, on 8-pixel steps */
 	short ty = w->work.y + find_row_h();	/* the column titles, under Find's row */
 	GRECT r;
+	unsigned long now;
 	fresh();
 	/* only the rows the area meets: a row drawn again (a click, a mark)
 	   draws one row, not the list (a Falcon at 16 MHz: 90 ms a time) */
 	first = clip->y > y0 ? w->top + (clip->y - y0) / ch : w->top;
 	last = clip->y + clip->h > y0 ? w->top + (clip->y + clip->h - 1 - y0) / ch : w->top - 1;
 	columns(cols, &c_from, &c_subj, &c_date);
+	now = (unsigned long)zone_utc_now() * 60;	/* once for the list */
 	xf = x0 + COL8(MK);
 	xs = x0 + COL8(MK + 1 + c_from);
 	xd = x0 + COL8(MK + 1 + c_from + c_subj);
@@ -663,7 +665,7 @@ static void draw(WIN *w, GRECT *clip)
 		row_name(h, who, name, sizeof(name), 1);
 		text_at(xf, y, name, strlen(name), c_from, fl | TX_RIGHT);
 		text_at(xs, y, h->subject, strlen(h->subject), c_subj - 1, fl | TX_RIGHT);
-		date_str(h->date, date, sizeof(date), 1);
+		date_short(h->date, now, date, sizeof(date));
 		/* dates and sizes in grey, so who and what stand out; an
 		   unread message's in blue, as the rest of its row */
 		text_pen = lit ? 1 : blue ? pen[P_ACCENT] : pen[P_DIM];

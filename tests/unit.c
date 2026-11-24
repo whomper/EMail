@@ -450,6 +450,28 @@ static void t_zone(void)
 	store_init(dir);
 	CHECK(!strcmp(opt.tzname, "Europe/Paris"), "TZ=Europe/Paris found: %s", opt.tzname);
 	unsetenv("TZ");
+	/* the message list's short date (decided 24 Nov 2026), in Jerusalem */
+	pf_save(path, "[OPTIONS]\r\nTIMEZONE=Asia/Jerusalem\r\n", 34);
+	forget_accounts();
+	store_init(dir);
+	{
+		char d[16];
+		unsigned long now = 1783000000UL;	/* 2026-07-02 13:46 UTC, 16:46 there */
+		date_short(now - 3600, now, d, sizeof(d));
+		CHECK(!strcmp(d, "15:46"), "today: the time, got %s", d);
+		date_short(1782939600UL, now, d, sizeof(d));	/* 2026-07-01 21:00 UTC: 2 Jul 00:00 there */
+		CHECK(!strcmp(d, "00:00"), "today by the local clock, got %s", d);
+		date_short(1782939540UL, now, d, sizeof(d));	/* a minute before: 1 Jul 23:59 there */
+		CHECK(!strcmp(d, "01.07"), "yesterday: day and month, got %s", d);
+		date_short(1767225600UL, now, d, sizeof(d));	/* 2026-01-01 00:00 UTC */
+		CHECK(!strcmp(d, "01.01"), "this year: day and month, got %s", d);
+		date_short(1767211200UL, now, d, sizeof(d));	/* 2025-12-31 20:00 UTC: 22:00 there */
+		CHECK(!strcmp(d, "31.12.25"), "last year: with the year, got %s", d);
+		date_short(0, now, d, sizeof(d));
+		CHECK(!d[0], "no date: empty");
+		date_str(now, d, sizeof(d), 1);
+		CHECK(!strcmp(d, "02.07.26 16:46"), "date_str as before, got %s", d);
+	}
 }
 
 /* EMAIL.INF is written only when a setting changed (guidelines 6.1;

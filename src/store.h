@@ -237,6 +237,7 @@ char *abook_load(long *len);
 
 /* dates for display, in the configured time zone */
 void date_str(unsigned long t, char *out, int size, int with_year);
+void date_short(unsigned long t, unsigned long now, char *out, int size);
 
 /* 0 on an Atari that can't make a Direct connection (a 68000): FALCON=1
    is then kept in EMAIL.INF but the gateway is used (store.c) */

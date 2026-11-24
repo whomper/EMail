@@ -1948,16 +1948,10 @@ int abook_add(const char *addr)
 
 /* ---------------- dates ---------------- */
 
-void date_str(unsigned long t, char *out, int size, int with_year)
+/* t, seconds since 1970 local, as its day (from 1970), year, month and day */
+static long civil(unsigned long t, long *y_, long *m_, long *d_)
 {
 	long z, era, doe, yoe, y, doy, mp, d, m;
-	unsigned long secs;
-	if (!t) {
-		str_copy(out, "", size);
-		return;
-	}
-	t += (long)zone_offset_at(t) * 60;
-	secs = t % 86400;
 	z = t / 86400 + 719468;
 	era = z / 146097;
 	doe = z - era * 146097;
@@ -1969,6 +1963,45 @@ void date_str(unsigned long t, char *out, int size, int with_year)
 	m = mp < 10 ? mp + 3 : mp - 9;
 	if (m <= 2)
 		y++;
+	*y_ = y, *m_ = m, *d_ = d;
+	return (long)(t / 86400);
+}
+
+/* the message list's date (decided 24 Nov 2026): today "18:20", this
+   year "09.10", older "09.10.25"; now is seconds since 1970, UTC, read
+   once for the whole list */
+void date_short(unsigned long t, unsigned long now, char *out, int size)
+{
+	long y, m, d, ny, nm, nd, day, nday;
+	unsigned long secs;
+	if (!t) {
+		str_copy(out, "", size);
+		return;
+	}
+	t += (long)zone_offset_at(t) * 60;
+	now += (long)zone_offset_at(now) * 60;
+	day = civil(t, &y, &m, &d);
+	nday = civil(now, &ny, &nm, &nd);
+	secs = t % 86400;
+	if (day == nday)
+		snprintf(out, size, "%02lu:%02lu", secs / 3600, (secs / 60) % 60);
+	else if (y == ny)
+		snprintf(out, size, "%02ld.%02ld", d, m);
+	else
+		snprintf(out, size, "%02ld.%02ld.%02ld", d, m, y % 100);
+}
+
+void date_str(unsigned long t, char *out, int size, int with_year)
+{
+	long y, d, m;
+	unsigned long secs;
+	if (!t) {
+		str_copy(out, "", size);
+		return;
+	}
+	t += (long)zone_offset_at(t) * 60;
+	secs = t % 86400;
+	civil(t, &y, &m, &d);
 	if (with_year)
 		snprintf(out, size, "%02ld.%02ld.%02ld %02lu:%02lu", d, m, y % 100, secs / 3600, (secs / 60) % 60);
 	else
