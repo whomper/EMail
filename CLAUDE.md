@@ -38,9 +38,8 @@ These come from AERA-Atari's repo template and are the same in every app's CLAUD
 - **Only formal releases leave the build machine.** The owner gets vX.Y releases made by the Release workflow from `main`, nothing else: no test builds, no CI artifacts, no builds from a branch. Work lands on `main`; to try a fix on real hardware, release it. If a release doesn't work, fix
   forward: a new release with the next number, before any other work; never a rollback (decided 7 Nov 2026).
 - **Releases go out without asking the owner** (decided 23 Oct 2026; guidelines 1.2), once the candidate has
-  passed **the regression gate** (decided 17 Nov 2026: "Since we are now at an evolved phase, we need to be extra
-  careful with regression issues as there are users of our software. This means testing across all
-  configurations" and "make sure we don't loose performance"; guidelines 1.2, AERA-Atari a22574e). In order:
+  passed **the regression gate** (decided 17 Nov 2026: EMail has users, so every configuration is
+  tested and no speed is lost; guidelines 1.2, AERA-Atari a22574e). In order:
   1. this repo's own checks;
   2. EMail's rigs on every row of the gate table at the top of AERA-Atari's `standards/TEST-MATRIX.md` it runs
      on, on real TOS images and NVDI (`~/.aera`; EmuTOS is no evidence for a release): the reference configuration,
@@ -88,6 +87,10 @@ These come from AERA-Atari's repo template and are the same in every app's CLAUD
   - real addresses from the owner's network: use `192.168.1.x`, `PI_IP`, `ATARI_IP`
   - passwords, session keys, `.KEY` / `.INF` files from a test run
   - photos that still carry EXIF/GPS data
+  - anything the owner provides (decided 24 Nov 2026; AERA-Atari `standards/GITHUB-IDENTITY.md`,
+    2f6101e): his files, mail, logs, screenshots, share links or file IDs, his messages and words,
+    or his machine's settings, on any branch. No commit message, test name or note quotes them. A
+    fault he reports becomes a case made from scratch that shows the same thing
 - **README:** keep the section order from the template (Highlights, Getting started, How it reaches the
   servers, Building, Source, Tests, Licence, family footer). Use British English.
 
@@ -177,10 +180,9 @@ section 8; AERA-Atari 8ddb463). Until the owner ends it:
   on an ST takes 330 ms (the AES draws it in one piece); the message pane's slider follows a scroll
   a turn later; D51 stays "Open | Later".
 - No new features and no speed rounds of its own.
-- **Every family rule holds for EMail as for the focus apps** (decided 17 Nov 2026: "there needs to be a
-  constant behavior across all applications. In the future, all applications must adhere to family
-  rules and be notified. We will review whether they need to issue a release." and "Applications on
-  maintenance does not mean they contain faults"). The hub notifies EMail of each new or changed rule
+- **Every family rule holds for EMail as for the focus apps** (decided 17 Nov 2026: every app behaves
+  the same and keeps every family rule, is told of each one, and whether it needs a release is
+  reviewed; maintenance doesn't mean an app has faults). The hub notifies EMail of each new or changed rule
   and each shared fix; EMail adopts it, with the shared code it needs (`tools/sync-common.sh`), and
   its row in section 8's table is ticked. EMail's ✗, ~ and ? there are EMail's work.
 - Whether a rule or a shared fix needs a release of its own is reviewed with the owner through the hub; a
