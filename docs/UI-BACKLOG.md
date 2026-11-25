@@ -36,6 +36,12 @@ when it is there.
 
 Find (D4, MD10): decided by the owner on 10 Nov 2026, `Find` where it is; nothing to do (the label lost its dots in 2.15).
 Nothing to do: Accounts... is in Options already (D13); `Open|Later` fits (W25).
+
+Open (guidelines 5.12, decided 25 Nov 2026; AERA-Atari 3df552d, common a44a12a): Save attachment as
+(`ui/reader.c`, `fsel_exinput` today) goes through the family's `filepick_save()`, with "Use the system
+file selector" in Settings (off by default, `filepick_system`) for the AES's own. It needs common at a44a12a
+or later (EMail's is older), so it comes with the next release EMail makes anyway; whether it gets one of
+its own is for the owner, through the hub. M.
 Progress (5.9): decided by the owner on 22 Nov 2026: EMail's text progress stays
 in the window's info line, not common's `progbar`; nothing to do.
 
