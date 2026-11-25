@@ -7,17 +7,20 @@ serial port, a message with NOTES.DAT attached.
 
 1. A click on the attachment's line opens the family's dialog ("Save the
    attachment as", NOTES.DAT proposed, the type DAT files): the screen
-   changes; Return on its first row, the folder AUTO, goes into it (the
-   folder line changes, the name stays); Save writes C:\\AUTO\\NOTES.DAT,
-   the attachment byte for byte.
-2. The same again (the dialog opens in AUTO, where it was left): Save
+   changes; Return, the name typed, saves C:\\NOTES.DAT, the attachment
+   byte for byte. Open again: a click on the list's first row, the folder
+   ATTACH, gives the list the keys, and Return goes into it (the folder
+   line changes, the name stays); Save writes C:\\ATTACH\\NOTES.DAT, byte
+   for byte.
+2. The same again (the dialog opens in ATTACH, where it was left): Save
    asks whether to replace it (the screen changes),
    Return is Cancel there and the dialog stays; Cancel closes it, the file
    as it was; once more, Replace there writes it again.
 3. With Settings' "Use the system file selector" (SYSFSEL=1 in EMAIL.INF):
    the AES's own selector opens in its place (its screen unlike the
    family dialog's), and Return there writes C:\\NOTES.DAT (a new start
-   begins in EMail's folder).
+   begins in EMail's folder; the first part's C:\\NOTES.DAT is taken away
+   before it).
 
 The clicks are placed for a 640x480 screen (Falcon, TT).
 
@@ -81,13 +84,15 @@ smtp = subprocess.Popen([sys.executable, os.path.join(ROOT, "tests", "smtp_serve
 rig.stop_at_exit(srv, smtp)
 
 os.makedirs(os.path.join(hd, "AUTO"))
+os.makedirs(os.path.join(hd, "ATTACH"))         # the folder chosen in the dialog, the list's first
 rig.install_prg(hd)
 rig.fakesting(os.path.join(hd, "AUTO"))
 INF = ("[options]\r\nnatfeats=1\r\ntz=180\r\n%s[account]\r\nname=Dana\r\nfullname=Dana Falcon\r\n"
        "email=dana@test.local\r\nin=imap\r\nhost=127.0.0.1\r\nport=%d\r\nuser=dana\r\n"
        "pass=secret\r\nsmtphost=127.0.0.1\r\nsmtpport=%d\r\n")
 ATTACH = (330, int(os.environ.get("SAVE_ATTACH_Y", "324")))   # the attachment's line in the reader
-SAVE, CANCEL, REPLACE = (440, 401), (330, 401), (278, 292)    # the dialog's buttons, the question's Replace
+SAVE, CANCEL, REPLACE = (440, 401), (330, 401), (288, 272)    # the dialog's buttons, the question's Replace
+FIRST_ROW = (230, 206)                                         # the list's first row
 
 fifo_out, fifo_in = os.path.join(work, "st_out"), os.path.join(work, "st_in")
 for p in (fifo_out, fifo_in):
@@ -142,16 +147,27 @@ try:
     dlg = r.shot("s2-dialog")
     check("a click on the attachment opens the family's dialog", changed(before, dlg) > 0.05,
           "%.1f%% of the screen" % (100 * changed(before, dlg)))
-    r.key(K["RETURN"])                   # its first row, the folder AUTO: into it
+    r.key(K["RETURN"])                   # the name typed: Return saves
+    time.sleep(8)
+    r.shot("s2a-saved-root")
+    path, data, t0 = saved()
+    check("Return saves C:\\NOTES.DAT, the attachment byte for byte", data == DATA,
+          "%s, %d bytes of %d" % (path, len(data), len(DATA)))
+    r.click(*ATTACH)
+    time.sleep(4)
+    dlg = r.shot("s2b-dialog-again")
+    r.click(*FIRST_ROW)                  # the folder ATTACH: the list has the keys
+    time.sleep(2)
+    r.key(K["RETURN"])                   # into it
     time.sleep(3)
-    into = r.shot("s2b-into-auto")
-    check("... Return on its first row, a folder, goes into it", 0.001 < changed(dlg, into) < 0.2,
+    into = r.shot("s2c-into-attach")
+    check("... a click on the first row, a folder, then Return goes into it", 0.001 < changed(dlg, into) < 0.2,
           "%.1f%% of the screen" % (100 * changed(dlg, into)))
     r.click(*SAVE)
     time.sleep(8)
     r.shot("s3-saved")
-    path, data, t1 = saved("AUTO")
-    check("Save writes C:\\AUTO\\NOTES.DAT, the attachment byte for byte", data == DATA,
+    path, data, t1 = saved("ATTACH")
+    check("Save writes C:\\ATTACH\\NOTES.DAT, the attachment byte for byte", data == DATA,
           "%s, %d bytes of %d" % (path, len(data), len(DATA)))
     r.click(*ATTACH)
     time.sleep(4)
@@ -169,9 +185,9 @@ try:
     r.click(*CANCEL)
     time.sleep(4)
     r.shot("s7-closed")
-    _, data2, t2 = saved("AUTO")
+    _, data2, t2 = saved("ATTACH")
     check("... Cancel closes it, the file as it was", data2 == DATA and t2 == t1)
-    check("... nothing written in C:\\ meanwhile", saved()[0] is None)
+    check("... C:\\NOTES.DAT left as it was meanwhile", saved()[2] == t0)
     time.sleep(2)
     r.click(*ATTACH)                     # and once more: Save, then Replace
     time.sleep(4)
@@ -180,14 +196,15 @@ try:
     r.click(*REPLACE)
     time.sleep(8)
     r.shot("s7b-replaced")
-    _, data3, t3 = saved("AUTO")
+    _, data3, t3 = saved("ATTACH")
     check("... Replace writes it again", data3 == DATA and t3 > t2, "%.0f s later" % (t3 - t2))
     r.ctrl("q")
     time.sleep(5)
 finally:
     r.stop()
 
-# 3: the system's selector
+# 3: the system's selector, with no C:\\NOTES.DAT to replace
+os.remove(saved()[0])
 r = boot(True)
 try:
     before = r.shot("s8-read")

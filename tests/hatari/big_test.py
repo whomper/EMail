@@ -132,8 +132,7 @@ try:
     r.click(315, 233 + (tall - 400) // 2)   # Save to disk
     time.sleep(4)
     r.shot("b4-fsel")
-    # Save in the family's file dialog (guidelines 5.12): its first row is
-    # chosen when it opens, and Return there would open that folder
+    # Save in the family's file dialog (guidelines 5.12), C:\ as proposed
     r.click(440, 401 - (480 - tall) // 2)
     # downloaded over the serial line: until the file stops growing and
     # EMail is idle again (up to 20 minutes on an 8 MHz ST)
