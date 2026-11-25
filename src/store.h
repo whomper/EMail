@@ -94,6 +94,7 @@ typedef struct {
 	short dsp;		/* Direct connection may use the DSP (else the 68030 does it all) */
 	char tzname[40];	/* the time zone, an IANA name ("Asia/Jerusalem") */
 	short colour;		/* colours, on screens with 16 or more */
+	short sysfsel;		/* "Use the system file selector": the AES's for Save as (guidelines 5.12) */
 	char signature[256];	/* below new messages, every account's; \n separated, Atari charset */
 	char workdir[200];
 	short peoplefile;	/* EContact not loaded: names from its CONTACTS.TXT (guidelines 4.1) */

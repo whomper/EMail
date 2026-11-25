@@ -19,6 +19,7 @@
 #include "bidi.h"
 #include "clip.h"
 #include "textsel.h"
+#include "filepick.h"
 
 MSG *cur_msg;
 char *cur_raw;
@@ -1133,27 +1134,44 @@ static int part_to_file(short i, const char *path)
 	return ok;
 }
 
+/* Save attachment as: the family's file dialog (guidelines 5.12, decided
+   25 Nov 2026), or the AES's selector with Settings' "Use the system file
+   selector"; the folder and the last ones kept for the session. The type
+   is the attachment's own extension, then All files */
 void reader_save_attachment(short i)
 {
-	static char path[160], name[16];
-	char full[200];
-	short button;
+	static char dir[FP_PATH], recent[FP_RECENT][FP_PATH];
+	static char ext[4], tname[16];
+	static DL_TYPE types[2];
+	static FP_SPEC spec = { "Save attachment as", "Save", "No folder saved to yet", 0, types, 1 };
+	char name[FP_NAMEW], full[FP_PATH + FP_NAMEW], *dot;
 	if (!cur_msg || i < 0 || i >= cur_msg->nparts)
 		return;
-	if (!path[0]) {
-		str_copy(path, opt.workdir, sizeof(path) - 5);
-		strcat(path, "\\*.*");
+	if (!dir[0]) {
+		str_copy(dir, opt.workdir, sizeof(dir) - 2);
+		if (dir[0] && dir[strlen(dir) - 1] != '\\')
+			strcat(dir, "\\");
 	}
 	short_name(cur_msg->parts[i].name, name);
-	if (!fsel_exinput(path, name, &button, "Save attachment as") || !button || !name[0])
-		return;
-	str_copy(full, path, sizeof(full));
-	{
-		char *bs = strrchr(full, '\\');
-		if (bs)
-			bs[1] = 0;
+	dot = strrchr(name, '.');
+	spec.ntypes = 1;
+	types[0].name = "All files";
+	types[0].exts = "";
+	if (dot && dot[1]) {
+		short k;
+		for (k = 0; k < 3 && dot[1 + k]; k++)
+			ext[k] = (char)(dot[1 + k] >= 'a' && dot[1 + k] <= 'z' ? dot[1 + k] - 32 : dot[1 + k]);
+		ext[k] = 0;
+		snprintf(tname, sizeof(tname), "%s files", ext);
+		types[0].name = tname;
+		types[0].exts = ext;
+		types[1].name = "All files";
+		types[1].exts = "";
+		spec.ntypes = 2;
 	}
-	strncat(full, name, sizeof(full) - strlen(full) - 1);
+	filepick_system = opt.sysfsel;
+	if (!filepick_save(&spec, dir, recent, name, sizeof(name), full, sizeof(full), 0))
+		return;
 	busy(1);
 	statusf("Saving %s...", name);
 	busy(0);
@@ -1187,7 +1205,7 @@ static void reader_pdf(short i)
 	for (p = name; *p; p++)
 		if (*p == '|' || *p == '[' || *p == ']')
 			*p = ' ';	/* the alert's own marks */
-	/* decideds; Cancel on the left, as in the family's dialogs (5.10) */
+	/* the words decided; Cancel on the left, as in the family's dialogs (5.10) */
 	r = alert(3, "[2][%s|is a PDF document.][Cancel|Save to disk|Open with EPDF]", name);
 	if (r == 3)
 		reader_to_epdf(i);

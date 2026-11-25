@@ -43,6 +43,7 @@ static void defaults(void)
 	opt.offline = 0;
 	opt.dsp = 1;
 	opt.colour = 1;
+	opt.sysfsel = 0;
 	opt.peoplefile = 0;
 	opt.peopledir[0] = 0;
 	opt.browser[0] = 0;
@@ -554,6 +555,7 @@ static void set_opt(const char *k, const char *v)
 			str_copy(opt.translate_to, v, sizeof(opt.translate_to));
 	}
 	else if (!strcmp(k, "colour") || !strcmp(k, "color")) opt.colour = n != 0;
+	else if (!strcmp(k, "sysfsel")) opt.sysfsel = n != 0;
 	/* HEBFONT= (the font's Hebrew places, gone: decided 12 Nov 2026) is read and dropped */
 }
 
@@ -819,6 +821,8 @@ int store_save_settings(void)
 		"DSP", "%d", opt.dsp);
 	put_fmt(&b, "1 = colours (selection, unread counts, flags, quotes, links) with 16 or more; with 4 links in blue",
 		"COLOUR", "%d", opt.colour);
+	put_fmt(&b, "1 = Save attachment as... opens the system's file selector, 0 = the family's file dialog",
+		"SYSFSEL", "%d", opt.sysfsel);
 	put_fmt(&b, "1 = when EContact isn't loaded, names come from its contacts file (CONTACTS.TXT)",
 		"PEOPLEFILE", "%d", opt.peoplefile);
 	put_path(&b, "EContact's folder, where its contacts file is (C:\\ECONTACT)", "PEOPLEDIR", opt.peopledir);

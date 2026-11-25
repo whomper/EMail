@@ -1754,7 +1754,7 @@ static char vwk_note[80];	/* the v_opnvwk line, said after store_init */
 
 /* common/atari/cpucheck.c (cpucheck_cf.S in the FireBee package's) runs
    first and calls app_main: on the other package's machine EMail says
-   which package to install, and goes (decideds, 22 Nov 2026; the
+   which package to install, and goes (decided 22 Nov 2026; the
    guidelines, 7.4) */
 const long cpu_need = 0;
 #ifdef __mcoldfire__

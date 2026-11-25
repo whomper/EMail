@@ -40,8 +40,8 @@ OBJECT *d_tree(void)
 	return tree;
 }
 
-static short s_on[8];			/* keep, log, falcon, dsp, colour, people file, start; an account's leave */
-enum { T_KEEP, T_LOG, T_FALCON, T_DSP, T_COLOUR, T_PFILE, T_START, T_LEAVE };
+static short s_on[9];			/* keep, log, falcon, dsp, colour, people file, start, system selector; an account's leave */
+enum { T_KEEP, T_LOG, T_FALCON, T_DSP, T_COLOUR, T_PFILE, T_START, T_SYSFSEL, T_LEAVE };
 
 static short page_of[DMAX], npages, cur_page, page_tab[7];
 static short list_line;			/* Settings: the line between the list and the page */
@@ -1236,6 +1236,7 @@ static void settings_load(void)
 	s_on[T_FALCON] = dlg_falcon;
 	s_on[T_DSP] = opt.dsp;
 	s_on[T_COLOUR] = opt.colour;
+	s_on[T_SYSFSEL] = opt.sysfsel;
 	s_on[T_PFILE] = opt.peoplefile;
 	str_copy(s_pdir, opt.peopledir, sizeof(s_pdir));
 	{
@@ -1282,7 +1283,7 @@ static void part_mail(short x, short y)
 	d_add(G_STRING, 0, 0, (long)"Messages to load at a time", x, ROW(1), 26, 1);
 	f_page = d_field(x + FX, ROW(1), s_page, 4, '9');
 	/* a larger message comes without its attachments, which stay on the
-	   server and come when one is saved (decideds, 21 Nov 2026) */
+	   server and come when one is saved (decided 21 Nov 2026) */
 	d_add(G_STRING, 0, 0, (long)"Messages larger than", x, ROW(2), 20, 1);
 	f_big = d_field(x + FX, ROW(2), s_big, 4, '9');
 	d_add(G_STRING, 0, 0, (long)"KB:", x + FX + 5, ROW(2), 3, 1);
@@ -1318,6 +1319,8 @@ static void part_look(short x, short y)
 	d_add(G_STRING, 0, 0, (long)"selection, unread counts, flags,", x + 3, ROW(2), 32, 1);
 	d_add(G_STRING, 0, 0, (long)"quoted text, links; with four", x + 3, ROW(3), 29, 1);
 	d_add(G_STRING, 0, 0, (long)"colours, links in blue", x + 3, ROW(4), 22, 1);
+	/* off: Save as is the family's file dialog (guidelines 5.12, decided 25 Nov 2026) */
+	d_tick(x, ROW(6), "Use the system file selector", T_SYSFSEL);
 }
 
 /* EContact's contacts file, when EContact isn't loaded (the guidelines,
@@ -1425,6 +1428,7 @@ int dlg_settings(void)
 	dlg_falcon = s_on[T_FALCON];
 	opt.dsp = s_on[T_DSP];
 	opt.colour = s_on[T_COLOUR];
+	opt.sysfsel = s_on[T_SYSFSEL];
 	opt.peoplefile = s_on[T_PFILE];
 	str_copy(opt.peopledir, s_pdir, sizeof(opt.peopledir));
 	sig_store();

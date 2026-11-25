@@ -311,7 +311,9 @@ EMail's main window has three panes, like a modern mail program:
   Sent and the Outbox it shows who you wrote to. Its header shows how
   many messages are loaded and how many there are.
 - **Message** (bottom right): the selected message. Click an attachment
-  line (`»`) to save it with the file selector. A PDF document asks
+  line (`»`) to save it: **Save attachment as**, the family's file
+  dialog, opens with its name proposed and the files of its type listed
+  (below). A PDF document asks
   first: **Open with EPDF**, **Save to disk** or **Cancel**. EMail
   writes it into the `PDF` folder in EMail's folder and hands it to
   EPDF; the file stays there (the next one of the same name replaces
@@ -860,9 +862,20 @@ are underlined).
 sidebar: **Mail** (checking every few minutes, how many messages to load
 at a time, keeping read messages on disk, starting offline), **Writing** (where lines
 wrap), **Signature**, **Look**
-(colours; dialogs have the AES's own 3D look wherever it draws one: TOS
+(colours, and the file selector, below; dialogs have the AES's own 3D look wherever it draws one: TOS
 4, MagiC, XaAES and EmuTOS in colour), **Contacts** (EContact's file, below) and **Connection** (the
 time zone, the Direct connection, the DSP and the protocol log).
+
+**Save attachment as** is the file dialog every AERA program saves
+with: the drive and the folder at the top (the last folders in its
+pop-up), the type and the sort, **Save as** with the attachment's name,
+and the folders and the files of that type. Choose a folder and press
+Return to go into it; **Save** writes the file in the folder shown, the
+type's extension added when the name has none. A file of that name
+already there is replaced only after "... is there already. Replace
+it?". **Use the system file selector** (Settings > Look, off at first)
+opens the AES's own selector in its place, with the name filled in;
+it is kept as SYSFSEL= in EMAIL.INF.
 
 **Start offline, with the mail on disk** (Settings > Mail, off at
 first): EMail starts at once, offline, with the folders and messages it

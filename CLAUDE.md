@@ -129,7 +129,7 @@ These come from AERA-Atari's repo template and are the same in every app's CLAUD
   (FreeMiNT with XaAES, a multitasking AES: common's rig in
   `common/tests/xaaes`, `make base` there once); `emailchk_test.py` (on `ST-1`, `TT` or `Falcon`: no accessory
   runs on the 4 MB machines, `ST` and `Falcon-4`; decided 4 Nov 2026) when the
-  accessory or `src/newmail.c` changes. With EContact: `people_test.py` (its stand-in);
+  accessory or `src/newmail.c` changes; `save_test.py` when saving or the file dialog changes. With EContact: `people_test.py` (its stand-in);
   the Help key: `help_test.py` (EHypView's stand-in).
 - `gateway/` is a read-only copy of
   [AERA-Gateway](https://github.com/whomper/AERA-Gateway)'s (emailgate,
@@ -170,11 +170,11 @@ These come from AERA-Atari's repo template and are the same in every app's CLAUD
 
 EMail is in maintenance mode while EWeb, EPDF and EPlay go to 1.0 (AERA-Atari, ATARI-APP-GUIDELINES.md,
 section 8; AERA-Atari 8ddb463). Until the owner ends it:
-- **Lifted for one item** (decided 24 Nov 2026): the message list's short dates, today "18:20",
-  this year "09.10", older "09.10.25", the column 9 wide and the 6 characters to From and Subject;
-  the message's header keeps the full date. Its own release, through the regression gate with the
-  pairs against 2.28 and the hub's family check; `tests/hatari/dates_test.py` reads the three forms
-  back from the screen. Maintenance comes back once it is released.
+- **Lifted for one item** (decided 25 Nov 2026): guidelines 5.12, Save attachment as through the family's
+  file dialog (`filepick_save()`), with "Use the system file selector" in Settings > Look (off by default,
+  `SYSFSEL=`). Its own release, through the regression gate with the pairs against 2.29 and the hub's family
+  check; `tests/hatari/save_test.py` saves, asks to replace and opens the system's selector. Maintenance comes
+  back once it is released. (The short dates of 24 Nov went out in 2.29.)
 - Decided 19 Nov 2026 (the redraw rule, released in 2.25): the whole main window on an ST is drawn
   whole (380-480 ms; pieces of 100 ms cost 80-115 % more there; now the family's rule); Settings
   on an ST takes 330 ms (the AES draws it in one piece); the message pane's slider follows a scroll
