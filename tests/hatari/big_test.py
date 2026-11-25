@@ -24,7 +24,7 @@ import sys
 import time
 
 import rig
-from rig import K
+from rig import K  # noqa: F401  (the keys, kept for edits)
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.normpath(os.path.join(HERE, "..", ".."))
@@ -132,7 +132,9 @@ try:
     r.click(315, 233 + (tall - 400) // 2)   # Save to disk
     time.sleep(4)
     r.shot("b4-fsel")
-    r.key(K["RETURN"])                   # C:\EMAIL\CASE.PDF
+    # Save in the family's file dialog (guidelines 5.12): its first row is
+    # chosen when it opens, and Return there would open that folder
+    r.click(440, 401 - (480 - tall) // 2)
     # downloaded over the serial line: until the file stops growing and
     # EMail is idle again (up to 20 minutes on an 8 MHz ST)
     saved = os.path.join(hd, "EMAIL", "CASE.PDF")
