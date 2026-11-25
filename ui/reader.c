@@ -20,6 +20,7 @@
 #include "clip.h"
 #include "textsel.h"
 #include "filepick.h"
+#include "people_ask.h"
 
 MSG *cur_msg;
 char *cur_raw;
@@ -1134,7 +1135,7 @@ static int part_to_file(short i, const char *path)
 	return ok;
 }
 
-/* Save attachment as: the family's file dialog (guidelines 5.12, decided
+/* Save the attachment as: the family's file dialog (guidelines 5.12, decided
    25 Nov 2026), or the AES's selector with Settings' "Use the system file
    selector"; the folder and the last ones kept for the session. The type
    is the attachment's own extension, then All files */
@@ -1143,7 +1144,7 @@ void reader_save_attachment(short i)
 	static char dir[FP_PATH], recent[FP_RECENT][FP_PATH];
 	static char ext[4], tname[16];
 	static DL_TYPE types[2];
-	static FP_SPEC spec = { "Save attachment as", "Save", "No folder saved to yet", 0, types, 1 };
+	static FP_SPEC spec = { "Save the attachment as", "Save", "No folder saved in yet", "EMAIL", types, 1 };
 	char name[FP_NAMEW], full[FP_PATH + FP_NAMEW], *dot;
 	if (!cur_msg || i < 0 || i >= cur_msg->nparts)
 		return;
@@ -1170,7 +1171,10 @@ void reader_save_attachment(short i)
 		spec.ntypes = 2;
 	}
 	filepick_system = opt.sysfsel;
-	if (!filepick_save(&spec, dir, recent, name, sizeof(name), full, sizeof(full), 0))
+	/* while it is open, the names asked of EContact still come (people_poll); a timed
+	   mail check waits until it closes, as in EMail's other dialogs: a check is a job
+	   with its own progress and alerts */
+	if (!filepick_save(&spec, dir, recent, name, sizeof(name), full, sizeof(full), people_poll))
 		return;
 	busy(1);
 	statusf("Saving %s...", name);

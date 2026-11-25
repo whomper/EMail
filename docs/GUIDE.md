@@ -311,7 +311,7 @@ EMail's main window has three panes, like a modern mail program:
   Sent and the Outbox it shows who you wrote to. Its header shows how
   many messages are loaded and how many there are.
 - **Message** (bottom right): the selected message. Click an attachment
-  line (`»`) to save it: **Save attachment as**, the family's file
+  line (`»`) to save it: **Save the attachment as**, the family's file
   dialog, opens with its name proposed and the files of its type listed
   (below). A PDF document asks
   first: **Open with EPDF**, **Save to disk** or **Cancel**. EMail
@@ -866,7 +866,7 @@ wrap), **Signature**, **Look**
 4, MagiC, XaAES and EmuTOS in colour), **Contacts** (EContact's file, below) and **Connection** (the
 time zone, the Direct connection, the DSP and the protocol log).
 
-**Save attachment as** is the file dialog every AERA program saves
+**Save the attachment as** is the file dialog every AERA program saves
 with: the drive and the folder at the top (the last folders in its
 pop-up), the type and the sort, **Save as** with the attachment's name,
 and the folders and the files of that type. Choose a folder and press
