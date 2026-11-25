@@ -1290,6 +1290,9 @@ static void part_mail(short x, short y)
 	d_add(G_STRING, 0, 0, (long)"without attachments", x + 3, ROW(3), 19, 1);
 	d_tick(x, ROW(4), "Keep read messages on disk", T_KEEP);
 	d_tick(x, ROW(5), "Start offline, with the mail on disk", T_START);
+	/* off: Save as is the family's file dialog; on the first page, EMail
+	   having no General page (guidelines 5.12, decided 25 Nov 2026) */
+	d_tick(x, ROW(6), "Use the system file selector", T_SYSFSEL);
 }
 
 static void part_writing(short x, short y)
@@ -1319,8 +1322,6 @@ static void part_look(short x, short y)
 	d_add(G_STRING, 0, 0, (long)"selection, unread counts, flags,", x + 3, ROW(2), 32, 1);
 	d_add(G_STRING, 0, 0, (long)"quoted text, links; with four", x + 3, ROW(3), 29, 1);
 	d_add(G_STRING, 0, 0, (long)"colours, links in blue", x + 3, ROW(4), 22, 1);
-	/* off: Save as is the family's file dialog (guidelines 5.12, decided 25 Nov 2026) */
-	d_tick(x, ROW(6), "Use the system file selector", T_SYSFSEL);
 }
 
 /* EContact's contacts file, when EContact isn't loaded (the guidelines,

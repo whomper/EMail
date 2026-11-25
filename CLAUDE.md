@@ -171,7 +171,7 @@ These come from AERA-Atari's repo template and are the same in every app's CLAUD
 EMail is in maintenance mode while EWeb, EPDF and EPlay go to 1.0 (AERA-Atari, ATARI-APP-GUIDELINES.md,
 section 8; AERA-Atari 8ddb463). Until the owner ends it:
 - **Lifted for one item** (decided 25 Nov 2026): guidelines 5.12, Save attachment as through the family's
-  file dialog (`filepick_save()`), with "Use the system file selector" in Settings > Look (off by default,
+  file dialog (`filepick_save()`), with "Use the system file selector" at the foot of Settings > Mail (off by default,
   `SYSFSEL=`). Its own release, through the regression gate with the pairs against 2.29 and the hub's family
   check; `tests/hatari/save_test.py` saves, asks to replace and opens the system's selector. Maintenance comes
   back once it is released. (The short dates of 24 Nov went out in 2.29.)

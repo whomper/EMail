@@ -860,9 +860,9 @@ are underlined).
 
 **Settings** (Options > Settings, Ctrl+,) has six parts in its
 sidebar: **Mail** (checking every few minutes, how many messages to load
-at a time, keeping read messages on disk, starting offline), **Writing** (where lines
+at a time, keeping read messages on disk, starting offline, the file selector), **Writing** (where lines
 wrap), **Signature**, **Look**
-(colours, and the file selector, below; dialogs have the AES's own 3D look wherever it draws one: TOS
+(colours; dialogs have the AES's own 3D look wherever it draws one: TOS
 4, MagiC, XaAES and EmuTOS in colour), **Contacts** (EContact's file, below) and **Connection** (the
 time zone, the Direct connection, the DSP and the protocol log).
 
@@ -873,7 +873,7 @@ and the folders and the files of that type. Choose a folder and press
 Return to go into it; **Save** writes the file in the folder shown, the
 type's extension added when the name has none. A file of that name
 already there is replaced only after "... is there already. Replace
-it?". **Use the system file selector** (Settings > Look, off at first)
+it?". **Use the system file selector** (Settings > Mail, off at first)
 opens the AES's own selector in its place, with the name filled in;
 it is kept as SYSFSEL= in EMAIL.INF.
 
