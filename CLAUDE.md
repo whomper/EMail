@@ -37,7 +37,13 @@ These come from AERA-Atari's repo template and are the same in every app's CLAUD
   commit built programs, help files or certificates (`binary/`, `dist/`). Never reuse a number.
 - **Only formal releases leave the build machine.** The owner gets vX.Y releases made by the Release workflow from `main`, nothing else: no test builds, no CI artifacts, no builds from a branch. Work lands on `main`; to try a fix on real hardware, release it. If a release doesn't work, fix
   forward: a new release with the next number, before any other work; never a rollback (decided 7 Nov 2026).
-- **Releases go out without asking the owner** (decided 23 Oct 2026; guidelines 1.2), once the candidate has
+- **Fewer releases, each carrying more** (decided 26 Nov 2026; guidelines 1.2): no release for every single
+  fix or feature. Changes gather on `main` and go out together when a body of work is complete, as one
+  candidate through the gate and the hub's family check. Only a data-loss, security or crash fault goes
+  out on its own at once, with only that fix; a fault a user reports gets its rig case and rides the
+  next release otherwise, as do the hub's shared fixes unless it names one as the exception.
+- **Releases go out without asking the owner** (decided 23 Oct 2026; guidelines 1.2), once a body of work
+  on `main` is ready and the candidate has
   passed **the regression gate** (decided 17 Nov 2026: EMail has users, so every configuration is
   tested and no speed is lost; guidelines 1.2, AERA-Atari a22574e). In order:
   1. this repo's own checks;
@@ -184,8 +190,8 @@ section 8; AERA-Atari 8ddb463). Until the owner ends it:
   reviewed; maintenance doesn't mean an app has faults). The hub notifies EMail of each new or changed rule
   and each shared fix; EMail adopts it, with the shared code it needs (`tools/sync-common.sh`), and
   its row in section 8's table is ticked. EMail's ✗, ~ and ? there are EMail's work.
-- Whether a rule or a shared fix needs a release of its own is reviewed with the owner through the hub; a
-  fault fix always gets one.
+- Whether a rule or a shared fix needs a release of its own is reviewed with the owner through the hub;
+  a data-loss, security or crash fault always gets one, other fixes ride the next release (decided 26 Nov 2026).
 - Otherwise a release only for:
   - a security or data-loss fault;
   - a crash or breakage;
