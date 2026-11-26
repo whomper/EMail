@@ -21,6 +21,8 @@
 #define FP_PATH AF_PATH
 #else
 #include "filepick.h"
+#include "dialog.h"
+#include "fsel.h"
 
 long nf_on = 1;		/* a test program: NatFeats always (nf.S's is 0) */
 #endif
@@ -39,6 +41,19 @@ static void take(const char *path)
 static void idle(void)
 {
 	idles++;
+}
+
+static void box_draw(short x, short y, short w, short h)
+{
+	short p[4];
+	p[0] = x;
+	p[1] = y;
+	p[2] = x + w - 1;
+	p[3] = y + h - 1;
+	vsf_color(vdi_h, 1);
+	vsf_interior(vdi_h, 2);
+	vsf_style(vdi_h, 4);
+	vr_recfl(vdi_h, p);
 }
 
 int main(void)
@@ -98,6 +113,56 @@ int main(void)
 		n = filepick_save(&sspec, dir, recent, name, sizeof(name), path, sizeof(path), idle);
 		snprintf(b, sizeof(b), "FPT saved %d %s\n", n, n ? path : "-");
 		nf_debug(b);
+		if (Fopen("C:\\FPAFTER.TXT", 0) >= 0) {	/* after.py: the presses that come after the dialog */
+			short m[8];
+			AEVENT e;
+			unsigned long t0 = tos_ms();
+			int k = 0, ewloop = Fopen("C:\\FPEWLOOP.TXT", 0) >= 0;
+			fsel_settle();			/* as EWeb does after it */
+			if (Fopen("C:\\FPBOX.TXT", 0) >= 0) {	/* a box over the screen first (EWeb's download box) */
+				short bx = 160, by = 120, bw = 320, bh = 160, j = 0;
+				unsigned long t1 = tos_ms();
+				dlg_open_area(box_draw, &bx, &by, &bw, &bh);
+				snprintf(b, sizeof(b), "FPT box %d %d %d %d\n", bx, by, bw, bh);
+				nf_debug(b);
+				while (tos_ms() - t1 < 20000 && j < 3) {
+					short w = dlg_evnt(MU_MESAG | MU_KEYBD | MU_BUTTON | MU_TIMER, 1, 1, 1, 5, m, &e);
+					if (w & MU_BUTTON) {
+						snprintf(b, sizeof(b), "FPT boxpress %d %d %d\n", ++j, e.mx, e.my);
+						nf_debug(b);
+						do
+							graf_mkstate(&e.mx, &e.my, &e.mbutton, &e.kstate);
+						while (e.mbutton & 1);
+					}
+				}
+				dlg_close();
+				snprintf(b, sizeof(b), "FPT box done %d\n", j);
+				nf_debug(b);
+			}
+			nf_debug("FPT after ready\n");
+			while (tos_ms() - t0 < 30000 && k < 6) {
+				short w;
+				if (ewloop) {
+					/* EWeb's main loop: any button pressed (0x101, 3, 0), the pointer's leaving
+					   of a 1x1 box, then the keys alone with no wait */
+					short mx, my, mb, ks;
+					graf_mkstate(&mx, &my, &mb, &ks);
+					evnt_set_m1(1, mx, my, 1, 1);
+					w = evnt_multi_(MU_KEYBD | MU_BUTTON | MU_M1 | MU_MESAG | MU_TIMER, 0x101, 3, 0, 200, m, &e);
+					if (!(w & MU_BUTTON))
+						evnt_multi_(MU_KEYBD | MU_TIMER, 0x101, 3, 0, 0, m, &e);
+				} else
+					w = evnt_multi_(MU_BUTTON | MU_TIMER, 1, 1, 1, 50, m, &e);
+				if (w & MU_BUTTON) {
+					snprintf(b, sizeof(b), "FPT press %d %d %d\n", ++k, e.mx, e.my);
+					nf_debug(b);
+					/* let go first, as a window loop does (5.8: done on the release) */
+					evnt_multi_(MU_BUTTON, 1, 1, 0, 0, m, &e);
+				}
+			}
+			snprintf(b, sizeof(b), "FPT after %d\n", k);
+			nf_debug(b);
+		}
 		appl_exit();
 		return 0;
 	}
