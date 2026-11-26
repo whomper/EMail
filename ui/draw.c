@@ -5,6 +5,7 @@
  * order; lines containing Hebrew go through bidi_visual() and, when the
  * paragraph is right-to-left, are aligned to the right edge.
  */
+#include <stdlib.h>
 #include <string.h>
 #include "ui.h"
 #include "theme.h"
@@ -126,7 +127,7 @@ static unsigned short *st_buf;
 void *st_ram(long n)
 {
 	if (!st_buf) {
-		void *p = Mxalloc(sizeof(st_fallback), 0);
+		void *p = acc_core(sizeof(st_fallback), 0);	/* its own in an accessory (2.2) */
 		st_buf = (long)p > 0 ? p : st_fallback;
 	}
 	return n <= (long)sizeof(st_fallback) ? st_buf : 0;

@@ -749,7 +749,7 @@ static void acc_memory(void)
 	if (acc_heap_tt)
 		pf_bounce_init();	/* the files' ST RAM, now rather than at the first read */
 	{
-		void *p = Mxalloc(sizeof(st_fallback), 0);	/* ST RAM, for the icon */
+		void *p = acc_core(sizeof(st_fallback), 0);	/* ST RAM, for the icon: its own on plain TOS (2.2) */
 		if ((long)p > 0)
 			st_buf = p;
 	}
