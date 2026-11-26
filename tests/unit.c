@@ -334,6 +334,27 @@ static void t_compose(void)
 	      "new message with signature [%s]", raw);
 	free(raw);
 
+	/* a forward whose To line runs past 512 bytes keeps all of it and what
+	   follows (common's sb_printf cut longer lines until bfc4656) */
+	{
+		static char to[700], tail[64];
+		MSG fm;
+		int k;
+		memset(&fm, 0, sizeof(fm));
+		for (k = 0; k < 30; k++)
+			snprintf(to + strlen(to), sizeof(to) - strlen(to), "%sreader%02d@example.com", k ? ", " : "", k);
+		fm.from = "Avi <avi@example.com>";
+		fm.date = "Tue, 20 Oct 2026 09:00:00 +0300";
+		fm.subject = "Notes";
+		fm.to = to;
+		fm.text = "The body.";
+		raw = compose_forward(&a, &fm, 0);
+		snprintf(tail, sizeof(tail), "To: %.20s", to);
+		CHECK(strlen(to) > 512 && raw && strstr(raw, to) && strstr(raw, "reader29@example.com\n\nThe body."),
+		      "forward: a To line of %d bytes kept whole, the text after it", (int)strlen(to));
+		free(raw);
+	}
+
 	/* mailto: links, as EContact sends them with VA_START */
 	opt.signature[0] = 0;
 	raw = compose_mailto(&a, "Maya Carter <maya@pixelpress.example>");
