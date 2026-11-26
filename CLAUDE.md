@@ -41,7 +41,10 @@ These come from AERA-Atari's repo template and are the same in every app's CLAUD
   fix or feature. Changes gather on `main` and go out together when a body of work is complete, as one
   candidate through the gate and the hub's family check. Only a data-loss, security or crash fault goes
   out on its own at once, with only that fix; a fault a user reports gets its rig case and rides the
-  next release otherwise, as do the hub's shared fixes unless it names one as the exception.
+  next release otherwise, as do the hub's shared fixes unless it names one as the exception. Nothing known
+  is left in a queue behind a release (decided 26 Nov 2026; guidelines 1.2, AERA-Atari c8429a7): a
+  candidate takes every known fault and pending item this session can finish within a few days, and its
+  message to the hub lists what was left out and why (the hub checks that list before its go).
 - **Releases go out without asking the owner** (decided 23 Oct 2026; guidelines 1.2), once a body of work
   on `main` is ready and the candidate has
   passed **the regression gate** (decided 17 Nov 2026: EMail has users, so every configuration is
