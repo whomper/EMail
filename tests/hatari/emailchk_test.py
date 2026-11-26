@@ -39,8 +39,12 @@ such as an AES_PROFILE one (its stretches go to hatari.log as AESGAP).
 
     emailchk_test.py WORKDIR [MACHINE] [direct] [pop3] [trace]
 
-MACHINE is ST-1, TT or Falcon: the accessories are not tested on the
-4 MB machines, ST and Falcon-4 (decided 4 Nov 2026).
+MACHINE is ST-2, TT or Falcon: the accessories are not tested on the
+4 MB machines, ST and Falcon-4 (decided 4 Nov 2026). On ST-1, a 1 MB ST,
+no family accessory runs (guidelines 2.1, decided 26 Nov 2026), and the
+test is that instead: booted with the GEMDOS trace, EMAILCHK.ACC takes no
+memory, opens no file and checks nothing; its Desk entry opens the alert
+that says it needs 2 MB, and OK takes it away.
 """
 import imaplib
 import os
@@ -59,7 +63,8 @@ IMAP, SMTP = 10143, 10025
 
 work, machine, more = rig.cli("Falcon")
 if machine.partition(":")[0] in ("ST", "Falcon-4"):
-    sys.exit("emailchk_test.py: no accessory runs on ST or Falcon-4 (decided 4 Nov 2026): use ST-1, TT or Falcon")
+    sys.exit("emailchk_test.py: no accessory runs on ST or Falcon-4 (decided 4 Nov 2026): use ST-2, TT or Falcon")
+small = machine.partition(":")[0] == "ST-1"
 direct = "direct" in more
 trace = "trace" in more
 pop = "pop3" in more
@@ -70,6 +75,65 @@ def traced(n):
     return ["--trace", "gemdos,aes", "--trace-file", os.path.join(work, "trace%d.txt" % n)] if trace else []
 IMAPS = 10993
 os.makedirs(work, exist_ok=True)
+
+
+def small_machine():
+    """ST-1: the accessory stands down (guidelines 2.1)"""
+    from PIL import Image, ImageChops
+    hd = os.path.join(work, "hd")
+    shutil.rmtree(hd, ignore_errors=True)
+    shutil.rmtree(os.path.join(work, "shots"), ignore_errors=True)
+    os.makedirs(hd)
+    shutil.copy(os.environ.get("CHK_ACC", os.path.join(ROOT, "binary", "emailchk.acc")),
+                os.path.join(hd, "emailchk.acc"))
+    with open(os.path.join(hd, "emailchk.inf"), "w", newline="") as f:
+        f.write("FOLDER=C:\\\r\nSTART=now\r\nNATFEATS=1\r\n")
+    tr = os.path.join(work, "trace1.txt")
+    bad = []
+
+    def check(what, good, detail=""):
+        print("  %s %s%s" % ("ok  " if good else "FAIL", what, ("  (" + detail + ")") if detail else ""), flush=True)
+        if not good:
+            bad.append(what)
+
+    r = rig.Rig(work, machine, auto=None, extra=["--trace", "gemdos,aes", "--trace-file", tr])
+    try:
+        time.sleep(40)               # booted, and past the moment START=now would check
+        row = 16 if Image.open(r.shot("s0-boot")).size[1] >= 400 else 8
+        y = row + 2 * row + row // 2 + 3
+        r.move(60, y)                # where the pointer will be after the alert
+        time.sleep(1)
+        desk = r.shot("s1-desktop")
+        r.click(40, 8)
+        time.sleep(1.5)
+        r.shot("s2-desk-menu")
+        r.click(60, y)
+        time.sleep(3)
+        told = r.shot("s3-alert")
+        box = ImageChops.difference(Image.open(desk).convert("RGB"), Image.open(told).convert("RGB")).getbbox()
+        w, h = Image.open(desk).size
+        check("the Desk entry opens an alert", box is not None and box[2] - box[0] > w // 4
+              and box[3] - box[1] > h // 6, "changed %s" % (box,))
+        r.key(K["RETURN"])           # OK
+        time.sleep(2)
+        gone = r.shot("s4-ok")
+        left = ImageChops.difference(Image.open(desk).convert("RGB"), Image.open(gone).convert("RGB")).getbbox()
+        check("OK takes it away", left is None, "left %s" % (left,))
+    finally:
+        r.stop()
+    log = open(os.path.join(work, "hatari.log"), errors="replace").read()
+    check("nothing checked", "EMAILCHK" not in log)
+    out = subprocess.run([sys.executable, os.path.join(HERE, "acc_trace.py"), "--none", tr],
+                         capture_output=True, text=True).stdout
+    print(out, end="")
+    check("no memory taken, no file opened", "\nNONE:" in "\n" + out)
+    print("screenshots in", os.path.join(work, "shots"))
+    print("EMail check test (1 MB):", "all passed" if not bad else "%d failed" % len(bad))
+    sys.exit(1 if bad else 0)
+
+
+if small:
+    small_machine()
 srv = os.path.join(work, "srv")
 hd = os.path.join(work, "hd")
 for d in (srv, hd, hd + ".home"):

@@ -6,9 +6,13 @@ calls (guideline 2.2), from Hatari's --trace gemdos,aes. Its calls are those who
 is in its image (from the Mshrink after it is loaded). A file of its is open across
 an event call when any AES call comes between its open and its close: under plain
 TOS another program runs only when the accessory has called the AES. GEMDOS memory
-it takes after its first event call (the first evnt_ after its menu_register)."""
+it takes after its first event call (the first evnt_ after its menu_register).
+
+acc_trace.py --none TRACE: on a 1 MB ST (guidelines 2.1), where it stands down: it
+takes no GEMDOS memory and opens no file at all ("NONE:" when so)."""
 import re, sys
-lines = open(sys.argv[1], "rb").read().decode("latin-1").splitlines()
+none = sys.argv[1] == "--none"
+lines = open(sys.argv[-1], "rb").read().decode("latin-1").splitlines()
 lo = hi = None
 reg = first_evnt = None
 for i, l in enumerate(lines):
@@ -52,4 +56,8 @@ for i, l in enumerate(lines):
 print("accessory image 0x%X-0x%X, first event call at line %s" % (lo or 0, hi or 0, first_evnt))
 print("its file opens: %d; open at the end of the trace: %s" % (nopen, [v[1] for v in openfd.values()]))
 print("its GEMDOS memory before the first event call: %s" % "; ".join(before))
+if none:
+    took = before + bad
+    print("\n".join(took) if took or nopen else "NONE: no memory taken, no file opened")
+    sys.exit(0)
 print("\n".join(bad) if bad else "OK: no file of its open across an AES call, no memory taken after its first event call")

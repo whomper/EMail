@@ -798,6 +798,16 @@ int app_main(void)
 		return 1;
 	if (is_acc)
 		menu_id = menu_register(ap_id, "  EMail check");
+	if (is_acc && acc_small_machine()) {
+		/* under 2 MB of ST RAM no family accessory runs (guidelines 2.1,
+		   decided 26 Nov 2026): no heap, no check, no TLS.OVL; its Desk
+		   entry says so, and EMAIL.PRG still runs there */
+		for (;;) {
+			evnt_multi_(MU_MESAG, 0, 0, 0, 0, msg, &ev);
+			if (msg[0] == AC_OPEN && msg[4] == menu_id)
+				acc_small_alert("EMail check", "EMAILCHK.ACC");
+		}
+	}
 	inf[0] = (char)('A' + boot_drive());
 	inf_read();
 	vwk_open();

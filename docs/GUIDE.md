@@ -553,6 +553,10 @@ accessories, and restart the Atari. It takes about 180 KB: itself and
 and takes that at the next start, MEMKB= in `EMAILCHK.INF`; if it ever
 runs out, it says so and takes more at the next start).
 
+EMail check needs 2 MB of memory or more. On a 1 MB ST it stays out of
+the way: it takes no memory and checks nothing, and its Desk entry says
+that it needs 2 MB. EMail itself runs on 1 MB.
+
 Checking over a **Direct connection** needs about 230 KB more, for
 `TLS.OVL` and the root certificates. The accessory takes that only in
 TT RAM (a TT, or a Falcon with fast RAM on an accelerator), where there

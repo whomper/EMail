@@ -15,7 +15,8 @@ An e-mail program for the Atari ST, STE, TT and Falcon, written in C for GEM.
 - **Translate** messages, or a few chosen words, on your own network, into the languages you install on it.
 - **People by name** from EContact, and calendar invitations straight into ECal.
 - **Printing** through NVDI: the message shown, or each one selected, from a new page.
-- **EMail check**, a small accessory, tells you about new mail while EMail isn't running.
+- **EMail check**, a small accessory, tells you about new mail while EMail isn't running (2 MB or more;
+  EMail itself runs on 1 MB).
 - **Any Atari:** TOS 1.04 to 4.x, EmuTOS, MagiC and MiNT, from a 1 MB ST to a Falcon.
 
 ![EMail on a Falcon in 256 colours: folders, the inbox and a message with its quoted reply in colour](docs/screenshot.png)
@@ -35,7 +36,7 @@ package's EMail says so if it is started on the other's machine). In either:
 | `EMAIL.PRG` | the program, for the ST, STE, TT and Falcon |
 | `EMAIL.HYP`, `EMAIL.REF` | the user guide, opened by the Help key |
 | `TLS.OVL`, `CACERT.PEM`, `ROOTS.DAT` | a Direct connection on a TT, Falcon or FireBee: TLS and the root certificates |
-| `EMAILCHK.ACC` | EMail check, the new-mail accessory (optional) |
+| `EMAILCHK.ACC` | EMail check, the new-mail accessory (optional; 2 MB or more) |
 | `EMAIL.RSC`, `EMAILNV.RSC`, `*.ICN` | the desktop icon ([which one](docs/GUIDE.md#the-desktop-icon)) |
 
 1. Copy `EMAIL.PRG`, `EMAIL.HYP` and `EMAIL.REF` to a folder of their own, such as `C:\EMAIL\`.
