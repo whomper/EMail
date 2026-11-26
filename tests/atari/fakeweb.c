@@ -10,7 +10,10 @@
  * -DFAKE_NAME and -DFAKE_LOG): a VA_START is answered with AV_STARTED
  * (av_message does it), and its text goes into FAKE_LOG, for the test to
  * read. Started as a program (fakeweb.prg as C:\EWEB\EWEB.PRG, the browser
- * EMail starts on plain TOS) it writes its command line there and ends.
+ * EMail starts on plain TOS) it writes its command line there and ends;
+ * given --back=PATH (guidelines 4.6, the round trip), it ends as EWeb does
+ * on the user's Quit: shel_write(1, 1, 0, PATH, " --resume"), written to
+ * the log too (tests/hatari/resume_test.py).
  */
 #include <string.h>
 #include <stdio.h>
@@ -48,7 +51,21 @@ int main(void)
 	AEVENT ev;
 	const char *s;
 	if (!_is_acc) {
-		note("args ", cmd_line());
+		const char *c = cmd_line(), *b = strstr(c, "--back=");
+		note("args ", c);
+		if (b) {
+			char path[200], tail[16];
+			short i;
+			for (i = 0, b += 7; b[i] && b[i] != ' ' && i < (short)sizeof(path) - 1; i++)
+				path[i] = b[i];
+			path[i] = 0;
+			appl_init();
+			evnt_timer_(1500);	/* a moment as the browser, then Quit */
+			tail[0] = 9;
+			memcpy(tail + 1, " --resume", 10);
+			note(shel_write(1, 1, 0, path, tail) ? "back " : "back failed ", path);
+			appl_exit();
+		}
 		return 0;
 	}
 	appl_init();
