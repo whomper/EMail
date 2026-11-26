@@ -110,9 +110,59 @@ int main(void)
 		static const DL_TYPE pl[] = { { "Playlists", "M3U" }, { "All files", "" } };
 		static const FP_SPEC sspec = { "Save the list as a playlist", "Save", "No folder saved in yet", "FPT", pl, 2 };
 		static char name[64] = "PLAYLIST.M3U", path[FP_PATH + 64];
+		int round, rounds = Fopen("C:\\FPROUNDS.TXT", 0) >= 0 ? 6 : 1;
+		if (Fopen("C:\\FPWIN.TXT", 0) >= 0) {
+			/* rounds.py --win: a window of the program's under the dialogs, as an app's (EWeb's) */
+			short wh = wind_create(0x0B, desk_x, desk_y, desk_w, desk_h);
+			if (wh > 0)
+				wind_open(wh, desk_x, desk_y, desk_w, desk_h);
+			nf_debug(wh > 0 ? "FPT window open\n" : "FPT no window\n");
+		}
+		for (round = 0; round < rounds; round++) {
+		if (Fopen("C:\\FPPRE.TXT", 0) >= 0) {
+			/* rounds.py --pre: a press taken as EWeb's main loop takes a link's (any button, 0x101, 3,
+			   0) and no wait for its release before the dialog opens (EWeb asks where to save once the
+			   file's answer has begun) */
+			short m[8];
+			AEVENT e;
+			nf_debug("FPT pre ready\n");
+			while (!(evnt_multi_(MU_BUTTON | MU_TIMER, 0x101, 3, 0, 20000, m, &e) & MU_BUTTON))
+				;
+			nf_debug("FPT pre pressed\n");
+		}
 		n = filepick_save(&sspec, dir, recent, name, sizeof(name), path, sizeof(path), idle);
 		snprintf(b, sizeof(b), "FPT saved %d %s\n", n, n ? path : "-");
 		nf_debug(b);
+		if (rounds > 1) {
+			/* after.py --rounds: a box over the screen after each save, one press in it, as EWeb's
+			   download box after each file saved */
+			short m[8], bx = 160, by = 120, bw = 320, bh = 160, j = 0;
+			AEVENT e;
+			unsigned long t1 = tos_ms();
+			fsel_settle();
+			dlg_open_area(box_draw, &bx, &by, &bw, &bh);
+			snprintf(b, sizeof(b), "FPT round %d box\n", round);
+			nf_debug(b);
+			while (tos_ms() - t1 < 20000 && !j) {
+				short w = dlg_evnt(MU_MESAG | MU_KEYBD | MU_BUTTON | MU_TIMER, 1, 1, 1, 5, m, &e);
+				if (w & MU_BUTTON) {
+					short mb, ks, mx, my;
+					unsigned long t2 = tos_ms();
+					j = 1;
+					do
+						graf_mkstate(&mx, &my, &mb, &ks);
+					while ((mb & 1) && tos_ms() - t2 < 10000);
+					snprintf(b, sizeof(b), "FPT round %d press %s\n", round, mb & 1 ? "STUCK" : "let go");
+					nf_debug(b);
+				}
+			}
+			dlg_close();
+			if (!j) {
+				snprintf(b, sizeof(b), "FPT round %d no press\n", round);
+				nf_debug(b);
+			}
+			continue;
+		}
 		if (Fopen("C:\\FPAFTER.TXT", 0) >= 0) {	/* after.py: the presses that come after the dialog */
 			short m[8];
 			AEVENT e;
@@ -162,6 +212,7 @@ int main(void)
 			}
 			snprintf(b, sizeof(b), "FPT after %d\n", k);
 			nf_debug(b);
+		}
 		}
 		appl_exit();
 		return 0;
