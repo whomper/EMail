@@ -173,6 +173,8 @@ void list_after_remove(void);
 long list_count(void);
 void list_relayout(void);
 void list_find_refresh(long top, long force);
+unsigned long list_current_uid(void);
+void list_resume(unsigned long uid, long top);
 /* Find (find.c): a field across the top of the list */
 int find_active(void);
 int find_filtering(void);		/* the list shows what was found */

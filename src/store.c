@@ -33,6 +33,9 @@ static void defaults(void)
 {
 	opt.tz = 0;
 	opt.tzname[0] = 0;
+	opt.resume_acct[0] = opt.resume_folder[0] = 0;	/* no round trip's place (guidelines 4.6) */
+	opt.resume_uid = 0;
+	opt.resume_top = opt.resume_line = 0;
 	tz_given = 0;
 	opt.check = 0;
 	opt.page = 100;
@@ -556,6 +559,11 @@ static void set_opt(const char *k, const char *v)
 	}
 	else if (!strcmp(k, "colour") || !strcmp(k, "color")) opt.colour = n != 0;
 	else if (!strcmp(k, "sysfsel")) opt.sysfsel = n != 0;
+	else if (!strcmp(k, "resumeaccount")) str_copy(opt.resume_acct, v, sizeof(opt.resume_acct));
+	else if (!strcmp(k, "resumefolder")) str_copy(opt.resume_folder, v, sizeof(opt.resume_folder));
+	else if (!strcmp(k, "resumemessage")) opt.resume_uid = strtoul(v, 0, 10);
+	else if (!strcmp(k, "resumetop")) opt.resume_top = atol(v);
+	else if (!strcmp(k, "resumeline")) opt.resume_line = atol(v);
 	/* HEBFONT= (the font's Hebrew places, gone: decided 12 Nov 2026) is read and dropped */
 }
 
@@ -696,9 +704,11 @@ int store_init(const char *workdir)
  * every save. */
 static void put_str(SBUF *b, const char *note, const char *key, const char *val)
 {
-	sb_adds(b, "; ");
-	sb_adds(b, note);
-	sb_adds(b, "\r\n");
+	if (note) {		/* a setting under the one before it has none of its own */
+		sb_adds(b, "; ");
+		sb_adds(b, note);
+		sb_adds(b, "\r\n");
+	}
 	sb_adds(b, key);
 	sb_adds(b, "=");
 	escape(b, val);
@@ -708,9 +718,11 @@ static void put_str(SBUF *b, const char *note, const char *key, const char *val)
 /* a path, as it is: no escapes, so it reads as typed (C:\ECONTACT) */
 static void put_path(SBUF *b, const char *note, const char *key, const char *val)
 {
-	sb_adds(b, "; ");
-	sb_adds(b, note);
-	sb_adds(b, "\r\n");
+	if (note) {		/* a setting under the one before it has none of its own */
+		sb_adds(b, "; ");
+		sb_adds(b, note);
+		sb_adds(b, "\r\n");
+	}
 	sb_adds(b, key);
 	sb_adds(b, "=");
 	sb_adds(b, val);
@@ -724,9 +736,11 @@ static void put_fmt(SBUF *b, const char *note, const char *key, const char *fmt,
 	va_start(ap, fmt);
 	vsnprintf(val, sizeof(val), fmt, ap);
 	va_end(ap);
-	sb_adds(b, "; ");
-	sb_adds(b, note);
-	sb_adds(b, "\r\n");
+	if (note) {		/* a setting under the one before it has none of its own */
+		sb_adds(b, "; ");
+		sb_adds(b, note);
+		sb_adds(b, "\r\n");
+	}
 	sb_adds(b, key);
 	sb_adds(b, "=");
 	sb_adds(b, val);
@@ -834,6 +848,16 @@ int store_save_settings(void)
 		"TRANSLATE", "%d", opt.translate);
 	put_str(&b, "the language messages are translated into, a two-letter code (en English, he Hebrew)",
 		"TRANSLATETO", opt.translate_to);
+	if (opt.resume_acct[0]) {
+		/* where the user was when EMail ended to start EWeb (guidelines 4.6) */
+		put_str(&b, "where EMail was when it ended to start another program: EMAIL.PRG --resume opens there "
+			"(the account's NAME=, the folder, the message, the list's first row, the message's first line)",
+			"RESUMEACCOUNT", opt.resume_acct);
+		put_str(&b, 0, "RESUMEFOLDER", opt.resume_folder);
+		put_fmt(&b, 0, "RESUMEMESSAGE", "%lu", opt.resume_uid);
+		put_fmt(&b, 0, "RESUMETOP", "%ld", opt.resume_top);
+		put_fmt(&b, 0, "RESUMELINE", "%ld", opt.resume_line);
+	}
 	if (opt.natfeats)	/* a test rig's: written back only where it was read */
 		put_fmt(&b, "1 = the emulator's debug output (NatFeats), for the test rigs only", "NATFEATS", "%d", 1);
 	for (i = 0; i < naccts; i++) {

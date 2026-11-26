@@ -135,7 +135,7 @@ These come from AERA-Atari's repo template and are the same in every app's CLAUD
   (FreeMiNT with XaAES, a multitasking AES: common's rig in
   `common/tests/xaaes`, `make base` there once); `emailchk_test.py` (on `ST-1`, `TT` or `Falcon`: no accessory
   runs on the 4 MB machines, `ST` and `Falcon-4`; decided 4 Nov 2026) when the
-  accessory or `src/newmail.c` changes; `save_test.py` when saving or the file dialog changes. With EContact: `people_test.py` (its stand-in);
+  accessory or `src/newmail.c` changes; `save_test.py` when saving or the file dialog changes; `resume_test.py` and `link_test.py` when links or the start change. With EContact: `people_test.py` (its stand-in);
   the Help key: `help_test.py` (EHypView's stand-in).
 - `gateway/` is a read-only copy of
   [AERA-Gateway](https://github.com/whomper/AERA-Gateway)'s (emailgate,
@@ -176,6 +176,12 @@ These come from AERA-Atari's repo template and are the same in every app's CLAUD
 
 EMail is in maintenance mode while EWeb, EPDF and EPlay go to 1.0 (AERA-Atari, ATARI-APP-GUIDELINES.md,
 section 8; AERA-Atari 8ddb463). Until the owner ends it:
+- **Lifted for one item** (decided 26 Nov 2026): the round trip, guidelines 4.6. On plain TOS, EWeb started
+  for a link gets `--back=` and EMAIL.PRG's path; EMAIL.INF keeps the place (`RESUMEACCOUNT=` and the rest);
+  `--resume` opens there from the disk, the start's check at the first quiet moment.
+  `tests/hatari/resume_test.py` with the stand-in `build/fakeweb.prg`, on the reference configuration,
+  Falcon-4:16, ST and the TT. Its own release through the gate, the pairs against 2.30; maintenance comes
+  back once it is released.
 - Done in 2.30 (decided 25 Nov 2026, maintenance lifted for it): guidelines 5.12, Save the attachment as through
   the family's file dialog (`filepick_save()`), "Use the system file selector" at the foot of Settings > Mail
   (`SYSFSEL=`); `tests/hatari/save_test.py`. Accepted with it (26 Nov 2026): the start 25 ms longer on the

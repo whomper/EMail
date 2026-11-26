@@ -322,6 +322,7 @@ void refind_current(const char *server)
 /* ---------------- commands ---------------- */
 
 static int quiet_check;		/* the timed check: errors on the status line */
+static int resuming, resume_check;	/* started with --resume; its check still to come */
 
 static int check_alerted;	/* cmd_check_all showed an alert */
 
@@ -553,14 +554,84 @@ static void start_prg(const char *prg, const char *arg, const char *who, const c
 	main_status(said);
 }
 
+/* EMAIL.PRG's own full path, in capitals (the command the AES started it
+   with, else its folder and EMAIL.PRG), for --back= (guidelines 4.6); 0
+   when it has a space, and there is no round trip */
+static int own_path(char *out, int size)
+{
+	char cmd[256], tail[256], *p;
+	cmd[0] = 0;
+	if (!shel_read(cmd, tail))
+		cmd[0] = 0;
+	cmd[sizeof(cmd) - 1] = 0;
+	if (cmd[0] && cmd[1] == ':' && strrchr(cmd, '\\'))
+		str_copy(out, cmd, size);
+	else
+		snprintf(out, size, "%sEMAIL.PRG", app_dir());
+	for (p = out; *p; p++) {
+		if (*p == ' ')
+			return 0;
+		if (*p >= 'a' && *p <= 'z')
+			*p = (char)(*p - 32);
+	}
+	return out[0] != 0;
+}
+
+/* the command line is " --resume" (its first space kept), as EWeb gives it */
+static int is_resume(const char *c)
+{
+	while (*c == ' ')
+		c++;
+	return !strcmp(c, "--resume");
+}
+
+/* where the user is, kept in EMAIL.INF for EMAIL.PRG --resume when EWeb
+   brings EMail back (guidelines 4.6) */
+static void resume_keep(void)
+{
+	opt.resume_acct[0] = 0;
+	if (!cur_acct || !cur_finfo)
+		return;
+	str_copy(opt.resume_acct, cur_acct->name, sizeof(opt.resume_acct));
+	str_copy(opt.resume_folder, cur_finfo->server, sizeof(opt.resume_folder));
+	opt.resume_uid = list_current_uid();
+	opt.resume_top = w_list.top;
+	opt.resume_line = w_reader.top;
+}
+
+/* EMAIL.PRG --resume: the account, folder and message EMail was at, from
+   what is on disk (no connection: the check comes after, at the first
+   quiet moment); 0 when the account or folder is gone, and EMail starts
+   as always */
+static int resume_open(void)
+{
+	ACCOUNT *a = 0;
+	FINFO *fi;
+	short i, was = opt.offline;
+	for (i = 0; i < naccts; i++)
+		if (!strcmp(accts[i]->name, opt.resume_acct))
+			a = accts[i];
+	if (!a || !(fi = folder_find(a, opt.resume_folder)))
+		return 0;
+	opt.offline = 1;		/* the cache only: nothing to wait for */
+	folders_select(a, fi);
+	opt.offline = was;
+	if (opt.resume_uid)
+		list_resume(opt.resume_uid, opt.resume_top);
+	if (opt.resume_line > 0)
+		win_scroll_to(&w_reader, opt.resume_line);
+	return 1;
+}
+
 /* EWeb started on url: beside EMail where the AES runs both (MagiC,
    MultiTOS, XaAES); on plain TOS in its place, once EMail has quit */
 static void start_browser(const char *url)
 {
 	int multi = multitasking();
-	char prg[200];
+	char prg[200], back[140], line[200];
 	const char *arg = url;
 	short r;
+	back[0] = 0;
 	r = alert(1, multi ? "[2][No web browser is running.|Start EWeb on this link?][Open in EWeb|Copy link|Cancel]"
 			   : "[2][No web browser is running.|EMail can close and start|EWeb on this link.]"
 			     "[Open in EWeb|Copy link|Cancel]");
@@ -574,10 +645,21 @@ static void start_browser(const char *url)
 	if (!multi && editor_dirty() &&
 	    alert(2, "[2][You are still writing a message.|Quit anyway?][Quit|Cancel]") != 1)
 		return;
+	/* on plain TOS, EWeb brings EMail back when it quits (guidelines 4.6):
+	   --back= and EMail's own path after the link, the place kept */
+	if (!multi && own_path(back + 8, sizeof(back) - 8))
+		memcpy(back, " --back=", 8);
 	/* a command line holds 125 characters: a longer link goes by a page */
-	if (strlen(url) > 120 && !(arg = link_page(url))) {
+	if (strlen(url) + strlen(back) > 120 && !(arg = link_page(url))) {
 		alert(1, "[1][Can't write LINK.HTM|in EMail's folder.][ OK ]");
 		return;
+	}
+	if (back[0]) {
+		snprintf(line, sizeof(line), "%s%s", arg, back);
+		if (strlen(line) <= 125) {
+			arg = line;
+			resume_keep();
+		}
 	}
 	start_prg(prg, arg, "EWeb", "on the link");
 }
@@ -1928,11 +2010,18 @@ int app_main(void)
 		FINFO *in;
 		if (store_lost_passwords)
 			alert(1, "[1][EMAIL.KEY is missing or new: type the passwords again in Options > Accounts.][ OK ]");
-		if (!opt.offline)
-			cmd_check_all();
-		in = folder_role(accts[0], FR_INBOX);
-		if (in)
-			folders_select(accts[0], in);
+		/* back from EWeb (guidelines 4.6): where the user was, from the
+		   disk at once; the check at the first quiet moment */
+		resuming = is_resume(av_command()) && opt.resume_acct[0] && resume_open();
+		if (resuming) {
+			resume_check = !opt.offline;
+		} else {
+			if (!opt.offline)
+				cmd_check_all();
+			in = folder_role(accts[0], FR_INBOX);
+			if (in)
+				folders_select(accts[0], in);
+		}
 	}
 	start_mark("inbox");
 #ifdef DRAW_TRACE
@@ -1952,7 +2041,7 @@ int app_main(void)
 		   its icon, a desktop's "open with"), the TOS way or the ARGV
 		   way of MiNT and MagiC: as a VA_START, in the main loop */
 		const char *c = av_command();
-		if (*c)
+		if (*c && !is_resume(c))
 			kept_start = strdup(c);
 	}
 
@@ -2075,6 +2164,15 @@ int app_main(void)
 		if ((which & MU_TIMER) && pf_ms() - last_input > 3000 && mail_flags_pending(cur_folder)) {
 			mail_push_flags(cur_folder);
 			last_input = pf_ms();	/* failed: not again at once */
+		}
+		/* back from EWeb: the start's check, once nothing has been typed or
+		   clicked for a moment (guidelines 4.6: without holding the user up) */
+		if (resume_check && (which & MU_TIMER) && pf_ms() - last_input > 1500 && !opt.offline) {
+			resume_check = 0;
+			quiet_check = 1;
+			cmd_check_all();
+			quiet_check = 0;
+			last_check = pf_ms();
 		}
 		if ((which & MU_TIMER) && opt.check > 0 && !opt.offline && naccts &&
 		    pf_ms() - last_check > (unsigned long)opt.check * 60000UL) {

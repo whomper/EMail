@@ -373,6 +373,34 @@ void list_select_uid(unsigned long uid)
 	win_redraw(&w_list, 0);
 }
 
+static void show_sel(void);
+
+/* the message selected, 0 when none (the round trip keeps it: guidelines 4.6) */
+unsigned long list_current_uid(void)
+{
+	return cur_folder && sel >= 0 && sel < nview ? cur_folder->h[view[sel]].uid : 0;
+}
+
+/* EMAIL.PRG --resume: the list at row top with message uid selected and,
+   when it is in the cache (no network, nothing to wait for), shown */
+void list_resume(unsigned long uid, long top)
+{
+	long i;
+	fresh();
+	if (top >= 0 && top < nview)
+		w_list.top = top;
+	for (i = 0; i < nview; i++)
+		if (cur_folder->h[view[i]].uid == uid) {
+			sel = anchor = i;
+			sel_uid = uid;
+			win_ensure_visible(&w_list, i);
+			if ((cur_folder->h[view[i]].flags & MF_CACHED) || cur_finfo->local)
+				show_sel();
+			break;
+		}
+	win_redraw(&w_list, 0);
+}
+
 /* ---------------- Find: only the rows that changed ----------------
  * What each row on the screen shows, before the list changes and
  * after: a row drawn again only where they differ (decided 31 Oct 2026:

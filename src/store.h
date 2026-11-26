@@ -95,6 +95,13 @@ typedef struct {
 	char tzname[40];	/* the time zone, an IANA name ("Asia/Jerusalem") */
 	short colour;		/* colours, on screens with 16 or more */
 	short sysfsel;		/* "Use the system file selector": the AES's for Save as (guidelines 5.12) */
+	/* where the user was when EMail ended to start another program
+	   (guidelines 4.6, the round trip): EMAIL.PRG --resume opens there */
+	char resume_acct[32];	/* the account's NAME= */
+	char resume_folder[160];	/* the folder's name on the server */
+	unsigned long resume_uid;	/* the message (0: none) */
+	long resume_top;	/* the list's first row */
+	long resume_line;	/* the message's first line */
 	char signature[256];	/* below new messages, every account's; \n separated, Atari charset */
 	char workdir[200];
 	short peoplefile;	/* EContact not loaded: names from its CONTACTS.TXT (guidelines 4.1) */

@@ -599,6 +599,34 @@ static void t_inf(void)
 	CHECK(opt.peoplefile == 1 && !strcmp(opt.peopledir, "C:\\ECONTACT"), "EContact's file read back: %d %s",
 	      opt.peoplefile, opt.peopledir);
 	CHECK(!store_lost_passwords, "EMAIL.KEY opens them");
+	/* the round trip's place (guidelines 4.6): written when kept, read back */
+	str_copy(opt.resume_acct, "Home", sizeof(opt.resume_acct));
+	str_copy(opt.resume_folder, "INBOX/Lists", sizeof(opt.resume_folder));
+	opt.resume_uid = 4123456789UL;
+	opt.resume_top = 37;
+	opt.resume_line = 12;
+	CHECK(store_save_settings() == 0, "saved with the round trip's place");
+	free(inf);
+	inf = pf_load(path, &len);
+	CHECK(inf && strstr(inf, "\r\nRESUMEACCOUNT=Home\r\n\r\nRESUMEFOLDER=INBOX/Lists\r\n\r\n"
+			     "RESUMEMESSAGE=4123456789\r\n\r\nRESUMETOP=37\r\n\r\nRESUMELINE=12\r\n\r\n"),
+	      "RESUME...= written, each with an empty line after it");
+	memset(opt.resume_acct, 0, sizeof(opt.resume_acct));
+	opt.resume_uid = 0;
+	forget_accounts();
+	store_init(dir);
+	CHECK(!strcmp(opt.resume_acct, "Home") && !strcmp(opt.resume_folder, "INBOX/Lists") &&
+	      opt.resume_uid == 4123456789UL && opt.resume_top == 37 && opt.resume_line == 12,
+	      "the place read back: %s %s %lu %ld %ld", opt.resume_acct, opt.resume_folder, opt.resume_uid,
+	      opt.resume_top, opt.resume_line);
+	opt.resume_acct[0] = 0;
+	store_save_settings();
+	free(inf);
+	inf = pf_load(path, &len);
+	CHECK(inf && !strstr(inf, "RESUME"), "no place kept: no RESUME...= lines");
+	forget_accounts();
+	store_init(dir);
+	a = accts[0];
 	/* "Start offline": off unless set, kept; EMail starts as it says */
 	CHECK(opt.startoffline == 0 && opt.offline == 0, "STARTOFFLINE off when not given: online");
 	opt.startoffline = 1;
