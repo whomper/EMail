@@ -37,7 +37,14 @@ across an event call, no GEMDOS memory taken after its first one (the
 guidelines, 2.2). CHK_ACC names another build of the accessory to test,
 such as an AES_PROFILE one (its stretches go to hatari.log as AESGAP).
 
-    emailchk_test.py WORKDIR [MACHINE] [direct] [pop3] [trace]
+    emailchk_test.py WORKDIR [MACHINE] [direct] [pop3] [trace] [held]
+
+With "held" (guidelines 2.2, decided 26 Nov 2026: an accessory's GEMDOS
+memory is its own on plain TOS), FILLMEM.PRG (tests/atari/fillmem.c,
+without the fast-load bit) is auto-started at boot and starts itself
+again before it ends: each clears its TPA and fills every free block. Mail comes after
+them, and the next two checks must find it, without a crash (make
+build/fillmem.prg first).
 
 MACHINE is ST-2, TT or Falcon: the accessories are not tested on the
 4 MB machines, ST and Falcon-4 (decided 4 Nov 2026). On ST-1, a 1 MB ST,
@@ -65,6 +72,7 @@ work, machine, more = rig.cli("Falcon")
 if machine.partition(":")[0] in ("ST", "Falcon-4"):
     sys.exit("emailchk_test.py: no accessory runs on ST or Falcon-4 (decided 4 Nov 2026): use ST-2, TT or Falcon")
 small = machine.partition(":")[0] == "ST-1"
+held = "held" in more
 direct = "direct" in more
 trace = "trace" in more
 pop = "pop3" in more
@@ -245,6 +253,50 @@ def unseen():
     m.logout()
     return n
 
+
+if held:
+    # the held case (guidelines 2.2): the accessory's memory is its own on
+    # plain TOS. FILLMEM.PRG, without the fast-load bit, auto-started at
+    # boot, and itself again from it: each clears its TPA and fills
+    # every free block. Then mail comes, and the next check must find it
+    shutil.copy(os.path.join(ROOT, "build", "fillmem.prg"), os.path.join(hd, "FILLMEM.PRG"))
+    r = rig.Rig(work, machine, serial=(fifo_out, fifo_in), auto="C:\\FILLMEM.PRG", extra=traced(1))
+    try:
+        flog = os.path.join(hd, "FILLMEM.LOG")
+        end = time.time() + 240
+        while time.time() < end and "run 2 ended" not in (open(flog, errors="replace").read() if os.path.exists(flog) else ""):
+            time.sleep(2)
+        print("  FILLMEM.PRG ended after %d s" % (time.time() - end + 240), flush=True)
+        time.sleep(5)
+        n = len(checks())
+        deliver(("()", "After the programs"))
+        line = wait_check(n + 1, 150)
+        check("after them, the next check still finds the new one",
+              re.search(r": 1 new, fresh$", line) is not None, line)
+        time.sleep(3)
+        r.shot("h1-told")
+        r.key(K["RETURN"])
+        time.sleep(2)
+        n = len(checks())
+        deliver(("()", "And one more"))
+        line = wait_check(n + 1, 150)
+        check("... and the one after it", re.search(r": 2 new, fresh$", line) is not None, line)
+        r.shot("h2-told")
+    finally:
+        r.stop()
+    runs = open(flog, errors="replace").read().splitlines() if os.path.exists(flog) else []
+    check("two programs without the fast-load bit ran and filled the free memory",
+          len([l for l in runs if " filled " in l]) == 2, "; ".join(l for l in runs if l))
+    crash = [f for f in os.listdir(hd) if f.upper() == "CRASH.LOG"]
+    check("no crash", not crash)
+    print("\n".join(checks()))
+    bridge.terminate()
+    smtp.terminate()
+    subprocess.run(["doveadm", "-c", os.path.join(srv, "dovecot.conf"), "stop"])
+    shutil.rmtree(run_dir, ignore_errors=True)
+    print("screenshots in", os.path.join(work, "shots"))
+    print("EMail check test (held):", "all passed" if not fails else "%d failed" % len(fails))
+    sys.exit(1 if fails else 0)
 
 r = rig.Rig(work, machine, serial=(fifo_out, fifo_in), auto=None, extra=traced(1))
 try:
