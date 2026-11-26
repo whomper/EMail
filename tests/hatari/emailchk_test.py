@@ -40,10 +40,12 @@ such as an AES_PROFILE one (its stretches go to hatari.log as AESGAP).
     emailchk_test.py WORKDIR [MACHINE] [direct] [pop3] [trace] [held]
 
 With "held" (guidelines 2.2, decided 26 Nov 2026: an accessory's GEMDOS
-memory is its own on plain TOS), FILLMEM.PRG (tests/atari/fillmem.c,
-without the fast-load bit) is auto-started at boot and starts itself
-again before it ends: each clears its TPA and fills every free block. Mail comes after
-them, and the next two checks must find it, without a crash (make
+memory is its own on plain TOS; ECal's held boot case), FILLMEM.PRG
+(tests/atari/fillmem.c, without the fast-load bit) is auto-started at
+boot twice: alone, the reference, filling all it is given; then holding
+the front in an event call for 30 s, ending, and running again to fill.
+That run gets no more than the reference, within 4 KB; mail comes, and
+the next two checks find it, without a crash (make
 build/fillmem.prg first).
 
 MACHINE is ST-2, TT or Falcon: the accessories are not tested on the
@@ -255,18 +257,39 @@ def unseen():
 
 
 if held:
-    # the held case (guidelines 2.2): the accessory's memory is its own on
-    # plain TOS. FILLMEM.PRG, without the fast-load bit, auto-started at
-    # boot, and itself again from it: each clears its TPA and fills
-    # every free block. Then mail comes, and the next check must find it
+    # the held case (guidelines 2.2; ECal's held boot case): the
+    # accessory's memory is its own on plain TOS. FILLMEM.PRG (no fast-load
+    # bit) auto-started at boot: first alone, the reference, filling what
+    # it is given; then holding the front in an event call for 30 s (the
+    # accessory's first turns come while it is the current process), and
+    # after it ends, again, filling. The second gets no more than the
+    # reference within 4 KB; mail comes, and the next two checks find it
     shutil.copy(os.path.join(ROOT, "build", "fillmem.prg"), os.path.join(hd, "FILLMEM.PRG"))
-    r = rig.Rig(work, machine, serial=(fifo_out, fifo_in), auto="C:\\FILLMEM.PRG", extra=traced(1))
-    try:
-        flog = os.path.join(hd, "FILLMEM.LOG")
-        end = time.time() + 240
-        while time.time() < end and "run 2 ended" not in (open(flog, errors="replace").read() if os.path.exists(flog) else ""):
+    flog = os.path.join(hd, "FILLMEM.LOG")
+
+    def boot(hold, n):
+        for f in (flog, os.path.join(hd, "HOLD.ON")):
+            if os.path.exists(f):
+                os.remove(f)
+        if hold:
+            open(os.path.join(hd, "HOLD.ON"), "w").close()
+        r = rig.Rig(work, machine, serial=(fifo_out, fifo_in), auto="C:\\FILLMEM.PRG", extra=traced(n))
+        end = time.time() + 300
+        while time.time() < end and "filled" not in (open(flog, errors="replace").read() if os.path.exists(flog) else ""):
             time.sleep(2)
-        print("  FILLMEM.PRG ended after %d s" % (time.time() - end + 240), flush=True)
+        log = open(flog, errors="replace").read().splitlines() if os.path.exists(flog) else []
+        got = [int(l.split()[1]) for l in log if l.startswith("filled ")]
+        return r, log, got[0] if got else 0
+
+    r, log, ref = boot(False, 1)
+    r.stop()
+    check("the reference boot: FILLMEM.PRG alone filled what it was given", ref > 0, "; ".join(log))
+    r, log, got = boot(True, 2)
+    try:
+        check("held: FILLMEM.PRG held the front, ended, and ran again", len(log) == 2 and log[0] == "held, then itself",
+              "; ".join(log))
+        check("... and was given no more than the reference (within 4 KB)", 0 < got <= ref + 4096,
+              "%d against %d, %+d" % (got, ref, got - ref))
         time.sleep(5)
         n = len(checks())
         deliver(("()", "After the programs"))
@@ -284,9 +307,6 @@ if held:
         r.shot("h2-told")
     finally:
         r.stop()
-    runs = open(flog, errors="replace").read().splitlines() if os.path.exists(flog) else []
-    check("two programs without the fast-load bit ran and filled the free memory",
-          len([l for l in runs if " filled " in l]) == 2, "; ".join(l for l in runs if l))
     crash = [f for f in os.listdir(hd) if f.upper() == "CRASH.LOG"]
     check("no crash", not crash)
     print("\n".join(checks()))
