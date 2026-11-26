@@ -29,3 +29,8 @@ void tls_close(TLS *t) { (void)t; }
 const char *tls_describe(TLS *t) { (void)t; return ""; }
 char tls_sigs_path[200];
 void (*tls_log)(const char *msg);
+/* libc.c's acc_core (common 9fd1335): the test is no accessory, so only
+   the cookie inquiry is reached; no cookie, no supervisor call */
+void *_BasePage;
+long get_cookie(long id) { (void)id; return 0; }
+long tos_supexec(void *f) { (void)f; return 0; }
