@@ -45,9 +45,34 @@ static struct {
 	int out;			/* counting bytes sent, not received */
 	long base, total;		/* bytes */
 	long items, nitems;
-	unsigned long last;
+	unsigned long last, t0;		/* the last shown; the job's start */
 	int on;
 } prog;
+
+/* a size as the family writes it (D35): "12 KB", "3.4 MB", "25 MB" */
+static void size_kbmb(long n, char *out, int size)
+{
+	if (n < 1024L * 1024)
+		snprintf(out, size, "%s KB", num((n + 512) / 1024));
+	else if (n < 10L * 1024 * 1024) {
+		long t = (n * 10 + 512L * 1024) / (1024L * 1024);
+		snprintf(out, size, "%ld.%ld MB", t / 10, t % 10);
+	} else
+		snprintf(out, size, "%ld MB", (n + 512L * 1024) / (1024L * 1024));
+}
+
+/* ", 2 min left" (D35) once the job has run 3 s and a minute or more is
+   left, from the time so far and the part done (permille); else "" */
+static void time_left(long permille, char *out, int size)
+{
+	unsigned long ran = pf_ms() - prog.t0;
+	out[0] = 0;
+	if (ran >= 3000 && permille > 0 && permille < 1000) {
+		unsigned long left = ran / (unsigned long)permille * (unsigned long)(1000 - permille);
+		if (left >= 60000UL)
+			snprintf(out, size, ", %lu min left", (left + 59999UL) / 60000UL);
+	}
+}
 
 static long prog_bytes(void)
 {
@@ -57,27 +82,34 @@ static long prog_bytes(void)
 static void prog_show(void)
 {
 	char bar[16], line[200];
-	long done = prog_bytes(), pct = -1;
+	long done = prog_bytes(), pct = -1, pm = -1;
+	char got[24], all[24], left[24];
 	short i;
 	prog.last = pf_ms();
 	if (prog.nitems > 0)
-		pct = prog.items * 100 / prog.nitems;
+		pm = prog.items * 1000 / prog.nitems;
 	else if (prog.total > 0)
-		pct = done / (prog.total / 100 + 1);
-	if (pct > 100)
-		pct = 100;
+		pm = done / (prog.total / 1000 + 1);
+	if (pm > 1000)
+		pm = 1000;
+	if (pm >= 0)
+		pct = pm / 10;
+	size_kbmb(done, got, sizeof(got));
 	if (pct < 0) {
-		snprintf(line, sizeof(line), "%s  %s KB", prog.label, num((done + 512) / 1024));
+		snprintf(line, sizeof(line), "%s  %s", prog.label, got);
 	} else {
 		for (i = 0; i < 10; i++)
 			bar[i] = i < pct / 10 ? '#' : '.';
 		bar[10] = 0;
-		if (prog.nitems > 0)
-			snprintf(line, sizeof(line), "%s %s of %s  [%s] %ld%%", prog.label,
-				 num(prog.items), num(prog.nitems), bar, pct);
-		else
-			snprintf(line, sizeof(line), "%s  [%s] %ld%%  %s KB", prog.label, bar, pct,
-				 num((done + 512) / 1024));
+		time_left(pm, left, sizeof(left));
+		if (prog.nitems > 0) {
+			snprintf(line, sizeof(line), "%s %s of %s  [%s] %ld%%%s", prog.label,
+				 num(prog.items), num(prog.nitems), bar, pct, left);
+		} else {
+			/* D35: "45%", "12 KB of 3.4 MB", "2 min left" */
+			size_kbmb(prog.total, all, sizeof(all));
+			snprintf(line, sizeof(line), "%s  [%s] %ld%%  %s of %s%s", prog.label, bar, pct, got, all, left);
+		}
 	}
 	if (mail_status)
 		mail_status(line);
@@ -102,6 +134,7 @@ static void prog_start(int out, long total, long nitems, const char *fmt, ...)
 	prog.total = total;
 	prog.items = 0;
 	prog.nitems = nitems;
+	prog.t0 = pf_ms();
 	prog.on = 1;
 	conn_tick = prog_tick;
 	prog_show();

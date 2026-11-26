@@ -185,8 +185,9 @@ expect "attachment with RFC 2231 Hebrew name" "Attachment: ת.png" "$out"
 out=$(run list 1 INBOX)
 expect "reading marks the message seen" "^$U1	 " "$out"
 U3=$(uid_of "$out" "Newsletter")
-out=$(run show 1 INBOX "$U3")
+out=$(MAIL_DEBUG=1 run show 1 INBOX "$U3")
 expect "HTML-only message turned into text" "Hello Atari fans" "$out"
+expect "progress: a download's size of the whole (D35)" "downloading.*\] [0-9]*%  [0-9]* KB of [0-9]* KB" "$out"
 expect "HTML list item" "  - Falcon030" "$out"
 
 out=$(run search 1 INBOX Falcon030)
