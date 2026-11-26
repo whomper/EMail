@@ -8,7 +8,8 @@ serial port, a message with NOTES.DAT attached.
 1. A click on the attachment's line opens the family's dialog ("Save the
    attachment as", NOTES.DAT proposed, the type DAT files): the screen
    changes; Return, the name typed, saves C:\\NOTES.DAT, the attachment
-   byte for byte. Open again: a click on the list's first row, the folder
+   byte for byte, and three clicks in EMail's window after it each act (a
+   mouse button left held after the dialog would lose them: EWeb 1.27). Open again: a click on the list's first row, the folder
    ATTACH, gives the list the keys, and Return goes into it (the folder
    line changes, the name stays); Save writes C:\\ATTACH\\NOTES.DAT, byte
    for byte.
@@ -153,6 +154,16 @@ try:
     path, data, t0 = saved()
     check("Return saves C:\\NOTES.DAT, the attachment byte for byte", data == DATA,
           "%s, %d bytes of %d" % (path, len(data), len(DATA)))
+    # after the dialog closed by Return, three clicks in EMail's window, each
+    # acting (a button TOS 4.04 kept held would lose them: EWeb 1.27's gate)
+    prev = r.shot("s2a1-before-clicks")
+    for k, (y, what) in enumerate(((124, "the second row"), (140, "the third row"), (108, "the first row again"))):
+        r.click(330, y)
+        time.sleep(4)
+        now = r.shot("s2a%d-click" % (k + 2))
+        check("... then a click on %s acts" % what, changed(prev, now) > 0.005,
+              "%.1f%% of the screen" % (100 * changed(prev, now)))
+        prev = now
     r.click(*ATTACH)
     time.sleep(4)
     dlg = r.shot("s2b-dialog-again")
