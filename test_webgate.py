@@ -8,6 +8,7 @@ import http.client
 import io
 import json
 import os
+import re
 import shutil
 import socket
 import sys
@@ -293,6 +294,17 @@ class ProxyTest(unittest.TestCase):
         self.assertTrue(webgate.picture_want("fit=640; deep=1")["deep"])
         self.assertFalse(webgate.picture_want("fit=640")["deep"])
         self.assertFalse(webgate.picture_want("fit=640; deep=0")["deep"])
+
+    def test_picture_want_soft(self):
+        # soft=N, EWeb's exact form last (decided 22 Nov 2026): 1 to 15, else the whole dither
+        ask = "fit=608; size=192x128; pens=16; pal=1a2b3c4d; ed=lj; soft=%s"
+        self.assertEqual(webgate.picture_want(ask % "12")["soft"], 12)
+        self.assertEqual(webgate.picture_want(ask % "8")["soft"], 8)
+        for v in ("0", "16", "x", "-3", ""):
+            self.assertEqual(webgate.picture_want(ask % v)["soft"], 0, v)
+        self.assertEqual(webgate.picture_want("fit=608; pens=16; pal=1a2b3c4d")["soft"], 0)
+        self.assertEqual(webgate.pens_request("l", 16, 1, 1, soft=12)[7], 12)
+        self.assertEqual(webgate.pens_request("l", 16, 1, 1)[7], 0)
 
     @unittest.skipUnless(PICS, "needs Pillow")
     def test_picture_turned_upright(self):
@@ -581,6 +593,12 @@ class PensTest(ProxyTest):
         self.assertEqual(q[:16], b"AEPQ\1l\x0f\0" + (300).to_bytes(2, "big") + (200).to_bytes(2, "big") +
                          len(PICS["big.jpg"][0]).to_bytes(4, "big"))
         self.assertEqual(q[16:], ST16 + PICS["big.jpg"][0])
+        self.assertIsNone(r.getheader("X-Gateway-Soft"))       # the whole dither: byte 7 is 0
+        # soft=12: the share in byte 7, and the answer says so
+        r, data = self.pens("big.jpg", "fit=600; size=300x200; pens=16; pal=%s; ed=lj; soft=12" % crc)
+        self.assertEqual((r.getheader("Content-Type"), r.getheader("X-Gateway-Soft")),
+                         ("application/x-aera-pens", "12"))
+        self.assertEqual(self.fake.last[7], 12)
         # without size=: fit wide at most; EWEBST.PRG's decoders
         r, data = self.pens("big.jpg", "fit=96; pens=16; pal=%s; ed=tj" % crc)
         self.assertEqual((data[8:12], self.fake.last[5:6], self.fake.last[8:12]),
@@ -940,12 +958,13 @@ class LiveTest(unittest.TestCase):
 
     shot_q = "w=1216"       # what the stand-in extension says of its picture
     shot_body = None        # and the picture (None: JPEG)
+    shot_areas = None       # and the page's links and fields (X-Live-Areas), or none
 
     def setUp(self):
         if os.path.exists(self.log):
             os.remove(self.log)
         webgate.LIVE.clear()
-        self.shot_q, self.shot_body = LiveTest.shot_q, LiveTest.shot_body
+        self.shot_q, self.shot_body, self.shot_areas = LiveTest.shot_q, LiveTest.shot_body, LiveTest.shot_areas
 
     def extension(self):
         """one turn of webgate-ext, as background.js answers each kind"""
@@ -953,7 +972,9 @@ class LiveTest(unittest.TestCase):
         c.request("GET", "/next")
         w = json.loads(c.getresponse().read())
         if w.get("shot"):
-            c.request("POST", "/shot?id=%s&%s" % (w["id"], self.shot_q), body=self.shot_body or JPEG)
+            c.request("POST", "/shot?id=%s&%s" % (w["id"], self.shot_q), body=self.shot_body or JPEG,
+                      headers={"X-Live-Areas": self.shot_areas if isinstance(self.shot_areas, str)
+                               else json.dumps(self.shot_areas)} if self.shot_areas else {})
         else:
             body = json.dumps({"url": w["url"] or "https://example.com/now", "title": "Now",
                                "html": "<!DOCTYPE html><title>Now</title><p>shown"}).encode()
@@ -1107,6 +1128,46 @@ class LiveTest(unittest.TestCase):
         r, data, w = self.ask("http://webgate/live/shot.jpg?n=5")
         self.assertEqual((w["w"], w["h"]), (790, 1650))
 
+    def test_links_and_typing(self):
+        # pic=1 (EWeb's live view, the 303 after a click): the page made
+        # with its picture, the browser's links over it as an image map (a
+        # click on one at its middle) and a field with the keyboard said, so
+        # that EWeb shows the pointing hand and sends what is typed there;
+        # the picture the page was made with is the one shot.jpg gives
+        # (decided 21 Nov 2026)
+        webgate.BRIDGE.shown = "https://example.com/"
+        self.shot_areas = {"areas": [[100, 50, 300, 60], [0, 0, 1, 1]], "typing": True, "dpr": 2}
+        r, data, w = self.ask("http://webgate/live?pic=1")
+        self.assertTrue(w["shot"])
+        page = data.decode("utf-8")
+        # the view 1216 px wide at 2 px a CSS px (608 CSS px), made 608 wide: 1 to 1
+        self.assertIn('<area shape=rect coords="100,50,400,110" '
+                      'href="http://webgate/live/click?at.x=250&amp;at.y=80" alt="">', page)
+        self.assertNotIn('coords="0,0,1,1"', page)      # (too small to point at)
+        self.assertIn('usemap="#live"', page)
+        self.assertIn('<meta name="aera-live" content="typing">', page)
+        n = re.search(r"shot\.jpg\?n=(\d+)", page).group(1)
+        r, data, w = self.ask("http://webgate/live/shot.jpg?n=%s" % n, turn=False)
+        self.assertEqual((r.status, data), (200, JPEG))  # (kept: not taken again)
+        # without pic=1, as before: no picture taken, no map, nothing said
+        r, data, _ = self.ask("http://webgate/live", turn=False)
+        self.assertNotIn("<area", data.decode("utf-8"))
+        self.assertNotIn("aera-live", data.decode("utf-8"))
+        # a click's 303 asks for the next page made so
+        r, data, _ = self.ask("http://webgate/live/click?at.x=250&at.y=80", turn=False)
+        self.assertIn("&pic=1", r.getheader("Location"))
+
+    def test_areas_bounded(self):
+        # X-Live-Areas from the extension, checked: a pixel ratio out of all
+        # reason (1e400 is inf to JSON) or boxes that aren't boxes give the
+        # page without them, never an error
+        webgate.BRIDGE.shown = "https://example.com/"
+        for more in ('{"areas": [[1, 1, 50, 50]], "dpr": 1e400}', '{"areas": [["a", 1, 2, 3], 5], "dpr": "x"}',
+                     '[1, 2]', '{"areas": 7}', 'not json'):
+            self.shot_areas = more
+            r, data, w = self.ask("http://webgate/live?pic=1")
+            self.assertEqual(r.status, 200, more)
+
     def test_picture_height(self):
         # the picture button's height as well: EWeb knows the size it shows
         # it at before it comes (and asks for its pens at that size once)
@@ -1157,6 +1218,11 @@ class LiveTest(unittest.TestCase):
         self.assertIn("pens 300x200", r.getheader("X-Gateway-Picture"))
         self.assertEqual(r.getheader("X-Gateway-Pens"), "aerapens 0123456789ab test")
         self.assertEqual(data[:4], b"EWPN")
+        self.assertIsNone(r.getheader("X-Gateway-Soft"))
+        # soft=8: the share passed on, and said
+        ask += "; soft=8"
+        r, data = shot()
+        self.assertEqual((r.getheader("X-Gateway-Soft"), fake.last[7]), ("8", 8))
         # no pens asked for: the JPEG as it came
         r, data, _ = self.ask("http://webgate/live/shot.jpg?n=8")
         self.assertEqual((r.status, r.getheader("Content-Type"), data), (200, "image/jpeg", PICS["big.jpg"][0]))
@@ -1504,7 +1570,7 @@ class BrowserProxyTest(unittest.TestCase):
 
     def test_tunnel_and_page_with_allow_local(self):
         webgate.Config.allow_local = True
-        webgate.Config.allow = ["192.168.1.50"]       # the Atari's: not the browser's concern
+        webgate.Config.allow = ["192.168.1.60"]       # the Atari's: not the browser's concern
         try:
             s = socket.create_connection(("127.0.0.1", self.ext.server_address[1]), timeout=10)
             self.addCleanup(s.close)
@@ -1552,7 +1618,7 @@ class BrowserProxyTest(unittest.TestCase):
 
     def test_names_that_answer_home(self):
         webgate.Config.allow_local = False
-        for answer in (["192.168.1.10"], ["93.184.216.34", "192.168.1.10"]):     # home, and mixed
+        for answer in (["192.168.1.50"], ["93.184.216.34", "192.168.1.50"]):     # home, and mixed
             calls, fake = self.resolver(answer)
             c1, c2 = self.conn(), self.conn()
             c1.connect()                # to webgate, before the stand-in answers every name
@@ -1571,7 +1637,7 @@ class BrowserProxyTest(unittest.TestCase):
         """public at the check, private a moment later: webgate connects to
         what it checked, and asks once"""
         webgate.Config.allow_local = False
-        calls, fake = self.resolver(["93.184.216.34"], ["192.168.1.10"])
+        calls, fake = self.resolver(["93.184.216.34"], ["192.168.1.50"])
         dialled = []
         a, b = socket.socketpair()
         self.addCleanup(a.close)
@@ -1660,6 +1726,97 @@ class LogTest(ProxyTest):
             time.sleep(0.2)
         self.assertNotIn("Wilhelmina", err.getvalue())
         self.assertIn("refused: 400", err.getvalue())
+
+
+
+class OwnHeadersTest(unittest.TestCase):
+    """webgate's own request headers (X-Gateway-...), in any case, are for
+    webgate alone: none goes on to the server (7.3)"""
+    setUpClass = classmethod(ProxyTest.setUpClass.__func__)
+    tearDownClass = classmethod(ProxyTest.tearDownClass.__func__)
+    ask = ProxyTest.ask
+
+    def test_none_go_upstream(self):
+        r, data, _ = self.ask("GET", "/page", {"X-Gateway-Picture": "fit=608",
+                                               "x-gateway-translate": "to=de", "X-GATEWAY-SNAPSHOT": "0",
+                                               "X-Other": "kept"})
+        self.assertEqual(r.status, 200)
+        sent = {k.lower() for k in Upstream.seen[-1][2]}
+        self.assertEqual([k for k in sent if k.startswith("x-gateway-")], [])
+        self.assertIn("x-other", sent)
+
+
+class ThroughAProxyTest(unittest.TestCase):
+    """HTTPS_PROXY: the proxy dials the server, so webgate checks the home
+    network itself first (7.3), before a connection is kept for it"""
+
+    def setUp(self):
+        self.srv = socket.socket()
+        self.srv.bind(("127.0.0.1", 0))
+        self.srv.listen(4)
+        self.addCleanup(self.srv.close)
+        self.got = []
+
+        def proxy():
+            while True:
+                try:
+                    a, _ = self.srv.accept()
+                except OSError:
+                    return
+                a.settimeout(5)
+                try:
+                    self.got.append(a.recv(4096))
+                    a.sendall(b"HTTP/1.1 502 no\r\nContent-Length: 0\r\n\r\n")
+                except OSError:
+                    pass
+                a.close()
+        threading.Thread(target=proxy, daemon=True).start()
+        old = os.environ.get("HTTPS_PROXY")
+        os.environ["HTTPS_PROXY"] = "http://127.0.0.1:%d" % self.srv.getsockname()[1]
+        self.addCleanup(lambda: os.environ.pop("HTTPS_PROXY") if old is None
+                        else os.environ.__setitem__("HTTPS_PROXY", old))
+        allow = webgate.Config.allow_local
+        self.addCleanup(lambda: setattr(webgate.Config, "allow_local", allow))
+        webgate.UP.conns.clear()
+        self.addCleanup(webgate.UP.conns.clear)
+        self.gw = ThreadingHTTPServer(("127.0.0.1", 0), webgate.Handler)
+        self.gw.daemon_threads = True
+        threading.Thread(target=self.gw.serve_forever, daemon=True).start()
+        self.addCleanup(self.gw.server_close)
+        self.addCleanup(self.gw.shutdown)
+
+    def ask(self):
+        c = http.client.HTTPConnection("127.0.0.1", self.gw.server_address[1], timeout=10)
+        self.addCleanup(c.close)
+        c.request("GET", "https://127.0.0.1:8443/page")
+        r = c.getresponse()
+        return r.status, r.read()
+
+    def test_home_network_refused_before_the_proxy(self):
+        webgate.Config.allow_local = False
+        self.assertEqual(self.ask(), (403, b"webgate: won't connect to the local network (127.0.0.1)\n"))
+        self.assertEqual(self.got, [])
+        self.assertEqual(webgate.UP.conns, {})          # nothing kept for it
+
+    def test_allow_local_goes_through_the_proxy(self):
+        webgate.Config.allow_local = True
+        status, _ = self.ask()
+        self.assertEqual(status, 502)
+        self.assertTrue(self.got and self.got[0].startswith(b"CONNECT 127.0.0.1:8443 "))
+
+
+class RestartAdviceTest(unittest.TestCase):
+    def test_the_snaps_own_unit(self):
+        with tempfile.TemporaryDirectory() as d:
+            old = webgate.SNAP_UNIT
+            try:
+                webgate.SNAP_UNIT = os.path.join(d, "webgate-browser.service")
+                self.assertEqual(webgate.restart_browser(), "sudo systemctl restart webgate-browser")
+                open(webgate.SNAP_UNIT, "w").close()
+                self.assertEqual(webgate.restart_browser(),
+                                 "sudo systemctl --user -M webgate@ restart webgate-browser")
+            finally:
+                webgate.SNAP_UNIT = old
 
 
 if __name__ == "__main__":
