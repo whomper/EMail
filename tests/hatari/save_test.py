@@ -91,7 +91,8 @@ rig.fakesting(os.path.join(hd, "AUTO"))
 INF = ("[options]\r\nnatfeats=1\r\ntz=180\r\n%s[account]\r\nname=Dana\r\nfullname=Dana Falcon\r\n"
        "email=dana@test.local\r\nin=imap\r\nhost=127.0.0.1\r\nport=%d\r\nuser=dana\r\n"
        "pass=secret\r\nsmtphost=127.0.0.1\r\nsmtpport=%d\r\n")
-ATTACH = (330, int(os.environ.get("SAVE_ATTACH_Y", "324")))   # the attachment's line in the reader
+# the attachment's line in the reader: a TT's window sits 10 pixels higher
+ATTACH = (330, int(os.environ.get("SAVE_ATTACH_Y", "314" if machine.startswith("TT") else "324")))
 SAVE, CANCEL, REPLACE = (440, 401), (330, 401), (288, 272)    # the dialog's buttons, the question's Replace
 FIRST_ROW = (230, 206)                                         # the list's first row
 
@@ -215,7 +216,8 @@ finally:
     r.stop()
 
 # 3: the system's selector, with no C:\\NOTES.DAT to replace
-os.remove(saved()[0])
+if saved()[0]:
+    os.remove(saved()[0])
 r = boot(True)
 try:
     before = r.shot("s8-read")
