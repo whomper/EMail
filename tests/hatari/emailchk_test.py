@@ -77,6 +77,8 @@ if machine.partition(":")[0] in ("ST", "Falcon-4"):
     sys.exit("emailchk_test.py: no accessory runs on ST or Falcon-4 (decided 4 Nov 2026): use ST-2, TT or Falcon")
 small = machine.partition(":")[0] == "ST-1"
 held = "held" in more
+busy = "busy" in more            # a player holding the sound beside it
+bell_off = "belloff" in more     # BELL=0 in EMAIL.INF
 direct = "direct" in more
 trace = "trace" in more
 pop = "pop3" in more
@@ -187,6 +189,8 @@ rig.install_prg(hd)
 shutil.copy(os.environ.get("CHK_ACC", os.path.join(ROOT, "binary", "emailchk.acc")),
             os.path.join(hd, "emailchk.acc"))
 rig.fakesting(os.path.join(hd, "AUTO"))
+if busy:
+    shutil.copy(os.path.join(ROOT, "build", "fakeplay.acc"), os.path.join(hd, "fakeplay.acc"))
 if direct:
     # the full Mozilla list, the test certificate with it, decoded here
     with open(os.path.join(hd, "cacert.pem"), "wb") as f:
@@ -196,11 +200,12 @@ if direct:
 with open(os.path.join(em, "email.inf"), "w", newline="") as f:
     # tz=0 for a Direct connection: the certificate's dates against the
     # emulator's clock, this computer's (UTC)
-    f.write("[options]\r\nnatfeats=1\r\ntz=%d\r\ncheck=1\r\nlog=1\r\nfalcon=%d\r\n[account]\r\nname=Dana\r\nfullname=Dana Falcon\r\n"
+    f.write("[options]\r\nnatfeats=1\r\ntz=%d\r\ncheck=1\r\nlog=1\r\nfalcon=%d\r\n" % (0 if direct else 180, direct)
+            + ("bell=0\r\n" if bell_off else "") + "[account]\r\nname=Dana\r\nfullname=Dana Falcon\r\n"
             "email=dana@test.local\r\nin=%s\r\nhost=127.0.0.1\r\nport=%d\r\nuser=dana\r\n"
             "pass=secret\r\nsmtphost=127.0.0.1\r\nsmtpport=%d\r\n"
             "dhost=127.0.0.1\r\ndport=%d\r\ndsec=1\r\n"
-            % (0 if direct else 180, direct, "pop3" if pop else "imap", 10110 if pop else IMAP, SMTP, IMAPS))
+            % ("pop3" if pop else "imap", 10110 if pop else IMAP, SMTP, IMAPS))
 with open(os.path.join(hd, "emailchk.inf"), "w", newline="") as f:
     f.write("FOLDER=C:\\\r\nSTART=now\r\nNATFEATS=1\r\n")
 
@@ -346,6 +351,10 @@ try:
     # has it (TT, Falcon), the YM chip on an ST
     rang = [l for l in console().splitlines() if l.startswith("BELL ")]
     want = "BELL ym" if machine.partition(":")[0].startswith("ST") else "BELL dma"
+    if busy:
+        want = "BELL silent: busy"
+    elif bell_off:
+        want = "BELL silent: off"
     check("... with the bell (%s)" % want, rang == [want], "; ".join(rang) or "none")
     r.shot("c2-told")
     check("... and the server's flags are as they were", unseen() == before + 2, "%d unread" % unseen())

@@ -427,8 +427,8 @@ void cmd_check_all(void)
 			snprintf(m + strlen(m), sizeof(m) - strlen(m), ", %s in %d other folders",
 				 num(mail_new_other), mail_new_folders);
 		status(m);
-		if (total > 0 && opt.bell)
-			bell_ring();	/* decided 27 Nov 2026: a soothing bell */
+		if (total > 0)
+			bell_ring(opt.bell);	/* decided 27 Nov 2026: a soothing bell */
 		if (quiet_check && total > 0 && !in_front())
 			notify_send("EMail", m, "Open|Later", 1);
 	}
@@ -1825,6 +1825,7 @@ static void crash_quit(const char *what)
 		wind_delete(main_h);
 	}
 	theme_exit();
+	bell_free();		/* a bell still ringing stopped, the settings back */
 	menu_bar(mb.tree, 0);
 	v_clsvwk(vdi_h);
 	appl_exit();
@@ -2081,6 +2082,7 @@ int app_main(void)
 									 win_redraw_waiting() || list_show_waiting() || win_sliders_waiting() || xlate_running() ? 0 : find_waiting() ? 20 : tip_wait(1000),
 									 msg, &ev);
 		}
+		bell_poll();		/* the bell ended: the sound settings back */
 		/* a message a key moved to is shown once no key is waiting, and
 		   before anything but another of those keys (Up, Down, Home) is
 		   done: a command acts on the message shown */

@@ -192,9 +192,9 @@ $(OBJDIR)/emailchk.elf: $(OBJDIR)/crt0chk.o $(addprefix $(OBJDIR)/,$(addsuffix .
 $(OBJDIR)/crt0chk.o: common/atari/crt0.S | $(OBJDIR)
 	$(CC) -m68000 -DSTACK_SIZE=16384 -c -o $@ $<
 
-# the new-mail bell's sample, made here (tools/mkbell.py; decided 27 Nov 2026)
-$(OBJDIR)/bell_snd.o: tools/mkbell.py | $(OBJDIR)
-	python3 tools/mkbell.py $(OBJDIR)/bell_snd.c
+# the bell's sample, made at build time (common/tools/mkbell.py; decided 27 Nov 2026)
+$(OBJDIR)/bell_snd.o: common/tools/mkbell.py | $(OBJDIR)
+	python3 common/tools/mkbell.py $(OBJDIR)/bell_snd.c
 	$(CC) $(CFLAGS) -c -o $@ $(OBJDIR)/bell_snd.c
 
 # EMail saying on the emulator's console what each pane draws ("DRAW
@@ -270,6 +270,14 @@ $(OBJDIR)/fillmem.prg: tests/atari/fillmem.c $(addprefix $(OBJDIR)/,$(addsuffix 
 	$(CC) $(LDFLAGS) -o $(OBJDIR)/fillmem.elf $(OBJDIR)/fillmem.o \
 		$(addprefix $(OBJDIR)/,$(addsuffix .o,$(FAKECAL))) $(OBJDIR)/nf.o -lgcc
 	PRGFLAGS=0 python3 common/tools/elf2tos.py $(OBJDIR)/fillmem.elf $@
+
+# a stand-in for a player holding the sound (EPlay), for
+# tests/hatari/emailchk_test.py's busy case (never released)
+$(OBJDIR)/fakeplay.acc: tests/atari/fakeplay.c $(addprefix $(OBJDIR)/,$(addsuffix .o,$(FAKECAL))) $(OBJDIR)/nf.o
+	$(CC) $(CFLAGS) -c -o $(OBJDIR)/fakeplay.o $<
+	$(CC) $(LDFLAGS) -o $(OBJDIR)/fakeplay.elf $(OBJDIR)/fakeplay.o \
+		$(addprefix $(OBJDIR)/,$(addsuffix .o,$(FAKECAL))) $(OBJDIR)/nf.o -lgcc
+	python3 common/tools/elf2tos.py $(OBJDIR)/fakeplay.elf $@
 
 # a stand-in for a help viewer's receiving side (EHYPVIEW's VA_START), for
 # tests/hatari/help_test.py: what EMail asks for goes into C:\EHYPVIEW.LOG

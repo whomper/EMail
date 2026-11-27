@@ -642,8 +642,7 @@ static void check(int asked)
 		return;
 	for (i = 0; i < naccts; i++)
 		newmail_told(&nm[i]);
-	if (fresh && opt.bell)
-		bell_ring();	/* decided 27 Nov 2026: a soothing bell, with the news */
+	bell_ring(opt.bell);	/* decided 27 Nov 2026: a soothing bell, with the news */
 	found_text(text, sizeof(text), total);
 	/* news nobody asked for goes to BGEM.NG where it runs (MiNT with
 	   XaAES or N.AES: the guidelines, 4.5), in place of the alert */
@@ -849,6 +848,7 @@ int app_main(void)
 		pending = (short)(folder[0] && (reread || reading || may_check()));
 		which = evnt_multi_(MU_MESAG | MU_TIMER, 0, 0, 0, bg_timer(pending, 1000), msg, &ev);
 		bg_tick();
+		bell_poll();		/* the bell ended: the sound settings back, unlocked */
 		if ((which & MU_MESAG) && notify_message(msg))
 			which &= ~MU_MESAG;	/* BGEM.NG's: its answer, a button clicked */
 		if (which & MU_MESAG) {
