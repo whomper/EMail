@@ -63,6 +63,8 @@ try:
     r.settle(30, 90)
     r.shot("k0-start")
     menu(340, 43)                        # Options > Settings...
+    r.key(K["TAB"])                      # the tick "Ring a bell for new mail" (2.33)
+    time.sleep(0.4)
     r.key(K["TAB"])
     time.sleep(0.4)
     r.key(K["TAB"])                      # the large messages' size (2.26)
@@ -72,8 +74,8 @@ try:
     r.shot("k1-ring-on-tick")
     r.key(0x39)                          # Space: off
     time.sleep(0.8)
-    for _ in range(4):
-        r.key(K["TAB"], shift=True)      # the fields, then the list
+    for _ in range(5):
+        r.key(K["TAB"], shift=True)      # the fields and the bell's tick, then the list
         time.sleep(0.4)
     r.shot("k2-ring-on-list")
     for _ in range(3):
@@ -87,7 +89,8 @@ try:
     r.key(K["RETURN"])                   # OK
     time.sleep(3)
     print("keepcache:", inf_value("keepcache"), "colour:", inf_value("colour"))
-    check("Tab, Tab, Space: Keep read messages on disk switched off", inf_value("keepcache") == "0")
+    check("Tab, Tab, Tab, Space: Keep read messages on disk switched off", inf_value("keepcache") == "0")
+    check("... the bell's tick passed, left on", inf_value("bell") in ("1", None), str(inf_value("bell")))
     check("Shift+Tab to the list, Down to Look, Tab, Space: Use colours off", inf_value("colour") == "0")
 finally:
     r.stop()
