@@ -188,44 +188,44 @@ static void dma_ended(void)
 void bell_ring(short on)
 {
 	if (!on) {
-		note("BELL silent: off");
+		note("BELL silent: off\n");
 		return;
 	}
 	if (playing) {
-		note("BELL silent: busy");	/* its own, still ringing */
+		note("BELL silent: busy\n");	/* its own, still ringing */
 		return;
 	}
 	switch (how) {
 	case FALCON:
 		if (Locksnd() != 1) {
-			note("BELL silent: busy");
+			note("BELL silent: busy\n");
 			return;
 		}
 		Supexec(dma_busy);
 		if (why[0]) {
 			Unlocksnd();
-			note("BELL silent: busy");
+			note("BELL silent: busy\n");
 			return;
 		}
 		Supexec(falcon_save);
 		Devconnect_dma_dac();
 		Supexec(dma_go);		/* then the same registers as the STE's */
 		playing = FALCON;
-		note("BELL dma");
+		note("BELL dma\n");
 		return;
 	case DMA:
 		Supexec(dma_busy);
 		if (why[0]) {
-			note("BELL silent: busy");
+			note("BELL silent: busy\n");
 			return;
 		}
 		Supexec(dma_go);
 		playing = DMA;
-		note("BELL dma");
+		note("BELL dma\n");
 		return;
 	case YM:
 		if (Dosound(-1L) > 0) {		/* a table still playing */
-			note("BELL silent: busy");
+			note("BELL silent: busy\n");
 			return;
 		}
 		{
@@ -235,10 +235,10 @@ void bell_ring(short on)
 			ym_table[YM_R7_OFF] = (unsigned char)(r7 | 0x3F);
 		}
 		Dosound(ym_table);
-		note("BELL ym");
+		note("BELL ym\n");
 		return;
 	default:
-		note("BELL silent: none");
+		note("BELL silent: none\n");
 	}
 }
 
@@ -252,10 +252,10 @@ void bell_poll(void)
 	if (playing == FALCON) {
 		Supexec(falcon_restore);
 		Unlocksnd();
-		note("BELL back, unlocked");
+		note("BELL back, unlocked\n");
 	} else {
 		Supexec(dma_restore);
-		note("BELL back");
+		note("BELL back\n");
 	}
 	playing = 0;
 }
