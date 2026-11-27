@@ -90,7 +90,7 @@ try:
     time.sleep(3)
     print("keepcache:", inf_value("keepcache"), "colour:", inf_value("colour"))
     check("Tab, Tab, Tab, Space: Keep read messages on disk switched off", inf_value("keepcache") == "0")
-    check("... the bell's tick passed, left on", inf_value("bell") in ("1", None), str(inf_value("bell")))
+    check("... the bell's tick passed, left on (BELL=%s)" % inf_value("bell"), inf_value("bell") in ("1", None))
     check("Shift+Tab to the list, Down to Look, Tab, Space: Use colours off", inf_value("colour") == "0")
 finally:
     r.stop()
