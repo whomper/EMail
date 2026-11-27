@@ -179,12 +179,12 @@ These come from AERA-Atari's repo template and are the same in every app's CLAUD
 
 EMail is in maintenance mode while EWeb, EPDF and EPlay go to 1.0 (AERA-Atari, ATARI-APP-GUIDELINES.md,
 section 8; AERA-Atari 8ddb463). Until the owner ends it:
-- **Lifted for one item** (decided 26 Nov 2026): the round trip, guidelines 4.6. On plain TOS, EWeb started
-  for a link gets `--back=` and EMAIL.PRG's path; EMAIL.INF keeps the place (`RESUMEACCOUNT=` and the rest);
-  `--resume` opens there from the disk, the start's check at the first quiet moment.
-  `tests/hatari/resume_test.py` with the stand-in `build/fakeweb.prg`, on the reference configuration,
-  Falcon-4:16, ST and the TT. Its own release through the gate, the pairs against 2.30; maintenance comes
-  back once it is released.
+- Done in 2.31 (decided 26 Nov 2026, maintenance lifted for it): the round trip, guidelines 4.6. On plain TOS,
+  EWeb started for a link gets `--back=` and EMAIL.PRG's path; EMAIL.INF keeps the place (`RESUMEACCOUNT=` and
+  the rest); `--resume` opens there from the disk, the start's check at the first quiet moment.
+  `tests/hatari/resume_test.py` with the stand-in `build/fakeweb.prg`. With it, as a fault release: EMail
+  check's memory its own on plain TOS (guidelines 2.2; `emailchk_test.py ST-2 held`), EMail check standing down
+  on a 1 MB ST (2.1; `emailchk_test.py ST-1`), and D35's progress formats. Maintenance is back.
 - Done in 2.30 (decided 25 Nov 2026, maintenance lifted for it): guidelines 5.12, Save the attachment as through
   the family's file dialog (`filepick_save()`), "Use the system file selector" at the foot of Settings > Mail
   (`SYSFSEL=`); `tests/hatari/save_test.py`. Accepted with it (26 Nov 2026): the start 25 ms longer on the
