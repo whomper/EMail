@@ -42,6 +42,8 @@ long Supexec(void (*f)(void))
 void nf_debug(const char *s)
 {
 	snprintf(last, sizeof(last), "%s", s);
+	if (*last && last[strlen(last) - 1] == '\n')
+		last[strlen(last) - 1] = 0;	/* the line end: checked apart */
 }
 
 static char core_buf[64];
