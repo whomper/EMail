@@ -53,8 +53,9 @@ int main(void)
 	if (!_is_acc) {
 		const char *c = cmd_line(), *b = strstr(c, "--back=");
 		note("args ", c);
-		/* as EWeb 1.26 does: the whole command line is the address; a
-		   file (the link page) is opened as it is named, or not at all */
+		/* as EWeb 1.27 does: the address ends at the first " --" (1.26
+		   took the whole line); a file (the link page) is opened as it is
+		   named, or not at all */
 		{
 			char f[200];
 			const char *a = c;
@@ -65,7 +66,8 @@ int main(void)
 				a += 8;
 			if (a[0] && a[1] == ':') {
 				long h;
-				for (i = 0; a[i] && i < (short)sizeof(f) - 1; i++)
+				for (i = 0; a[i] && !(a[i] == ' ' && a[i + 1] == '-' && a[i + 2] == '-') &&
+				    i < (short)sizeof(f) - 1; i++)
 					f[i] = a[i] == '/' ? '\\' : a[i];
 				f[i] = 0;
 				h = Fopen(f, 0);

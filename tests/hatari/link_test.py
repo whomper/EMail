@@ -198,15 +198,15 @@ for part, (row, url, look) in enumerate(((0, PLAIN, PLAIN), (3, LONG, "link.htm"
     args = [l[5:] for l in log().splitlines() if l.startswith("args ")]
     what = "a link of %d characters" % len(url)
     check("%s, no browser: the browser started after EMail" % what, bool(args), log().strip().replace("\r\n", " | "))
-    check("... on the link", any(look in a.lower() if look == "link.htm" else look == a.strip() for a in args),
-          " | ".join(args))
-    # nothing after the link: EWeb 1.26 takes the whole line for it (2.31's
-    # fault); --back= comes back with ROUND_TRIP=1, once EWeb reads it
-    check("... and nothing after it", args and not any("--back=" in a for a in args), " | ".join(args))
+    # then " --back=" and EMail's own path: the round trip (guidelines 4.6),
+    # which EWeb 1.27 and newer read (1.26 took the whole line: 2.31's fault)
+    check("... on the link", any(look in a.lower() if look == "link.htm" else look == a.split(" --back=")[0].strip()
+                                 for a in args), " | ".join(args))
+    check("... then --back= and EMail's own path", args and all(" --back=" in a and a.rstrip().upper().endswith(
+        "EMAIL.PRG") for a in args), " | ".join(args))
     if any("link.htm" in a.lower() for a in args):
-        # the line taken whole as the address, as EWeb 1.26 does: the
-        # page must open (2.31 sent " --back=..." after it, and it didn't)
-        check("... and the page opens, the line taken whole", "opened " in log() and "can't open" not in log(),
+        # the address up to " --", as EWeb 1.27 takes it: the page opens
+        check("... and the page opens, the address cut at \" --\"", "opened " in log() and "can't open" not in log(),
               log().strip().replace("\r\n", " | "))
     if url == LONG:
         page = open(os.path.join(hd, "link.htm"), errors="replace").read() if os.path.exists(

@@ -522,9 +522,9 @@ When a browser is running beside EMail (EWeb, or CAB or HighWire; under
 MiNT or MagiC), EMail hands it the link. When none is, as on plain TOS,
 where one program runs at a time, EMail asks: **Open in EWeb** closes
 EMail and starts EWeb on the link; quitting EWeb brings EMail back at the
-same message, where you can click the next link (EWeb does this from the
-version that knows the family's round trip; before it, quitting EWeb takes
-you to the desktop). Under MiNT or MagiC, EWeb starts beside EMail instead. **Copy
+same message, where you can click the next link. This needs EWeb 1.27 or
+newer: an older EWeb can't open links that EMail starts it on, so update
+EWeb first. Under MiNT or MagiC, EWeb starts beside EMail instead. **Copy
 link** puts the address on the clipboard. EMail finds `EWEB.PRG` (on an
 ST `EWEBST.PRG`) next to itself; elsewhere it asks you once, with the
 file selector, and keeps it as BROWSER= in EMAIL.INF. A link longer

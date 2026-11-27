@@ -22,15 +22,14 @@ EWeb does on its Quit (guidelines 1.2: EMail runs alone).
 3. Its link clicked again: EMail asks as before (the next link works).
 
     resume_test.py WORKDIR [MACHINE]  (make build/fakeweb.prg first)
+
+The link is a plain page (no scripts, no stylesheets) from a web server
+on this computer, port 18080, reached through FAKESTNG. With EWEB_DIR=FOLDER, every file there (EWEB.PRG, EWEB.FNT, the
+overlays) goes to C:\\EWEB in place of the stand-in: the real EWeb, for the
+hub's family check (EMail's own runs never fetch it, guidelines 1.2). The
+test then waits for EWeb's page, quits it with ^Q and checks what it can
+see; the stand-in's log checks are left out.
 """
-import os as _os
-import sys as _sys
-if not _os.environ.get("ROUND_TRIP"):
-    # the round trip is off in EMAIL.PRG until an EWeb release reads --back
-    # (ui/main.c, ROUND_TRIP): a build with make APPCF=-DROUND_TRIP=1 and
-    # ROUND_TRIP=1 in the environment runs this test
-    print("resume test: skipped (the round trip is off: ROUND_TRIP)")
-    _sys.exit(0)
 import os
 import shutil
 import subprocess
@@ -44,7 +43,11 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.normpath(os.path.join(HERE, "..", ".."))
 IMAP, SMTP = 10143, 10025
 PLAIN = "https://example.com/show?a=1&b=2"
-HTML = "http://news.example/today?id=42"
+# a plain page (no scripts, no stylesheets) from a web server here, which
+# the Atari reaches through FAKESTNG as it does the mail servers
+WEB = 18080
+HTML = "http://127.0.0.1:%d/news.htm" % WEB
+EWEB_DIR = os.environ.get("EWEB_DIR")
 LONG = "http://track.example/c?u=" + "0123456789" * 15     # past a command line's 125
 ALT = "https://www.atari-forum.com/viewtopic.php?t=12345&start=20"
 
@@ -97,7 +100,7 @@ with open(os.path.join(MD, "new", "7-long.eml"), "wb") as f:
              "Content-Type: text/html; charset=utf-8\r\n\r\n"
              "<p>Your order is on its way: <a href=\"%s\">track it</a>.</p>\r\n" % LONG).encode())
 subprocess.run(["chown", "-R", "nobody:", os.path.join(srv, "home")], check=True)
-rig.servers_ready(work, IMAP, SMTP, 10110)
+rig.servers_ready(work, IMAP, SMTP, 10110, WEB)
 subprocess.run(["dovecot", "-c", os.path.join(srv, "dovecot.conf")], check=True)
 smtp = subprocess.Popen([sys.executable, os.path.join(ROOT, "tests", "smtp_server.py"), str(SMTP), srv, "dana", "secret"])
 rig.stop_at_exit(srv, smtp)
@@ -106,7 +109,23 @@ os.makedirs(os.path.join(hd, "AUTO"))
 rig.install_prg(hd)
 rig.fakesting(os.path.join(hd, "AUTO"))
 os.makedirs(os.path.join(hd, "EWEB"))
-shutil.copy(os.path.join(ROOT, "build", "fakeweb.prg"), os.path.join(hd, "EWEB", "EWEB.PRG"))
+if EWEB_DIR:
+    # the real EWeb (the hub's family check, never EMail's own runs:
+    # guidelines 1.2): every file of the folder, EWEB.PRG, EWEB.FNT and its
+    # overlays
+    for n in os.listdir(EWEB_DIR):
+        if os.path.isfile(os.path.join(EWEB_DIR, n)):
+            shutil.copy(os.path.join(EWEB_DIR, n), os.path.join(hd, "EWEB", n.upper()))
+else:
+    shutil.copy(os.path.join(ROOT, "build", "fakeweb.prg"), os.path.join(hd, "EWEB", "EWEB.PRG"))
+site = os.path.join(work, "site")
+os.makedirs(site, exist_ok=True)
+with open(os.path.join(site, "news.htm"), "w", newline="") as f:
+    f.write("<html><head><title>The news</title></head><body><h1>The news</h1>\r\n"
+            "<p>Today's page, plain HTML.</p></body></html>\r\n")
+web = subprocess.Popen([sys.executable, "-m", "http.server", str(WEB), "--bind", "127.0.0.1", "--directory", site],
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+rig.stop_at_exit(srv, web)
 with open(os.path.join(hd, "email.inf"), "w", newline="") as f:
     f.write("[options]\r\nnatfeats=1\r\ntz=180\r\nbrowser=C:\\EWEB\\EWEB.PRG\r\n[account]\r\nname=Dana\r\nfullname=Dana Falcon\r\n"
             "email=dana@test.local\r\nin=imap\r\nhost=127.0.0.1\r\nport=%d\r\nuser=dana\r\n"
@@ -194,18 +213,27 @@ try:
         # EMail logs out and quits, the stand-in starts, waits, quits and
         # starts EMail with --resume, which opens from the disk
         t0 = time.time()
-        while time.time() - t0 < 240 and "back " not in log():
-            time.sleep(5)
+        if EWEB_DIR:
+            # EWeb up on the page, then its Quit (^Q, the family's)
+            time.sleep(40)
+            r.shot("r2b-eweb")
+            r.ctrl("q")
+        else:
+            while time.time() - t0 < 240 and "back " not in log():
+                time.sleep(5)
         r.settle(30, 200)
         back = r.shot("r3-back")
         args = [l[5:] for l in log().splitlines() if l.startswith("args ")]
-        check("the browser started on the link, with --back= and EMAIL.PRG's path",
-              any(a.startswith(HTML + " --back=") and a.rstrip().upper().endswith("EMAIL.PRG") for a in args),
-              " | ".join(args))
+        if not EWEB_DIR:
+            check("the browser started on the link, with --back= and EMAIL.PRG's path",
+                  any(a.strip().startswith(HTML + " --back=") and a.rstrip().upper().endswith("EMAIL.PRG")
+                      for a in args), " | ".join(args))
         inf = open(rig.ci_path(hd, "email.inf"), errors="replace").read()
         check("EMAIL.INF keeps the place", "RESUMEACCOUNT=Dana" in inf and "RESUMEFOLDER=INBOX" in inf and
               "RESUMEMESSAGE=" in inf, " ".join(l for l in inf.splitlines() if l.startswith("RESUME")))
-        check("the stand-in started EMail again with --resume", "back " in log(), log().strip().replace("\r\n", " | "))
+        if not EWEB_DIR:
+            check("the stand-in started EMail again with --resume", "back " in log(),
+                  log().strip().replace("\r\n", " | "))
         from PIL import Image
         W, H = Image.open(before).size
         panes = (W // 3, 60, W - 20, H - 30)          # the list and the reader, not the status line

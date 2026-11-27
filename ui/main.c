@@ -624,7 +624,7 @@ static int resume_open(void)
 }
 
 #ifndef ROUND_TRIP
-#define ROUND_TRIP 0
+#define ROUND_TRIP 1
 #endif
 
 /* EWeb started on url: beside EMail where the AES runs both (MagiC,
@@ -650,9 +650,10 @@ static void start_browser(const char *url)
 	    alert(2, "[2][You are still writing a message.|Quit anyway?][Quit|Cancel]") != 1)
 		return;
 	/* on plain TOS, EWeb brings EMail back when it quits (guidelines 4.6):
-	   --back= and EMail's own path after the link, the place kept. Off
-	   until an EWeb release reads --back (ROUND_TRIP=1): EWeb 1.26 takes
-	   the whole line for the link and can't open it (2.31's fault) */
+	   --back= and EMail's own path after the link, the place kept. It needs
+	   EWeb 1.27 or newer, which ends the address at " --": 1.26 took the
+	   whole line for the link and couldn't open it (2.31's fault, undone in
+	   2.32). ROUND_TRIP=0 builds without it */
 	if (ROUND_TRIP && !multi && own_path(back + 8, sizeof(back) - 8))
 		memcpy(back, " --back=", 8);
 	/* a command line holds 125 characters: a longer link goes by a page */
