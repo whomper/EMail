@@ -883,6 +883,14 @@ it?". **Use the system file selector** (Settings > Mail, off at first)
 opens the AES's own selector in its place, with the name filled in;
 it is kept as SYSFSEL= in EMAIL.INF.
 
+**Ring a bell for new mail** (Settings > Mail, on at first): a soft
+bell rings when a check finds new mail, in EMail and in EMail check. On
+an STE, TT or Falcon it is a bell with a little room around it; on an
+ST, whose sound chip can't play one, a gentle chime. It never interrupts
+another program's sound: while EPlay or another player has the sound,
+it stays silent, and it leaves your volume as it is. It is kept as BELL=
+in EMAIL.INF; switch it off there or here for silence.
+
 **Start offline, with the mail on disk** (Settings > Mail, off at
 first): EMail starts at once, offline, with the folders and messages it
 has on disk, and doesn't connect, nor check on its timer. When you switch

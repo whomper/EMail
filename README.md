@@ -15,6 +15,8 @@ An e-mail program for the Atari ST, STE, TT and Falcon, written in C for GEM.
 - **Translate** messages, or a few chosen words, on your own network, into the languages you install on it.
 - **People by name** from EContact, and calendar invitations straight into ECal.
 - **Printing** through NVDI: the message shown, or each one selected, from a new page.
+- **A soft bell** for new mail, in EMail and EMail check: a bell on the STE, TT and Falcon, a gentle chime on an
+  ST, never over another program's sound (Settings > Mail).
 - **EMail check**, a small accessory, tells you about new mail while EMail isn't running (2 MB or more;
   EMail itself runs on 1 MB).
 - **Any Atari:** TOS 1.04 to 4.x, EmuTOS, MagiC and MiNT, from a 1 MB ST to a Falcon.
