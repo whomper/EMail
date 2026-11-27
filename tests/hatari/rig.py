@@ -65,7 +65,10 @@ def cli(default, usage=None):
 
 def fakesting(auto):
     """Put FAKESTNG.PRG in drive C:'s AUTO folder."""
-    shutil.copy(os.path.join(FAKESTING, "FAKESTNG.PRG"), auto)
+    prg = os.path.join(FAKESTING, "FAKESTNG.PRG")
+    if not os.path.exists(prg):
+        sys.exit("no %s: build common's STinG stand-in first (make in common/tools/fakesting)" % prg)
+    shutil.copy(prg, auto)
 
 
 def servers_ready(work, *ports):
