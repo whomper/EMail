@@ -252,8 +252,10 @@ void bell_poll(void)
 	if (playing == FALCON) {
 		Supexec(falcon_restore);
 		Unlocksnd();
+		note("BELL back, unlocked");
 	} else {
 		Supexec(dma_restore);
+		note("BELL back");
 	}
 	playing = 0;
 }
