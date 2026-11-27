@@ -841,6 +841,9 @@ int app_main(void)
 	}
 	acc_memory();
 	bell_init();		/* its ST RAM, if any, before the first event (2.2) */
+	/* and while its box (the news) is open, every 20 ms: the sound back to
+	   the others as soon as the bell has ended (guidelines 5.13) */
+	dlg_idle = bell_poll;
 	bg_init(bg_parse(start_v));
 
 	for (;;) {

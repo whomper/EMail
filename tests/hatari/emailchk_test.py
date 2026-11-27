@@ -229,8 +229,18 @@ def console():
     return open(os.path.join(work, "hatari.log"), errors="replace").read()
 
 
+BELL_RE = re.compile(r"BELL (dma|ym|silent: (?:off|busy|none)|back, unlocked|back)")
+
+
+def bells():
+    """the bell's console lines, in order (common's bell.c writes them
+    without a line end: found wherever they are)"""
+    return ["BELL " + m.group(1) for m in BELL_RE.finditer(console())]
+
+
 def checks():
-    return [l for l in console().splitlines() if l.startswith("EMAILCHK checked")]
+    # (anywhere in a line: a bell's words without a line end may be before)
+    return [l[l.index("EMAILCHK checked"):] for l in console().splitlines() if "EMAILCHK checked" in l]
 
 
 def wait_check(n, most):
@@ -349,13 +359,23 @@ try:
     time.sleep(3)
     # the bell with the news (decided 27 Nov 2026): DMA where the machine
     # has it (TT, Falcon), the YM chip on an ST
-    rang = [l for l in console().splitlines() if l.startswith("BELL ")]
+    rang = [b for b in bells() if not b.startswith("BELL back")]
     want = "BELL ym" if machine.partition(":")[0].startswith("ST") else "BELL dma"
     if busy:
         want = "BELL silent: busy"
     elif bell_off:
         want = "BELL silent: off"
     check("... with the bell (%s)" % want, rang == [want], "; ".join(rang) or "none")
+    if want == "BELL dma":
+        # the sound's settings back (and on the Falcon the lock given
+        # back) within 5 s, before the next check: bell_poll on the
+        # accessory's own timer, its window closed (guidelines 5.13)
+        back = "BELL back, unlocked" if machine.partition(":")[0].startswith("Falcon") else "BELL back"
+        n_then, end = len(checks()), time.time() + 5
+        while time.time() < end and back not in bells():
+            time.sleep(0.5)
+        check("... and %s within 5 s, before the next check" % back,
+              back in bells() and len(checks()) == n_then, "; ".join(bells()))
     r.shot("c2-told")
     check("... and the server's flags are as they were", unseen() == before + 2, "%d unread" % unseen())
     r.key(K["RETURN"])               # OK
@@ -364,7 +384,7 @@ try:
     # 3. nothing more: not told again; one more: told
     line = wait_check(3, 150)
     check("checked again with nothing more: not told again", re.search(r": %d new$" % NEW2, line) is not None, line)
-    check("... and no bell", len([l for l in console().splitlines() if l.startswith("BELL ")]) == 1)
+    check("... and no bell", len([b for b in bells() if not b.startswith("BELL back")]) == 1, "; ".join(bells()))
     deliver(("()", "Third news"))
     line = wait_check(4, 150)
     check("one more: told again, %d new" % NEW3, re.search(r": %d new, fresh$" % NEW3, line) is not None, line)

@@ -1888,6 +1888,7 @@ int app_main(void)
 	start_mark("appl_init");
 	notify_init("EMAIL   ");
 	bell_init();		/* the new-mail bell: DMA sound, the YM chip or none */
+	dlg_idle = bell_poll;	/* in a dialog too, the sound back once it has rung */
 	notify_clicked = notified;
 	notify_ask();		/* BGEM.NG's answer comes to the main loop */
 	if (ap_id < 0)
