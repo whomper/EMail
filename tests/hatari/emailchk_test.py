@@ -294,6 +294,13 @@ if held:
         n = len(checks())
         deliver(("()", "After the programs"))
         line = wait_check(n + 1, 150)
+        stopped = [l for l in console().splitlines() if "Bus Error" in l or "Address Error" in l or "Halt" in l]
+        if stopped:
+            # the machine stopped (2.30's accessory: its heap filled with
+            # 0xA5, then used): a halted Hatari answers no more commands
+            check("the machine runs on", False, stopped[0])
+            r.proc.kill()
+            raise SystemExit
         check("after them, the next check still finds the new one",
               re.search(r": 1 new, fresh$", line) is not None, line)
         time.sleep(3)
@@ -305,6 +312,8 @@ if held:
         line = wait_check(n + 1, 150)
         check("... and the one after it", re.search(r": 2 new, fresh$", line) is not None, line)
         r.shot("h2-told")
+    except SystemExit:
+        pass
     finally:
         r.stop()
     crash = [f for f in os.listdir(hd) if f.upper() == "CRASH.LOG"]
