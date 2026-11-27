@@ -183,7 +183,9 @@ section 8; AERA-Atari 8ddb463). Until the owner ends it:
   default ("Ring a bell for new mail", BELL=), the sounds as approved with a bit of reverb; common's `ui/bell.c`
   to guidelines 5.13 (sound). With it, 2.33 brings the round trip back for EWeb 1.27 (2.32 had sent the link
   alone: EWeb 1.26 read the whole line). Rigs: `emailchk_test.py` on ST-2, Falcon:16, `busy` (fakeplay.acc
-  holding the sound) on Falcon:16 and TT, `belloff`. Maintenance comes back once 2.33 is released.
+  holding the sound) on Falcon:16 and TT, `belloff`. Accepted with it (27 Nov 2026): the start 10 ms longer on
+  the reference configuration (780 to 790 ms), from the bell's 21 KB sample in the image. Maintenance comes back
+  once 2.33 is released.
 - Done in 2.31 (decided 26 Nov 2026, maintenance lifted for it): the round trip, guidelines 4.6. On plain TOS,
   EWeb started for a link gets `--back=` and EMAIL.PRG's path; EMAIL.INF keeps the place (`RESUMEACCOUNT=` and
   the rest); `--resume` opens there from the disk, the start's check at the first quiet moment.
