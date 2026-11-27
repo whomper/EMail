@@ -23,6 +23,14 @@ EWeb does on its Quit (guidelines 1.2: EMail runs alone).
 
     resume_test.py WORKDIR [MACHINE]  (make build/fakeweb.prg first)
 """
+import os as _os
+import sys as _sys
+if not _os.environ.get("ROUND_TRIP"):
+    # the round trip is off in EMAIL.PRG until an EWeb release reads --back
+    # (ui/main.c, ROUND_TRIP): a build with make APPCF=-DROUND_TRIP=1 and
+    # ROUND_TRIP=1 in the environment runs this test
+    print("resume test: skipped (the round trip is off: ROUND_TRIP)")
+    _sys.exit(0)
 import os
 import shutil
 import subprocess

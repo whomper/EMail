@@ -198,10 +198,11 @@ for part, (row, url, look) in enumerate(((0, PLAIN, PLAIN), (3, LONG, "link.htm"
     args = [l[5:] for l in log().splitlines() if l.startswith("args ")]
     what = "a link of %d characters" % len(url)
     check("%s, no browser: the browser started after EMail" % what, bool(args), log().strip().replace("\r\n", " | "))
-    # (then " --back=" and EMail's own path: the round trip, guidelines 4.6)
-    check("... on the link", any(look in a.lower() if look == "link.htm" else look == a.split(" --back=")[0].strip()
-                                 for a in args),
+    check("... on the link", any(look in a.lower() if look == "link.htm" else look == a.strip() for a in args),
           " | ".join(args))
+    # nothing after the link: EWeb 1.26 takes the whole line for it (2.31's
+    # fault); --back= comes back with ROUND_TRIP=1, once EWeb reads it
+    check("... and nothing after it", args and not any("--back=" in a for a in args), " | ".join(args))
     if url == LONG:
         page = open(os.path.join(hd, "link.htm"), errors="replace").read() if os.path.exists(
             os.path.join(hd, "link.htm")) else ""
