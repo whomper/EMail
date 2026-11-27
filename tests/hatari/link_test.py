@@ -203,6 +203,11 @@ for part, (row, url, look) in enumerate(((0, PLAIN, PLAIN), (3, LONG, "link.htm"
     # nothing after the link: EWeb 1.26 takes the whole line for it (2.31's
     # fault); --back= comes back with ROUND_TRIP=1, once EWeb reads it
     check("... and nothing after it", args and not any("--back=" in a for a in args), " | ".join(args))
+    if any("link.htm" in a.lower() for a in args):
+        # the line taken whole as the address, as EWeb 1.26 does: the
+        # page must open (2.31 sent " --back=..." after it, and it didn't)
+        check("... and the page opens, the line taken whole", "opened " in log() and "can't open" not in log(),
+              log().strip().replace("\r\n", " | "))
     if url == LONG:
         page = open(os.path.join(hd, "link.htm"), errors="replace").read() if os.path.exists(
             os.path.join(hd, "link.htm")) else ""

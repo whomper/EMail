@@ -53,6 +53,27 @@ int main(void)
 	if (!_is_acc) {
 		const char *c = cmd_line(), *b = strstr(c, "--back=");
 		note("args ", c);
+		/* as EWeb 1.26 does: the whole command line is the address; a
+		   file (the link page) is opened as it is named, or not at all */
+		{
+			char f[200];
+			const char *a = c;
+			short i;
+			while (*a == ' ')
+				a++;
+			if (!strncmp(a, "file:///", 8))
+				a += 8;
+			if (a[0] && a[1] == ':') {
+				long h;
+				for (i = 0; a[i] && i < (short)sizeof(f) - 1; i++)
+					f[i] = a[i] == '/' ? '\\' : a[i];
+				f[i] = 0;
+				h = Fopen(f, 0);
+				if (h >= 0)
+					Fclose((short)h);
+				note(h >= 0 ? "opened " : "can't open ", f);
+			}
+		}
 		if (b) {
 			char path[200], tail[16];
 			short i;
