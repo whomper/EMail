@@ -37,6 +37,7 @@
 #include "twin.h"
 #include "busy.h"
 #include "av.h"
+#include "bell.h"
 #include "newmail.h"
 #include "tls.h"
 #include "tlsovl.h"
@@ -641,6 +642,8 @@ static void check(int asked)
 		return;
 	for (i = 0; i < naccts; i++)
 		newmail_told(&nm[i]);
+	if (fresh && opt.bell)
+		bell_ring();	/* decided 27 Nov 2026: a soothing bell, with the news */
 	found_text(text, sizeof(text), total);
 	/* news nobody asked for goes to BGEM.NG where it runs (MiNT with
 	   XaAES or N.AES: the guidelines, 4.5), in place of the alert */
@@ -838,6 +841,7 @@ int app_main(void)
 		return 0;
 	}
 	acc_memory();
+	bell_init();		/* its ST RAM, if any, before the first event (2.2) */
 	bg_init(bg_parse(start_v));
 
 	for (;;) {

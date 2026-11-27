@@ -47,6 +47,7 @@ static void defaults(void)
 	opt.dsp = 1;
 	opt.colour = 1;
 	opt.sysfsel = 0;
+	opt.bell = 1;
 	opt.peoplefile = 0;
 	opt.peopledir[0] = 0;
 	opt.browser[0] = 0;
@@ -559,6 +560,7 @@ static void set_opt(const char *k, const char *v)
 	}
 	else if (!strcmp(k, "colour") || !strcmp(k, "color")) opt.colour = n != 0;
 	else if (!strcmp(k, "sysfsel")) opt.sysfsel = n != 0;
+	else if (!strcmp(k, "bell")) opt.bell = n != 0;
 	else if (!strcmp(k, "resumeaccount")) str_copy(opt.resume_acct, v, sizeof(opt.resume_acct));
 	else if (!strcmp(k, "resumefolder")) str_copy(opt.resume_folder, v, sizeof(opt.resume_folder));
 	else if (!strcmp(k, "resumemessage")) opt.resume_uid = strtoul(v, 0, 10);
@@ -837,6 +839,8 @@ int store_save_settings(void)
 		"COLOUR", "%d", opt.colour);
 	put_fmt(&b, "1 = Save attachment as... opens the system's file selector, 0 = the family's file dialog",
 		"SYSFSEL", "%d", opt.sysfsel);
+	put_fmt(&b, "1 = a bell rings when new mail comes, in EMail and EMail check; 0 = silent",
+		"BELL", "%d", opt.bell);
 	put_fmt(&b, "1 = when EContact isn't loaded, names come from its contacts file (CONTACTS.TXT)",
 		"PEOPLEFILE", "%d", opt.peoplefile);
 	put_path(&b, "EContact's folder, where its contacts file is (C:\\ECONTACT)", "PEOPLEDIR", opt.peopledir);

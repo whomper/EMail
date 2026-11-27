@@ -19,7 +19,9 @@ EMAILCHK.INF naming the folder (START=now).
 5. Booted with EMail started (Hatari's --auto): while it runs the
    accessory leaves the checking to it. EMail quits; one more message
    comes: a minute after EMail ended the accessory finds 1.
-The console lines ("EMAILCHK checked ...") say what each check found.
+The console lines ("EMAILCHK checked ...") say what each check found; the
+bell rings with each piece of news told ("BELL ym" on an ST, "BELL dma"
+on the TT and Falcon), and not when nothing new is told.
 
 With "direct" after the machine, the account is a Direct connection
 (FALCON=1, IMAPS with the test certificate the root it trusts): the
@@ -340,6 +342,11 @@ try:
     line = wait_check(2, 150)
     check("the next check finds the %d new" % NEW2, re.search(r": %d new, fresh$" % NEW2, line) is not None, line)
     time.sleep(3)
+    # the bell with the news (decided 27 Nov 2026): DMA where the machine
+    # has it (TT, Falcon), the YM chip on an ST
+    rang = [l for l in console().splitlines() if l.startswith("BELL ")]
+    want = "BELL ym" if machine.partition(":")[0].startswith("ST") else "BELL dma"
+    check("... with the bell (%s)" % want, rang == [want], "; ".join(rang) or "none")
     r.shot("c2-told")
     check("... and the server's flags are as they were", unseen() == before + 2, "%d unread" % unseen())
     r.key(K["RETURN"])               # OK
@@ -348,6 +355,7 @@ try:
     # 3. nothing more: not told again; one more: told
     line = wait_check(3, 150)
     check("checked again with nothing more: not told again", re.search(r": %d new$" % NEW2, line) is not None, line)
+    check("... and no bell", len([l for l in console().splitlines() if l.startswith("BELL ")]) == 1)
     deliver(("()", "Third news"))
     line = wait_check(4, 150)
     check("one more: told again, %d new" % NEW3, re.search(r": %d new, fresh$" % NEW3, line) is not None, line)

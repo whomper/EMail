@@ -95,6 +95,7 @@ typedef struct {
 	char tzname[40];	/* the time zone, an IANA name ("Asia/Jerusalem") */
 	short colour;		/* colours, on screens with 16 or more */
 	short sysfsel;		/* "Use the system file selector": the AES's for Save as (guidelines 5.12) */
+	short bell;		/* "Ring a bell for new mail" (decided 27 Nov 2026; on by default) */
 	/* where the user was when EMail ended to start another program
 	   (guidelines 4.6, the round trip): EMAIL.PRG --resume opens there */
 	char resume_acct[32];	/* the account's NAME= */

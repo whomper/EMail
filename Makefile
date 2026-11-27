@@ -58,7 +58,7 @@ HBSSLOBJ = $(patsubst $(BSSL)/src/%.c,$(OBJDIR)/hbssl/%.o,$(BSSLSRC))
 
 CORE    := util charset mime links conn imap pop3 smtp store compose mail futil bidi secret ctime tz
 ATARI   := libc tos plat_tos net_tos sting gem tls_ovl crash bigbuf
-UI      := main draw text notify tooltip aboutline win folders list find reader editor dialogs popup font fontsel about dsp_ovl theme etheme help av alert mbar aboutbox iconify clip clipedit dd busy people_ask dialog field av_people people_file panebar hebkey xlate translate textsel langs click arrowed printmsg print filepick fsel dirlist
+UI      := main draw text notify tooltip aboutline win folders list find reader editor dialogs popup font fontsel about dsp_ovl theme etheme help av alert mbar aboutbox iconify clip clipedit dd busy people_ask dialog field av_people people_file panebar hebkey xlate translate textsel langs click arrowed printmsg print filepick fsel dirlist bell
 
 OBJDIR  := build
 # EMAIL.PRG's objects with a pad after each file 2.20 grew or shrank
@@ -70,7 +70,7 @@ PATARI  := $(patsubst plat_tos,plat_tos pad_plat,$(patsubst tls_ovl,tls_ovl pad_
 PUI     := $(patsubst main,main pad_main,$(UI))
 PADS    := $(foreach p,nf conn store ovl plat tlsovl main,-Wl,-u,pad_$(p)) -Wl,-u,pad_store_ro -Wl,-u,pad_tlsovl_ro
 OBJS0   := $(OBJDIR)/crt0.o $(OBJDIR)/sting_s.o $(OBJDIR)/nf.o $(OBJDIR)/pad_nf.o $(OBJDIR)/crash_s.o \
-           $(addprefix $(OBJDIR)/,$(addsuffix .o,$(PCORE) ovl pad_ovl $(PATARI) $(PUI) cpucheck))
+           $(addprefix $(OBJDIR)/,$(addsuffix .o,$(PCORE) ovl pad_ovl $(PATARI) $(PUI) cpucheck bell_snd))
 # 2.21's pads (the syncs of 17 Nov 2026 moved nearly every function): after
 # each object, code, read-only data, data and BSS in bytes, so everything
 # outside the files the syncs changed is at 2.20's places modulo 256, as
@@ -181,7 +181,8 @@ $(OBJDIR)/pad_%.o: atari/pad_%.S | $(OBJDIR)
 CHKDIR  := build/chk
 CHKOBJ  := sting_s nf util charset mime links conn imap pop3 store newmail futil bidi secret ctime tz \
            ovl libc tos plat_tos net_tos sting gem tls_ovl bigbuf \
-           emailchk notify aboutline dsp_ovl av alert dialog aboutbox accmem bgwork twin busy field clip clipedit crash crash_s text click cpucheck
+           emailchk notify aboutline dsp_ovl av alert dialog aboutbox accmem bgwork twin busy field clip clipedit crash crash_s text click cpucheck \
+           bell bell_snd
 binary/emailchk.acc: FORCE | binary
 	$(MAKE) OBJDIR=$(CHKDIR) APPCF= TRACECF="-ffunction-sections -fdata-sections" $(CHKDIR)/emailchk.elf
 	PRGFLAGS=7 python3 common/tools/elf2tos.py $(CHKDIR)/emailchk.elf $@
@@ -190,6 +191,11 @@ $(OBJDIR)/emailchk.elf: $(OBJDIR)/crt0chk.o $(addprefix $(OBJDIR)/,$(addsuffix .
 		$(OBJDIR)/build.o -lgcc
 $(OBJDIR)/crt0chk.o: common/atari/crt0.S | $(OBJDIR)
 	$(CC) -m68000 -DSTACK_SIZE=16384 -c -o $@ $<
+
+# the new-mail bell's sample, made here (tools/mkbell.py; decided 27 Nov 2026)
+$(OBJDIR)/bell_snd.o: tools/mkbell.py | $(OBJDIR)
+	python3 tools/mkbell.py $(OBJDIR)/bell_snd.c
+	$(CC) $(CFLAGS) -c -o $@ $(OBJDIR)/bell_snd.c
 
 # EMail saying on the emulator's console what each pane draws ("DRAW
 # list y h", "COPY list ..."), for tests/hatari/scroll_test.py (never

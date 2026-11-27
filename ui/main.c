@@ -8,6 +8,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "bell.h"
 #include "ui.h"
 #include "click.h"
 #include "theme.h"
@@ -426,6 +427,8 @@ void cmd_check_all(void)
 			snprintf(m + strlen(m), sizeof(m) - strlen(m), ", %s in %d other folders",
 				 num(mail_new_other), mail_new_folders);
 		status(m);
+		if (total > 0 && opt.bell)
+			bell_ring();	/* decided 27 Nov 2026: a soothing bell */
 		if (quiet_check && total > 0 && !in_front())
 			notify_send("EMail", m, "Open|Later", 1);
 	}
@@ -1883,6 +1886,7 @@ int app_main(void)
 	key_state_init();	/* a Shift typed during the long start keeps its state (3.2) */
 	start_mark("appl_init");
 	notify_init("EMAIL   ");
+	bell_init();		/* the new-mail bell: DMA sound, the YM chip or none */
 	notify_clicked = notified;
 	notify_ask();		/* BGEM.NG's answer comes to the main loop */
 	if (ap_id < 0)

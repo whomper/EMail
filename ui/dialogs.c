@@ -40,12 +40,12 @@ OBJECT *d_tree(void)
 	return tree;
 }
 
-static short s_on[9];			/* keep, log, falcon, dsp, colour, people file, start, system selector; an account's leave */
-enum { T_KEEP, T_LOG, T_FALCON, T_DSP, T_COLOUR, T_PFILE, T_START, T_SYSFSEL, T_LEAVE };
+enum { T_KEEP, T_LOG, T_FALCON, T_DSP, T_COLOUR, T_PFILE, T_START, T_SYSFSEL, T_BELL, T_LEAVE };
+static short s_on[T_LEAVE + 1];		/* keep, log, falcon, dsp, colour, people file, start, system selector, bell; an account's leave */
 
 static short page_of[DMAX], npages, cur_page, page_tab[7];
 static short list_line;			/* Settings: the line between the list and the page */
-#define NTICK 8
+#define NTICK 10
 static short tick_box[NTICK], tick_lbl[NTICK], tick_var[NTICK], nticks;
 static short d_tick(short x, short y, const char *label, short var);
 static void d_title(short w, const char *title);
@@ -1237,6 +1237,7 @@ static void settings_load(void)
 	s_on[T_DSP] = opt.dsp;
 	s_on[T_COLOUR] = opt.colour;
 	s_on[T_SYSFSEL] = opt.sysfsel;
+	s_on[T_BELL] = opt.bell;
 	s_on[T_PFILE] = opt.peoplefile;
 	str_copy(s_pdir, opt.peopledir, sizeof(s_pdir));
 	{
@@ -1280,19 +1281,21 @@ static void part_mail(short x, short y)
 	d_add(G_STRING, 0, 0, (long)"Check for new mail every", x, ROW(0), 24, 1);
 	d_field(x + FX, ROW(0), s_check, 3, '9');
 	d_add(G_STRING, 0, 0, (long)"min", x + FX + 4, ROW(0), 3, 1);
-	d_add(G_STRING, 0, 0, (long)"Messages to load at a time", x, ROW(1), 26, 1);
-	f_page = d_field(x + FX, ROW(1), s_page, 4, '9');
+	/* decided 27 Nov 2026: a soothing bell, in EMail and EMail check */
+	d_tick(x, ROW(1), "Ring a bell for new mail", T_BELL);
+	d_add(G_STRING, 0, 0, (long)"Messages to load at a time", x, ROW(2), 26, 1);
+	f_page = d_field(x + FX, ROW(2), s_page, 4, '9');
 	/* a larger message comes without its attachments, which stay on the
 	   server and come when one is saved (decided 21 Nov 2026) */
-	d_add(G_STRING, 0, 0, (long)"Messages larger than", x, ROW(2), 20, 1);
-	f_big = d_field(x + FX, ROW(2), s_big, 4, '9');
-	d_add(G_STRING, 0, 0, (long)"KB:", x + FX + 5, ROW(2), 3, 1);
-	d_add(G_STRING, 0, 0, (long)"without attachments", x + 3, ROW(3), 19, 1);
-	d_tick(x, ROW(4), "Keep read messages on disk", T_KEEP);
-	d_tick(x, ROW(5), "Start offline, with the mail on disk", T_START);
+	d_add(G_STRING, 0, 0, (long)"Messages larger than", x, ROW(3), 20, 1);
+	f_big = d_field(x + FX, ROW(3), s_big, 4, '9');
+	d_add(G_STRING, 0, 0, (long)"KB:", x + FX + 5, ROW(3), 3, 1);
+	d_add(G_STRING, 0, 0, (long)"without attachments", x + 3, ROW(4), 19, 1);
+	d_tick(x, ROW(5), "Keep read messages on disk", T_KEEP);
+	d_tick(x, ROW(6), "Start offline, with the mail on disk", T_START);
 	/* off: Save as is the family's file dialog; on the first page, EMail
 	   having no General page (guidelines 5.12, decided 25 Nov 2026) */
-	d_tick(x, ROW(6), "Use the system file selector", T_SYSFSEL);
+	d_tick(x, ROW(7), "Use the system file selector", T_SYSFSEL);
 }
 
 static void part_writing(short x, short y)
@@ -1430,6 +1433,7 @@ int dlg_settings(void)
 	opt.dsp = s_on[T_DSP];
 	opt.colour = s_on[T_COLOUR];
 	opt.sysfsel = s_on[T_SYSFSEL];
+	opt.bell = s_on[T_BELL];
 	opt.peoplefile = s_on[T_PFILE];
 	str_copy(opt.peopledir, s_pdir, sizeof(opt.peopledir));
 	sig_store();

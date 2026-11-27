@@ -627,6 +627,21 @@ static void t_inf(void)
 	forget_accounts();
 	store_init(dir);
 	a = accts[0];
+	/* the new-mail bell (decided 27 Nov 2026): on unless set, kept */
+	CHECK(opt.bell == 1, "BELL on when not given");
+	opt.bell = 0;
+	CHECK(store_save_settings() == 0, "saved with BELL=0");
+	free(inf);
+	inf = pf_load(path, &len);
+	CHECK(inf && strstr(inf, "\r\nBELL=0\r\n"), "BELL=0 written");
+	forget_accounts();
+	store_init(dir);
+	CHECK(opt.bell == 0, "BELL=0 read back");
+	opt.bell = 1;
+	store_save_settings();
+	forget_accounts();
+	store_init(dir);
+	a = accts[0];
 	/* "Start offline": off unless set, kept; EMail starts as it says */
 	CHECK(opt.startoffline == 0 && opt.offline == 0, "STARTOFFLINE off when not given: online");
 	opt.startoffline = 1;
