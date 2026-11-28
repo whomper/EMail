@@ -52,6 +52,9 @@ void dlg_about(void)
 		str_copy(mine, "No account yet", sizeof(mine));
 	about_mem_line(mem, sizeof(mem));
 	about_show(&a);
+	/* the box draws with EMail's VDI handle and leaves it at the system
+	   font's normal height (common 688f567); EMail's own font and size back */
+	font_reselect();
 }
 
 /* the About box's 256-colour icon made ahead, at the first quiet turn
